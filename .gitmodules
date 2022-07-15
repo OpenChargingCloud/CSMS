@@ -1,0 +1,27 @@
+[submodule "libs/Styx"]
+	path = libs/Styx
+	url = ssh://git@git.graphdefined.com:5001/Vanaheimr/Styx.git
+[submodule "libs/Hermod"]
+	path = libs/Hermod
+	url = ssh://git@git.graphdefined.com:5001/Vanaheimr/Hermod.git
+[submodule "libs/WWCP_Core"]
+	path = libs/WWCP_Core
+	url = ssh://git@git.graphdefined.com:5001/OpenChargingCloud/WWCP_Core.git
+[submodule "libs/WWCP_Cloud"]
+	path = libs/WWCP_Cloud
+	url = ssh://git@git.graphdefined.com:5001/OpenChargingCloud/WWCP_Cloud.git
+[submodule "libs/WWCP_OCPP"]
+	path = libs/WWCP_OCPP
+	url = ssh://git@git.graphdefined.com:5001/OpenChargingCloud/WWCP_OCPP.git
+[submodule "libs/UsersAPI"]
+	path = libs/UsersAPI
+	url = ssh://git@git.graphdefined.com:5001/OpenData/UsersAPI.git
+[submodule "libs/OpenChargingCloudAPI"]
+	path = libs/OpenChargingCloudAPI
+	url = ssh://git@git.graphdefined.com:5001/OpenChargingCloud/OpenChargingCloudAPI.git
+[submodule "libs/SMSAPI"]
+	path = libs/SMSAPI
+	url = ssh://git@git.graphdefined.com:5001/APIs/SMSAPI.git
+[submodule "libs/TelegramBotAPI"]
+	path = libs/TelegramBotAPI
+	url = ssh://git@git.graphdefined.com:5001/APIs/TelegramBotAPI.git
