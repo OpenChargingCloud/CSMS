@@ -1,5 +1,11 @@
 #!/bin/bash
 
-cd ChargeITMobilityCSO1_Prod/bin/Debug
-#mono --debug ChargeITMobilityCSO.exe
-mono cloud.charging.chargeIT.CSO1.Prod.exe
+cd libs
+cd UsersAPI;             versionHash_UsersAPI=$(git rev-list --max-count=1 HEAD);                cd ..
+cd OpenChargingCloudAPI; versionHash_OpenChargingCloudAPI=$(git rev-list --max-count=1 HEAD);    cd ..
+#cd ChargeITMobilityAPI;  versionHash_ChargeITMobilityAPI=$(git rev-list --max-count=1 HEAD);     cd ..
+#cd ChargeITMobilityAPI;  versionHash_ChargeITMobilityEMPAPI=$(git rev-list --max-count=1 HEAD);  cd ..
+cd ..
+
+cd OCPPTests
+dotnet run $versionHash_UsersAPI $versionHash_OpenChargingCloudAPI
