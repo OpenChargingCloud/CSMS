@@ -190,6 +190,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                 // Development...
                 case "ZBOOK":
                 case "ZBOOK2":
+                case "ZBOOK3":
                 case "OCTAL":
                 case "QUADQUANTOR":
 
