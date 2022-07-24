@@ -192,9 +192,11 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                 case "ZBOOK2":
                 case "ZBOOK3":
                 case "OCTAL":
-                case "QUADQUANTOR":
+                case "OCCloud1A":
+                case "OCCloud2A":
+                case "OCCloud3A":
 
-                    API_DNSClient   = new DNSClient (SearchForIPv6DNSServers: false);
+                    API_DNSClient = new DNSClient (SearchForIPv6DNSServers: false);
 
                     //API_SMTPClient  = new SMTPClient(RemoteHost:                 "mail.ahzf.de", //"159.69.66.88",
                     //                                 RemotePort:                 IPPort.Parse(25),
