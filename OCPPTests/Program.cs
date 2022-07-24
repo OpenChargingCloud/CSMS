@@ -217,7 +217,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
             #endregion
 
 
-            Directory.CreateDirectory("HTTPSSEs");
+            Directory.CreateDirectory(Path.Combine(AppContext.BaseDirectory, "HTTPSSEs"));
 
 
             // Support "gzip" and "deflate" HTTP compression
