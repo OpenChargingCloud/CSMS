@@ -217,6 +217,9 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
             #endregion
 
 
+            Directory.CreateDirectory("HTTPSSEs");
+
+
             // Support "gzip" and "deflate" HTTP compression
 
             var testCentralSystem      = new TestCentralSystem(CentralSystemId:        CentralSystem_Id.Parse("OCPPTest01"),
