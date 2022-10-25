@@ -526,7 +526,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
             //                                              MaxNumberOfRetries:          3,
             //                                              UseHTTPPipelining:           false,
             //                                              LoggingContext:              null,
-            //                                              LogFileCreator:              null,
+            //                                              LogfileCreator:              null,
             //                                              HTTPLogger:                  null,
             //                                              DNSClient:                   API_DNSClient);
 
