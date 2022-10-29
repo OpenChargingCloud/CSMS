@@ -68,7 +68,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                                                            Request_Id.Parse("1234"),
                                                            DateTime.Now);
 
-                var xml = BootNotificationRequest.Parse(original.ToXML().ToString(),
+                var xml = BootNotificationRequest.Parse(original.ToXML(),
                                                         Request_Id.  Parse("1234"),
                                                         ChargeBox_Id.Parse("1"));
 
@@ -86,7 +86,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                     return;
                 }
 
-                var json = BootNotificationRequest.Parse(original.ToJSON().ToString(),
+                var json = BootNotificationRequest.Parse(original.ToJSON(),
                                                          Request_Id.Parse("1234"),
                                                          ChargeBox_Id.Parse("1"));
 
@@ -130,7 +130,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                                                              DateTime.Parse(DateTime.UtcNow.ToIso8601()).ToUniversalTime(),
                                                              TimeSpan.FromSeconds(120));
 
-                var xml       = BootNotificationResponse.Parse(request, original.ToXML().ToString());
+                var xml       = BootNotificationResponse.Parse(request, original.ToXML());
 
                 if (!(original.Status      == xml.Status      &&
                       original.CurrentTime == xml.CurrentTime &&
@@ -140,7 +140,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                     return;
                 }
 
-                var json      = BootNotificationResponse.Parse(request, original.ToJSON().ToString());
+                var json      = BootNotificationResponse.Parse(request, original.ToJSON());
 
                 if (!(original.Status      == json.Status      &&
                       original.CurrentTime == json.CurrentTime &&
@@ -232,11 +232,11 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                                              AutoStart:  true
                                          );
 
-            var TestBackendSOAP        = testCentralSystem.CreateSOAPService(
-                                             TCPPort:    IPPort.Parse(8800),
-                                             DNSClient:  API_DNSClient,
-                                             AutoStart:  true
-                                         );
+            //var TestBackendSOAP        = testCentralSystem.CreateSOAPService(
+            //                                 TCPPort:    IPPort.Parse(8800),
+            //                                 DNSClient:  API_DNSClient,
+            //                                 AutoStart:  true
+            //                             );
 
             testCentralSystem.AddBasicAuth("GD001", "1234");
 
@@ -569,168 +569,178 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
 
             #region Wait for key 'Q' pressed... and quit.
 
-            String[] command = null;
+            var       quit          = false;
+            String[]? commandArray  = null;
 
             do
             {
 
-                command = Console.ReadLine()?.Trim()?.Split(' ');
+                commandArray = Console.ReadLine()?.Trim()?.Split(' ');
 
-                if (command.SafeAny() && command[0].Length > 0)
+                if (commandArray is not null &&
+                    commandArray.Any())
                 {
 
-                    if (command[0].StartsWith("trigger") && command.Length == 3 && command[2].ToLower() == "BootNotification".ToLower())
-                    {
-                        var response = await testCentralSystem.TriggerMessage(ChargeBox_Id.Parse(command[1]), MessageTriggers.BootNotification);
-                        Console.WriteLine(response.ToJSON());
-                    }
+                    var command = commandArray[0]?.ToLower();
 
-                    if (command[0].StartsWith("trigger") && command.Length == 3 && command[2].ToLower() == "StatusNotification".ToLower())
-                    {
-                        var response = await testCentralSystem.TriggerMessage(ChargeBox_Id.Parse(command[1]), MessageTriggers.StatusNotification);
-                        Console.WriteLine(response.ToJSON());
-                    }
-
-                    if (command[0].StartsWith("trigger") && command.Length == 4 && command[3].ToLower() == "MeterValues".ToLower())
-                    {
-                        var response = await testCentralSystem.TriggerMessage(ChargeBox_Id.Parse(command[1]), MessageTriggers.MeterValues, Connector_Id.Parse(command[2]));
-                        Console.WriteLine(response.ToJSON());
-                    }
-
-
-                    if (command[0].StartsWith("hardreset") && command.Length == 2)
-                    {
-                        var response = await testCentralSystem.Reset(ChargeBox_Id.Parse(command[1]), ResetTypes.Hard);
-                        Console.WriteLine(response.ToJSON());
-                    }
-
-                    if (command[0].StartsWith("softreset") && command.Length == 2)
-                    {
-                        var response = await testCentralSystem.Reset(ChargeBox_Id.Parse(command[1]), ResetTypes.Soft);
-                        Console.WriteLine(response.ToJSON());
-                    }
-
-                    if (command[0].StartsWith("setinoperative") && command.Length == 3)
-                    {
-                        var response = await testCentralSystem.ChangeAvailability(ChargeBox_Id.Parse(command[1]), Connector_Id.Parse(command[2]), Availabilities.Inoperative);
-                        Console.WriteLine(response.ToJSON());
-                    }
-
-                    if (command[0].StartsWith("setoperative") && command.Length == 3)
-                    {
-                        var response = await testCentralSystem.ChangeAvailability(ChargeBox_Id.Parse(command[1]), Connector_Id.Parse(command[2]), Availabilities.Operative);
-                        Console.WriteLine(response.ToJSON());
-                    }
-
-                    if (command[0].StartsWith("getdiag") && command.Length == 3)
-                    {
-                        var response = await testCentralSystem.GetDiagnostics(ChargeBox_Id.Parse(command[1]), command[2]); // http://95.89.178.27:9901/diagnostics/
-                        Console.WriteLine(response.ToJSON());
-                    }
-
-                    if (command[0].StartsWith("getconf") && command.Length == 2)
-                    {
-                        var response = await testCentralSystem.GetConfiguration(ChargeBox_Id.Parse(command[1]));
-                        Console.WriteLine(response.ToJSON());
-                    }
-
-                    if (command[0].StartsWith("getconf") && command.Length > 2)
-                    {
-                        var response = await testCentralSystem.GetConfiguration(ChargeBox_Id.Parse(command[1]), command.Skip(2));
-                        Console.WriteLine(response.ToJSON());
-                    }
-
-                    if (command[0].StartsWith("changeconfiguration") && command.Length == 4)
-                    {
-                        var response = await testCentralSystem.ChangeConfiguration(ChargeBox_Id.Parse(command[1]), command[2], command[3]);
-                        Console.WriteLine(response.ToJSON());
-                    }
-
-                    if (command[0].StartsWith("transferdata") && command.Length == 5)
-                    {
-                        var response = await testCentralSystem.DataTransfer(ChargeBox_Id.Parse(command[1]), command[2], command[3], command[4]);
-                        Console.WriteLine(response.ToJSON());
-                    }
-
-                    if (command[0].StartsWith("reserve") && command.Length == 5)
-                    {
-                        var response = await testCentralSystem.ReserveNow(ChargeBox_Id.Parse(command[1]), Connector_Id.Parse(command[2]), Reservation_Id.Parse(command[3]), DateTime.UtcNow + TimeSpan.FromMinutes(15), IdToken.Parse(command[4]));
-                        Console.WriteLine(response.ToJSON());
-                    }
-
-                    if (command[0].StartsWith("cancelrreservation") && command.Length == 3)
-                    {
-                        var response = await testCentralSystem.CancelReservation(ChargeBox_Id.Parse(command[1]), Reservation_Id.Parse(command[2]));
-                        Console.WriteLine(response.ToJSON());
-                    }
-
-
-                    if (command[0].StartsWith("remotestart") && command.Length == 4)
-                    {
-                        var response = await testCentralSystem.RemoteStartTransaction(ChargeBox_Id.Parse(command[1]), IdToken.Parse(command[2]), Connector_Id.Parse(command[3]));
-                        Console.WriteLine(response.ToJSON());
-                    }
-
-                    if (command[0].StartsWith("remotestop") && command.Length == 3)
-                    {
-                        var response = await testCentralSystem.RemoteStopTransaction(ChargeBox_Id.Parse(command[1]), Transaction_Id.Parse(command[2]));
-                        Console.WriteLine(response.ToJSON());
-                    }
-
-                    if (command[0].StartsWith("unlock") && command.Length == 3)
-                    {
-                        var response = await testCentralSystem.UnlockConnector(ChargeBox_Id.Parse(command[1]), Connector_Id.Parse(command[2]));
-                        Console.WriteLine(response.ToJSON());
-                    }
-
-                    if (command[0].StartsWith("getlocallistversion") && command.Length == 2)
-                    {
-                        var response = await testCentralSystem.GetLocalListVersion(ChargeBox_Id.Parse(command[1]));
-                        Console.WriteLine(response.ToJSON());
-                    }
-
-                    if (command[0].StartsWith("sendlocallist") && command.Length == 2)
-                    {
-                        var response = await testCentralSystem.SendLocalList(ChargeBox_Id.Parse(command[1]),
-                                                                             0,
-                                                                             UpdateTypes.Full,
-                                                                             new AuthorizationData[] {
-                                                                                 new AuthorizationData(IdToken.Parse("aabbcc11"), new IdTagInfo(AuthorizationStatus.Accepted)),
-                                                                                 new AuthorizationData(IdToken.Parse("aabbcc22"), new IdTagInfo(AuthorizationStatus.Accepted)),
-                                                                                 new AuthorizationData(IdToken.Parse("aabbcc33"), new IdTagInfo(AuthorizationStatus.Accepted))
-                                                                             });
-                        Console.WriteLine(response.ToJSON());
-                    }
-
-                    if (command[0].StartsWith("clearcache") && command.Length == 2)
-                    {
-                        var response = await testCentralSystem.ClearCache(ChargeBox_Id.Parse(command[1]));
-                        Console.WriteLine(response.ToJSON());
-                    }
-
-
-
-
-
-                    if (command[0] == "s")
+                    if (command is not null &&
+                        command.Length > 0)
                     {
 
-                        //var bb = WSServer.RemoteStartTransaction(ChargeBox_Id.Parse("CP3211"),
-                        //                                         IdToken.     Parse("AABBCCDD"),
-                        //                                         Connector_Id.Parse(1)).Result;
+                        if (command == "q")
+                            quit = true;
 
-                        //Console.WriteLine(bb);
+                        if (command == "trigger"                && commandArray.Length == 3 && commandArray[2].ToLower() == "BootNotification".ToLower())
+                        {
+                            var response = await testCentralSystem.TriggerMessage(ChargeBox_Id.Parse(commandArray[1]), MessageTriggers.BootNotification);
+                            Console.WriteLine(response.ToJSON());
+                        }
 
-                        //var aa = WSServer.Send("CP3211",
-                        //                       "TESTACTION",
-                        //                       new Newtonsoft.Json.Linq.JObject(new Newtonsoft.Json.Linq.JProperty("prop1", "value1")),
-                        //                       DateTime.UtcNow + TimeSpan.FromMinutes(2)).Result;
+                        if (command == "trigger"                && commandArray.Length == 3 && commandArray[2].ToLower() == "StatusNotification".ToLower())
+                        {
+                            var response = await testCentralSystem.TriggerMessage(ChargeBox_Id.Parse(commandArray[1]), MessageTriggers.StatusNotification);
+                            Console.WriteLine(response.ToJSON());
+                        }
+
+                        if (command == "trigger"                && commandArray.Length == 4 && commandArray[3].ToLower() == "MeterValues".ToLower())
+                        {
+                            var response = await testCentralSystem.TriggerMessage(ChargeBox_Id.Parse(commandArray[1]), MessageTriggers.MeterValues, Connector_Id.Parse(commandArray[2]));
+                            Console.WriteLine(response.ToJSON());
+                        }
+
+
+                        if (command == "hardreset"              && commandArray.Length == 2)
+                        {
+                            var response = await testCentralSystem.Reset(ChargeBox_Id.Parse(commandArray[1]), ResetTypes.Hard);
+                            Console.WriteLine(response.ToJSON());
+                        }
+
+                        if (command == "softreset"              && commandArray.Length == 2)
+                        {
+                            var response = await testCentralSystem.Reset(ChargeBox_Id.Parse(commandArray[1]), ResetTypes.Soft);
+                            Console.WriteLine(response.ToJSON());
+                        }
+
+                        if (command == "setinoperative"         && commandArray.Length == 3)
+                        {
+                            var response = await testCentralSystem.ChangeAvailability(ChargeBox_Id.Parse(commandArray[1]), Connector_Id.Parse(commandArray[2]), Availabilities.Inoperative);
+                            Console.WriteLine(response.ToJSON());
+                        }
+
+                        if (command == "setoperative"           && commandArray.Length == 3)
+                        {
+                            var response = await testCentralSystem.ChangeAvailability(ChargeBox_Id.Parse(commandArray[1]), Connector_Id.Parse(commandArray[2]), Availabilities.Operative);
+                            Console.WriteLine(response.ToJSON());
+                        }
+
+                        if (command == "getdiag"                && commandArray.Length == 3)
+                        {
+                            var response = await testCentralSystem.GetDiagnostics(ChargeBox_Id.Parse(commandArray[1]), commandArray[2]); // http://95.89.178.27:9901/diagnostics/
+                            Console.WriteLine(response.ToJSON());
+                        }
+
+                        if (command == "getconf"                && commandArray.Length == 2)
+                        {
+                            var response = await testCentralSystem.GetConfiguration(ChargeBox_Id.Parse(commandArray[1]));
+                            Console.WriteLine(response.ToJSON());
+                        }
+
+                        if (command == "getconf"                && commandArray.Length > 2)
+                        {
+                            var response = await testCentralSystem.GetConfiguration(ChargeBox_Id.Parse(commandArray[1]), commandArray.Skip(2));
+                            Console.WriteLine(response.ToJSON());
+                        }
+
+                        if (command == "changeconfiguration"    && commandArray.Length == 4)
+                        {
+                            var response = await testCentralSystem.ChangeConfiguration(ChargeBox_Id.Parse(commandArray[1]), commandArray[2], commandArray[3]);
+                            Console.WriteLine(response.ToJSON());
+                        }
+
+                        if (command == "transferdata"           && commandArray.Length == 5)
+                        {
+                            var response = await testCentralSystem.DataTransfer(ChargeBox_Id.Parse(commandArray[1]), commandArray[2], commandArray[3], commandArray[4]);
+                            Console.WriteLine(response.ToJSON());
+                        }
+
+                        if (command == "reserve"                && commandArray.Length == 5)
+                        {
+                            var response = await testCentralSystem.ReserveNow(ChargeBox_Id.Parse(commandArray[1]), Connector_Id.Parse(commandArray[2]), Reservation_Id.Parse(commandArray[3]), DateTime.UtcNow + TimeSpan.FromMinutes(15), IdToken.Parse(commandArray[4]));
+                            Console.WriteLine(response.ToJSON());
+                        }
+
+                        if (command == "cancelrreservation"     && commandArray.Length == 3)
+                        {
+                            var response = await testCentralSystem.CancelReservation(ChargeBox_Id.Parse(commandArray[1]), Reservation_Id.Parse(commandArray[2]));
+                            Console.WriteLine(response.ToJSON());
+                        }
+
+
+                        if (command == "remotestart"            && commandArray.Length == 4)
+                        {
+                            var response = await testCentralSystem.RemoteStartTransaction(ChargeBox_Id.Parse(commandArray[1]), IdToken.Parse(commandArray[2]), Connector_Id.Parse(commandArray[3]));
+                            Console.WriteLine(response.ToJSON());
+                        }
+
+                        if (command == "remotestop"             && commandArray.Length == 3)
+                        {
+                            var response = await testCentralSystem.RemoteStopTransaction(ChargeBox_Id.Parse(commandArray[1]), Transaction_Id.Parse(commandArray[2]));
+                            Console.WriteLine(response.ToJSON());
+                        }
+
+                        if (command == "unlock"                 && commandArray.Length == 3)
+                        {
+                            var response = await testCentralSystem.UnlockConnector(ChargeBox_Id.Parse(commandArray[1]), Connector_Id.Parse(commandArray[2]));
+                            Console.WriteLine(response.ToJSON());
+                        }
+
+                        if (command == "getlocallistversion"    && commandArray.Length == 2)
+                        {
+                            var response = await testCentralSystem.GetLocalListVersion(ChargeBox_Id.Parse(commandArray[1]));
+                            Console.WriteLine(response.ToJSON());
+                        }
+
+                        if (command == "sendlocallist"          && commandArray.Length == 2)
+                        {
+                            var response = await testCentralSystem.SendLocalList(ChargeBox_Id.Parse(commandArray[1]),
+                                                                                 0,
+                                                                                 UpdateTypes.Full,
+                                                                                 new AuthorizationData[] {
+                                                                                     new AuthorizationData(IdToken.Parse("aabbcc11"), new IdTagInfo(AuthorizationStatus.Accepted)),
+                                                                                     new AuthorizationData(IdToken.Parse("aabbcc22"), new IdTagInfo(AuthorizationStatus.Accepted)),
+                                                                                     new AuthorizationData(IdToken.Parse("aabbcc33"), new IdTagInfo(AuthorizationStatus.Accepted))
+                                                                                 });
+                            Console.WriteLine(response.ToJSON());
+                        }
+
+                        if (command == "clearcache"             && commandArray.Length == 2)
+                        {
+                            var response = await testCentralSystem.ClearCache(ChargeBox_Id.Parse(commandArray[1]));
+                            Console.WriteLine(response.ToJSON());
+                        }
+
+
+                        if (command == "s")
+                        {
+
+                            //var bb = WSServer.RemoteStartTransaction(ChargeBox_Id.Parse("CP3211"),
+                            //                                         IdToken.     Parse("AABBCCDD"),
+                            //                                         Connector_Id.Parse(1)).Result;
+
+                            //Console.WriteLine(bb);
+
+                            //var aa = WSServer.Send("CP3211",
+                            //                       "TESTACTION",
+                            //                       new Newtonsoft.Json.Linq.JObject(new Newtonsoft.Json.Linq.JProperty("prop1", "value1")),
+                            //                       DateTime.UtcNow + TimeSpan.FromMinutes(2)).Result;
+
+                        }
 
                     }
 
                 }
 
-            } while (command[0] != "q");
+            } while (!quit);
 
             foreach (var DebugListener in Trace.Listeners)
                 (DebugListener as TextWriterTraceListener)?.Flush();
