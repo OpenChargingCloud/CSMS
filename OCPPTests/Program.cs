@@ -282,26 +282,26 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                                                         DNSClient:                API_DNSClient);
 
 
-            //var response1  =  await chargingStation1.ConnectWebSocket("From:GD001",
-            //                                                          "To:OCPPTest01",
-            //                                                          //URL.Parse("ws://janus1.graphdefined.com:80/"));
-            //                                                          URL.Parse("http://127.0.0.1:9900/" + chargingStation1.ChargeBoxId));
-            //                                                          //URL.Parse("http://oca.charging.cloud:9900/" + chargingStation1.ChargeBoxId));
-            //                                                          //URL.Parse("ws://oca.charging.cloud/io/OCPPv1.6j/" + chargingStation1.ChargeBoxId));
-            //                                                          //URL.Parse("wss://oca.charging.cloud/io/OCPPv1.6j/" + chargingStation1.ChargeBoxId));
-            //                                                          //URL.Parse("ws://35.190.199.146:8080/stationServer/websocket/OLI_001"));
-            //
-            //                                                          //URL.Parse("wss://encharge-broker-ppe1.envisioniot.com/ocpp-broker/ocpp/" + chargingStation1.ChargeBoxId));      // Envisison
-            //                                                          //URL.Parse("wss://testop.amplified.cloud/ocpp16/GDEF"));                                                         // Stackbox GmbH
-            //                                                          //URL.Parse("wss://ocpp.eu.ngrok.io/GD001"));                                                                     // Monta
-            //                                                          //URL.Parse("wss://cpc.demo.dev.charge.ampeco.tech:443/test/GD001"));                                             // AMPECO
-            //                                                          //URL.Parse("ws://ocppj.yaayum.com:8887/CUS002"));                                                                // yaayum
-            //                                                          //URL.Parse("ws://ocpp-dev.eastus.azurecontainer.io:8433/VENTURUS/GD001"));
+            var response1  =  await chargingStation1.ConnectWebSocket("From:GD001",
+                                                                      "To:OCPPTest01",
+                                                                      //URL.Parse("ws://janus1.graphdefined.com:80/"));
+                                                                      URL.Parse("http://127.0.0.1:9900/" + chargingStation1.ChargeBoxId));
+                                                                      //URL.Parse("http://oca.charging.cloud:9900/" + chargingStation1.ChargeBoxId));
+                                                                      //URL.Parse("ws://oca.charging.cloud/io/OCPPv1.6j/" + chargingStation1.ChargeBoxId));
+                                                                      //URL.Parse("wss://oca.charging.cloud/io/OCPPv1.6j/" + chargingStation1.ChargeBoxId));
+                                                                      //URL.Parse("ws://35.190.199.146:8080/stationServer/websocket/OLI_001"));
+            
+                                                                      //URL.Parse("wss://encharge-broker-ppe1.envisioniot.com/ocpp-broker/ocpp/" + chargingStation1.ChargeBoxId));      // Envisison
+                                                                      //URL.Parse("wss://testop.amplified.cloud/ocpp16/GDEF"));                                                         // Stackbox GmbH
+                                                                      //URL.Parse("wss://ocpp.eu.ngrok.io/GD001"));                                                                     // Monta
+                                                                      //URL.Parse("wss://cpc.demo.dev.charge.ampeco.tech:443/test/GD001"));                                             // AMPECO
+                                                                      //URL.Parse("ws://ocppj.yaayum.com:8887/CUS002"));                                                                // yaayum
+                                                                      //URL.Parse("ws://ocpp-dev.eastus.azurecontainer.io:8433/VENTURUS/GD001"));
 
-            //await Task.Delay(250);
+            await Task.Delay(250);
 
-            //var response1a  = await chargingStation1.SendBootNotification();
-            //var response1b  = await chargingStation1.SendHeartbeat();
+            var response1a  = await chargingStation1.SendBootNotification();
+            var response1b  = await chargingStation1.SendHeartbeat();
             //var response1c  = await chargingStation1.SendStatusNotification(Connector_Id.Parse(1), ChargePointStatus.Available, ChargePointErrorCodes.NoError, "info 1", DateTime.UtcNow, "GD", "VEC01");
             //var response1d  = await chargingStation1.TransferData("GD", "Message1", "Data1");
             //var response1e  = await chargingStation1.SendDiagnosticsStatusNotification(DiagnosticsStatus.UploadFailed);
