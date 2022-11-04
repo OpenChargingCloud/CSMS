@@ -37,6 +37,7 @@ using OCPPv1_6 = cloud.charging.open.protocols.OCPPv1_6;
 using cloud.charging.open.protocols.OCPPv1_6.CS;
 using cloud.charging.open.protocols.OCPPv1_6.CP;
 using cloud.charging.open.protocols.OCPPv1_6;
+using System.Runtime.CompilerServices;
 
 //using OCPPv2_0 = cloud.charging.open.protocols.OCPPv1_6;
 
@@ -222,14 +223,18 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
 
             // Support "gzip" and "deflate" HTTP compression
 
-            var testCentralSystem      = new TestCentralSystem(CentralSystemId:        CentralSystem_Id.Parse("OCPPTest01"),
-                                                               RequireAuthentication:  false,
-                                                               HTTPUploadPort:         IPPort.Parse(9901),
-                                                               DNSClient:              API_DNSClient);
+            var testCentralSystem      = new TestCentralSystem(
+                                             CentralSystemId:             CentralSystem_Id.Parse("OCPPTest01"),
+                                             RequireAuthentication:       false,
+                                             HTTPUploadPort:              IPPort.Parse(9901),
+                                             DNSClient:                   API_DNSClient
+                                         );
 
             var testBackendWebSockets  = testCentralSystem.CreateWebSocketService(
-                                             TCPPort:    IPPort.Parse(9900),
-                                             AutoStart:  true
+                                             TCPPort:                     IPPort.Parse(9900),
+                                             DisableWebSocketPings:       true,
+                                             SlowNetworkSimulationDelay:  TimeSpan.FromMilliseconds(10),
+                                             AutoStart:                   true
                                          );
 
             //var TestBackendSOAP        = testCentralSystem.CreateSOAPService(
@@ -245,47 +250,56 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
 
 
 
-            var chargingStation1  = new TestChargePoint(ChargeBoxId:              ChargeBox_Id.Parse("GD001"),
-                                                        ChargePointVendor:        "GraphDefined",
-                                                        ChargePointModel:         "VCP.1",
-                                                        NumberOfConnectors:       2,
+            var chargingStation1  = new TestChargePoint(
+                                        ChargeBoxId:              ChargeBox_Id.Parse("GD001"),
+                                        ChargePointVendor:        "GraphDefined",
+                                        ChargePointModel:         "VCP.1",
+                                        NumberOfConnectors:       2,
 
-                                                        Description:              I18NString.Create(Languages.en, "Our first virtual charging station!"),
-                                                        ChargePointSerialNumber:  "SN-CP0001",
-                                                        ChargeBoxSerialNumber:    "SN-CB0001",
-                                                        FirmwareVersion:          "v0.1",
-                                                        Iccid:                    "0000",
-                                                        IMSI:                     "1111",
-                                                        MeterType:                "Virtual Energy Meter",
-                                                        MeterSerialNumber:        "SN-EN0001",
-                                                        MeterPublicKey:           "0xcafebabe",
+                                        Description:              I18NString.Create(Languages.en, "Our first virtual charging station!"),
+                                        ChargePointSerialNumber:  "SN-CP0001",
+                                        ChargeBoxSerialNumber:    "SN-CB0001",
+                                        FirmwareVersion:          "v0.1",
+                                        Iccid:                    "0000",
+                                        IMSI:                     "1111",
+                                        MeterType:                "Virtual Energy Meter",
+                                        MeterSerialNumber:        "SN-EN0001",
+                                        MeterPublicKey:           "0xcafebabe",
 
-                                                        //HTTPBasicAuth:            new Tuple<String, String>("OLI_001", "1234"),
-                                                        //HTTPBasicAuth:            new Tuple<String, String>("GD001", "1234"),
-                                                        DNSClient:                API_DNSClient);
+                                        DisableSendHeartbeats:    true,
 
-            var chargingStation2  = new TestChargePoint(ChargeBoxId:              ChargeBox_Id.Parse("CP002"),
-                                                        ChargePointVendor:        "GraphDefined",
-                                                        ChargePointModel:         "VCP.2",
-                                                        NumberOfConnectors:       2,
+                                        //HTTPBasicAuth:            new Tuple<String, String>("OLI_001", "1234"),
+                                        //HTTPBasicAuth:            new Tuple<String, String>("GD001", "1234"),
+                                        DNSClient:                API_DNSClient
+                                    );
 
-                                                        Description:              I18NString.Create(Languages.en, "Our 2nd virtual charging station!"),
-                                                        ChargePointSerialNumber:  "SN-CP0002",
-                                                        ChargeBoxSerialNumber:    "SN-CB0002",
-                                                        FirmwareVersion:          "v0.1",
-                                                        Iccid:                    "3333",
-                                                        IMSI:                     "4444",
-                                                        MeterType:                "Virtual Energy Meter",
-                                                        MeterSerialNumber:        "SN-EN0002",
-                                                        MeterPublicKey:           "0xbabecafe",
+            var chargingStation2  = new TestChargePoint(
+                                        ChargeBoxId:              ChargeBox_Id.Parse("CP002"),
+                                        ChargePointVendor:        "GraphDefined",
+                                        ChargePointModel:         "VCP.2",
+                                        NumberOfConnectors:       2,
 
-                                                        DNSClient:                API_DNSClient);
+                                        Description:              I18NString.Create(Languages.en, "Our 2nd virtual charging station!"),
+                                        ChargePointSerialNumber:  "SN-CP0002",
+                                        ChargeBoxSerialNumber:    "SN-CB0002",
+                                        FirmwareVersion:          "v0.1",
+                                        Iccid:                    "3333",
+                                        IMSI:                     "4444",
+                                        MeterType:                "Virtual Energy Meter",
+                                        MeterSerialNumber:        "SN-EN0002",
+                                        MeterPublicKey:           "0xbabecafe",
+
+                                        DNSClient:                API_DNSClient
+                                    );
 
 
             var response1  =  await chargingStation1.ConnectWebSocket("From:GD001",
                                                                       "To:OCPPTest01",
                                                                       //URL.Parse("ws://janus1.graphdefined.com:80/"));
-                                                                      URL.Parse("http://127.0.0.1:9900/" + chargingStation1.ChargeBoxId));
+                                                                      URL.Parse("http://127.0.0.1:9900/" + chargingStation1.ChargeBoxId),
+                                                                      DisableWebSocketPings:       true
+                                                                      //SlowNetworkSimulationDelay:  TimeSpan.FromMilliseconds(10)
+                                                                      );
                                                                       //URL.Parse("http://oca.charging.cloud:9900/" + chargingStation1.ChargeBoxId));
                                                                       //URL.Parse("ws://oca.charging.cloud/io/OCPPv1.6j/" + chargingStation1.ChargeBoxId));
                                                                       //URL.Parse("wss://oca.charging.cloud/io/OCPPv1.6j/" + chargingStation1.ChargeBoxId));
@@ -301,30 +315,13 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
             await Task.Delay(250);
 
             var response1a  = await chargingStation1.SendBootNotification();
-            var response1b  = await chargingStation1.SendHeartbeat();
-            //var response1c  = await chargingStation1.SendStatusNotification(Connector_Id.Parse(1), ChargePointStatus.Available, ChargePointErrorCodes.NoError, "info 1", DateTime.UtcNow, "GD", "VEC01");
-            //var response1d  = await chargingStation1.TransferData("GD", "Message1", "Data1");
-            //var response1e  = await chargingStation1.SendDiagnosticsStatusNotification(DiagnosticsStatus.UploadFailed);
-            //var response1f  = await chargingStation1.SendFirmwareStatusNotification(FirmwareStatus.Installed);
+            var response2a  = await chargingStation1.SendHeartbeat();
+            var response3a  = await chargingStation1.Authorize(IdToken.Parse("000000"));
+            var response4a  = await chargingStation1.SendStatusNotification(Connector_Id.Parse(1), ChargePointStatus.Available, ChargePointErrorCodes.NoError, "info 1", DateTime.UtcNow, "GD", "VEC01");
+            var response5a  = await chargingStation1.TransferData("GD", "Message1", "Data1");
+            var response6a  = await chargingStation1.SendDiagnosticsStatusNotification(DiagnosticsStatus.UploadFailed);
+            var response7a  = await chargingStation1.SendFirmwareStatusNotification(FirmwareStatus.Installed);
 
-            //var response1m  = await chargingStation1.Authorize(IdToken.Parse("000000"));
-            //var validToken  = IdToken.Parse("000000");
-            //var response1m  = await chargingStation1.Authorize(validToken);
-
-            //if (response1a.Status           == RegistrationStatus. Accepted &&
-            //    response1m.IdTagInfo.Status == AuthorizationStatus.Accepted)
-            //{
-
-            //    var startTimestamp = DateTime.UtcNow;
-            //    var response1n  = await chargingStation1.StartTransaction(Connector_Id.Parse(1), validToken, startTimestamp, 0);
-
-            //    var response1n2 = await chargingStation1.SendStatusNotification(Connector_Id.Parse(1),
-            //                                                                    ChargePointStatus.Charging,
-            //                                                                    ChargePointErrorCodes.NoError,
-            //                                                                    "info 2",
-            //                                                                    DateTime.UtcNow,
-            //                                                                    "GD",
-            //                                                                    "VEC02");
 
             //    await Task.Delay(10);
             //    var firstTimestamp = DateTime.UtcNow;
@@ -427,6 +424,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
 
             var xy = 23;
 
+            #region SOAP
 
             //await chargingStation2.InitSOAP("From:CP002",
             //                                "To:OCPPTest01",
@@ -490,7 +488,6 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
             //var response3t = await testCentralSystem.SendLocalList         (chargingStation1.ChargeBoxId, 1, UpdateTypes.Full, null);
             //var response3u = await testCentralSystem.ClearCache            (chargingStation1.ChargeBoxId);
 
-            var x = 23;
 
             //var ChargingStation1  = new ChargePointSOAPServer(TCPPort:    IPPort.Parse(8801),
             //                                                  DNSClient:  API_DNSClient,
@@ -503,9 +500,6 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
             //var ChargingStation3  = new ChargePointSOAPServer(TCPPort:    IPPort.Parse(8802),
             //                                                  DNSClient:  API_DNSClient,
             //                                                  AutoStart:  true);
-
-
-
 
 
             //var OCPPClient1 = new CentralSystemSOAPClient(ChargeBoxIdentity:           ChargeBox_Id.Parse("1"),
@@ -549,6 +543,8 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
             //                                                                               ));
 
             //var rs2 = rs_response.Content;
+
+            #endregion
 
 
             #region DEBUG tasks after 10 seconds...

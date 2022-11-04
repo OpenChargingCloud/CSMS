@@ -23,9 +23,6 @@
     <ProjectReference Include="..\libs\WWCP_OCPP\WWCP_OCPPv1.6\WWCP_OCPPv1.6.csproj" />
     <ProjectReference Include="..\libs\WWCP_OCPP\WWCP_OCPPv1.6_Adapter\WWCP_OCPPv1.6_Adapter.csproj" />
     <ProjectReference Include="..\libs\WWCP_OCPP\WWCP_OCPPv1.6_WebAPI\WWCP_OCPPv1.6_WebAPI.csproj" />
-    <ProjectReference Include="..\libs\WWCP_OCPP\WWCP_OCPPv2.0\WWCP_OCPPv2.0.csproj" />
-    <ProjectReference Include="..\libs\WWCP_OCPP\WWCP_OCPPv2.0_Adapter\WWCP_OCPPv2.0_Adapter.csproj" />
-    <ProjectReference Include="..\libs\WWCP_OCPP\WWCP_OCPPv2.0_WebAPI\WWCP_OCPPv2.0_WebAPI.csproj" />
   </ItemGroup>
 
 </Project>
