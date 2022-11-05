@@ -304,7 +304,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                                                                       //URL.Parse("ws://oca.charging.cloud/io/OCPPv1.6j/" + chargingStation1.ChargeBoxId));
                                                                       //URL.Parse("wss://oca.charging.cloud/io/OCPPv1.6j/" + chargingStation1.ChargeBoxId));
                                                                       //URL.Parse("ws://35.190.199.146:8080/stationServer/websocket/OLI_001"));
-            
+
                                                                       //URL.Parse("wss://encharge-broker-ppe1.envisioniot.com/ocpp-broker/ocpp/" + chargingStation1.ChargeBoxId));      // Envisison
                                                                       //URL.Parse("wss://testop.amplified.cloud/ocpp16/GDEF"));                                                         // Stackbox GmbH
                                                                       //URL.Parse("wss://ocpp.eu.ngrok.io/GD001"));                                                                     // Monta
@@ -316,11 +316,15 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
 
             var response1a  = await chargingStation1.SendBootNotification();
             var response2a  = await chargingStation1.SendHeartbeat();
-            var response3a  = await chargingStation1.Authorize(IdToken.Parse("000000"));
+            var response3a  = await chargingStation1.Authorize(IdToken.Parse("aabbccdd"));
+            var response3b  = await chargingStation1.Authorize(IdToken.Parse("000000"));
             var response4a  = await chargingStation1.SendStatusNotification(Connector_Id.Parse(1), ChargePointStatus.Available, ChargePointErrorCodes.NoError, "info 1", DateTime.UtcNow, "GD", "VEC01");
             var response5a  = await chargingStation1.TransferData("GD", "Message1", "Data1");
             var response6a  = await chargingStation1.SendDiagnosticsStatusNotification(DiagnosticsStatus.UploadFailed);
             var response7a  = await chargingStation1.SendFirmwareStatusNotification(FirmwareStatus.Installed);
+
+
+            var ss1         = await testCentralSystem.Reset(chargingStation1.ChargeBoxId, ResetTypes.Hard);
 
 
             //    await Task.Delay(10);
