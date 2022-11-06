@@ -38,6 +38,8 @@ using cloud.charging.open.protocols.OCPPv1_6.CS;
 using cloud.charging.open.protocols.OCPPv1_6.CP;
 using cloud.charging.open.protocols.OCPPv1_6;
 using System.Runtime.CompilerServices;
+using System.Reflection.Emit;
+using com.GraphDefined.SMSApi.API.Response;
 
 //using OCPPv2_0 = cloud.charging.open.protocols.OCPPv1_6;
 
@@ -48,117 +50,6 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
 
     public class Program
     {
-
-        public static void MessageTests()
-        {
-
-            #region BootNotification request
-
-            {
-
-                var original = new BootNotificationRequest(ChargeBox_Id.Parse("1"),
-                                                           "vendor",
-                                                           "model",
-                                                           "chargePointSerialnumber",
-                                                           "chargeBoxSerialnumber",
-                                                           "firmwareVersion",
-                                                           "ICCID",
-                                                           "IMSI",
-                                                           "MeterType",
-                                                           "MeterSerialNumber",
-                                                           Request_Id.Parse("1234"),
-                                                           DateTime.Now);
-
-                var xml = BootNotificationRequest.Parse(original.ToXML(),
-                                                        Request_Id.  Parse("1234"),
-                                                        ChargeBox_Id.Parse("1"));
-
-                if (!(original.ChargePointVendor       == xml.ChargePointVendor       &&
-                      original.ChargePointModel        == xml.ChargePointModel        &&
-                      original.ChargePointSerialNumber == xml.ChargePointSerialNumber &&
-                      original.ChargeBoxSerialNumber   == xml.ChargeBoxSerialNumber   &&
-                      original.FirmwareVersion         == xml.FirmwareVersion         &&
-                      original.Iccid                   == xml.Iccid                   &&
-                      original.IMSI                    == xml.IMSI                    &&
-                      original.MeterType               == xml.MeterType               &&
-                      original.MeterSerialNumber       == xml.MeterSerialNumber))
-                {
-                    Console.WriteLine("BootNotification request XML test failed!");
-                    return;
-                }
-
-                var json = BootNotificationRequest.Parse(original.ToJSON(),
-                                                         Request_Id.Parse("1234"),
-                                                         ChargeBox_Id.Parse("1"));
-
-                if (!(original.ChargePointVendor       == json.ChargePointVendor       &&
-                      original.ChargePointModel        == json.ChargePointModel        &&
-                      original.ChargePointSerialNumber == json.ChargePointSerialNumber &&
-                      original.ChargeBoxSerialNumber   == json.ChargeBoxSerialNumber   &&
-                      original.FirmwareVersion         == json.FirmwareVersion         &&
-                      original.Iccid                   == json.Iccid                   &&
-                      original.IMSI                    == json.IMSI                    &&
-                      original.MeterType               == json.MeterType               &&
-                      original.MeterSerialNumber       == json.MeterSerialNumber))
-                {
-                    Console.WriteLine("BootNotification request JSON test failed!");
-                    return;
-                }
-
-            }
-
-            #endregion
-
-            #region BootNotification response
-
-            {
-
-                var request   = new BootNotificationRequest(ChargeBox_Id.Parse("1"),
-                                                            "vendor",
-                                                            "model",
-                                                            "chargePointSerialnumber",
-                                                            "chargeBoxSerialnumber",
-                                                            "firmwareVersion",
-                                                            "ICCID",
-                                                            "IMSI",
-                                                            "MeterType",
-                                                            "MeterSerialNumber",
-                                                            Request_Id.Parse("1234"),
-                                                            DateTime.Now);
-
-                var original  = new BootNotificationResponse(request,
-                                                             RegistrationStatus.Accepted,
-                                                             DateTime.Parse(DateTime.UtcNow.ToIso8601()).ToUniversalTime(),
-                                                             TimeSpan.FromSeconds(120));
-
-                var xml       = BootNotificationResponse.Parse(request, original.ToXML());
-
-                if (!(original.Status      == xml.Status      &&
-                      original.CurrentTime == xml.CurrentTime &&
-                      original.HeartbeatInterval    == xml.HeartbeatInterval))
-                {
-                    Console.WriteLine("BootNotification response XML test failed!");
-                    return;
-                }
-
-                var json      = BootNotificationResponse.Parse(request, original.ToJSON());
-
-                if (!(original.Status      == json.Status      &&
-                      original.CurrentTime == json.CurrentTime &&
-                      original.HeartbeatInterval    == json.HeartbeatInterval))
-                {
-                    Console.WriteLine("BootNotification response JSON test failed!");
-                    return;
-                }
-
-            }
-
-            #endregion
-
-        }
-
-
-
 
         /// <summary>
         /// A runner for running all versions of the OCPP test runners.
@@ -232,9 +123,9 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
 
             var testBackendWebSockets  = testCentralSystem.CreateWebSocketService(
                                              TCPPort:                     IPPort.Parse(9900),
-                                             DisableWebSocketPings:       true,
-                                             SlowNetworkSimulationDelay:  TimeSpan.FromMilliseconds(10),
-                                             AutoStart:                   true
+                                             //DisableWebSocketPings:       true,
+                                             //SlowNetworkSimulationDelay:  TimeSpan.FromMilliseconds(10),
+                                             Autostart:                   true
                                          );
 
             //var TestBackendSOAP        = testCentralSystem.CreateSOAPService(
@@ -245,9 +136,35 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
 
             testCentralSystem.AddBasicAuth("GD001", "1234");
 
-            //MessageTests();
+            (testCentralSystem.CentralSystemServers.First() as WebSocketServer).OnNewWebSocketConnection += async (timestamp, server, connection, eventTrackingId, ct) => {
+                DebugX.Log(String.Concat("HTTP web socket server on ", server.IPSocket, " new connection with ", connection.TryGetCustomData("chargeBoxId") + " (" + connection.RemoteSocket + ")"));
+            };
+
+            (testCentralSystem.CentralSystemServers.First() as WebSocketServer).OnTextMessageRequest     += async (timestamp, server, connection, message, eventTrackingId) => {
+                DebugX.Log(String.Concat("Received a web socket TEXT message: '", message, "'!"));
+            };
+
+            (testCentralSystem.CentralSystemServers.First() as WebSocketServer).OnTextMessageSent        += async (timestamp, server, connection, message, eventTrackingId) => {
+                DebugX.Log(String.Concat("Sent     a web socket TEXT message: '", message, "'!"));
+            };
 
 
+
+
+
+
+
+            (testCentralSystem.CentralSystemServers.First() as WebSocketServer).OnPingMessageReceived += async (timestamp, server, connection, frame, eventTrackingId) => {
+                DebugX.Log(nameof(WebSocketServer) + ": Ping received: '" + frame.Payload.ToUTF8String() + "' (" + connection.TryGetCustomData("chargeBoxId") + ", " + connection.RemoteSocket + ")");
+            };
+
+            (testCentralSystem.CentralSystemServers.First() as WebSocketServer).OnPingMessageSent     += async (timestamp, server, connection, frame, eventTrackingId) => {
+                DebugX.Log(nameof(WebSocketServer) + ": Ping sent:     '" + frame.Payload.ToUTF8String() + "' (" + connection.TryGetCustomData("chargeBoxId") + ", " + connection.RemoteSocket + ")");
+            };
+
+            (testCentralSystem.CentralSystemServers.First() as WebSocketServer).OnPongMessageReceived += async (timestamp, server, connection, frame, eventTrackingId) => {
+                DebugX.Log(nameof(WebSocketServer) + ": Pong received: '" + frame.Payload.ToUTF8String() + "' (" + connection.TryGetCustomData("chargeBoxId") + ", " + connection.RemoteSocket + ")");
+            };
 
 
             var chargingStation1  = new TestChargePoint(
@@ -266,7 +183,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                                         MeterSerialNumber:        "SN-EN0001",
                                         MeterPublicKey:           "0xcafebabe",
 
-                                        DisableSendHeartbeats:    true,
+                                        //DisableSendHeartbeats:    true,
 
                                         //HTTPBasicAuth:            new Tuple<String, String>("OLI_001", "1234"),
                                         //HTTPBasicAuth:            new Tuple<String, String>("GD001", "1234"),
@@ -293,140 +210,42 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                                     );
 
 
-            var response1  =  await chargingStation1.ConnectWebSocket("From:GD001",
-                                                                      "To:OCPPTest01",
-                                                                      //URL.Parse("ws://janus1.graphdefined.com:80/"));
-                                                                      URL.Parse("http://127.0.0.1:9900/" + chargingStation1.ChargeBoxId),
-                                                                      DisableWebSocketPings:       true
-                                                                      //SlowNetworkSimulationDelay:  TimeSpan.FromMilliseconds(10)
-                                                                      );
-                                                                      //URL.Parse("http://oca.charging.cloud:9900/" + chargingStation1.ChargeBoxId));
-                                                                      //URL.Parse("ws://oca.charging.cloud/io/OCPPv1.6j/" + chargingStation1.ChargeBoxId));
-                                                                      //URL.Parse("wss://oca.charging.cloud/io/OCPPv1.6j/" + chargingStation1.ChargeBoxId));
-                                                                      //URL.Parse("ws://35.190.199.146:8080/stationServer/websocket/OLI_001"));
+            //var response1  =  await chargingStation1.ConnectWebSocket("From:GD001",
+            //                                                          "To:OCPPTest01",
+            //                                                          //URL.Parse("ws://janus1.graphdefined.com:80/"));
+            //                                                          URL.Parse("http://127.0.0.1:9900/" + chargingStation1.ChargeBoxId),
+            //                                                          DisableWebSocketPings:       true
+            //                                                          //SlowNetworkSimulationDelay:  TimeSpan.FromMilliseconds(10)
+            //                                                          );
+            //                                                          //URL.Parse("http://oca.charging.cloud:9900/" + chargingStation1.ChargeBoxId));
+            //                                                          //URL.Parse("ws://oca.charging.cloud/io/OCPPv1.6j/" + chargingStation1.ChargeBoxId));
+            //                                                          //URL.Parse("wss://oca.charging.cloud/io/OCPPv1.6j/" + chargingStation1.ChargeBoxId));
+            //                                                          //URL.Parse("ws://35.190.199.146:8080/stationServer/websocket/OLI_001"));
+            //
+            //                                                          //URL.Parse("wss://encharge-broker-ppe1.envisioniot.com/ocpp-broker/ocpp/" + chargingStation1.ChargeBoxId));      // Envisison
+            //                                                          //URL.Parse("wss://testop.amplified.cloud/ocpp16/GDEF"));                                                         // Stackbox GmbH
+            //                                                          //URL.Parse("wss://ocpp.eu.ngrok.io/GD001"));                                                                     // Monta
+            //                                                          //URL.Parse("wss://cpc.demo.dev.charge.ampeco.tech:443/test/GD001"));                                             // AMPECO
+            //                                                          //URL.Parse("ws://ocppj.yaayum.com:8887/CUS002"));                                                                // yaayum
+            //                                                          //URL.Parse("ws://ocpp-dev.eastus.azurecontainer.io:8433/VENTURUS/GD001"));
 
-                                                                      //URL.Parse("wss://encharge-broker-ppe1.envisioniot.com/ocpp-broker/ocpp/" + chargingStation1.ChargeBoxId));      // Envisison
-                                                                      //URL.Parse("wss://testop.amplified.cloud/ocpp16/GDEF"));                                                         // Stackbox GmbH
-                                                                      //URL.Parse("wss://ocpp.eu.ngrok.io/GD001"));                                                                     // Monta
-                                                                      //URL.Parse("wss://cpc.demo.dev.charge.ampeco.tech:443/test/GD001"));                                             // AMPECO
-                                                                      //URL.Parse("ws://ocppj.yaayum.com:8887/CUS002"));                                                                // yaayum
-                                                                      //URL.Parse("ws://ocpp-dev.eastus.azurecontainer.io:8433/VENTURUS/GD001"));
+            //await Task.Delay(250);
 
-            await Task.Delay(250);
-
-            var response1a  = await chargingStation1.SendBootNotification();
-            var response2a  = await chargingStation1.SendHeartbeat();
-            var response3a  = await chargingStation1.Authorize(IdToken.Parse("aabbccdd"));
-            var response3b  = await chargingStation1.Authorize(IdToken.Parse("000000"));
-            var response4a  = await chargingStation1.SendStatusNotification(Connector_Id.Parse(1), ChargePointStatus.Available, ChargePointErrorCodes.NoError, "info 1", DateTime.UtcNow, "GD", "VEC01");
-            var response5a  = await chargingStation1.TransferData("GD", "Message1", "Data1");
-            var response6a  = await chargingStation1.SendDiagnosticsStatusNotification(DiagnosticsStatus.UploadFailed);
-            var response7a  = await chargingStation1.SendFirmwareStatusNotification(FirmwareStatus.Installed);
-
-
-            var ss1         = await testCentralSystem.Reset(chargingStation1.ChargeBoxId, ResetTypes.Hard);
+            //var response01a  = await chargingStation1.SendBootNotification();
+            //var response02a  = await chargingStation1.SendHeartbeat();
+            //var response03a  = await chargingStation1.Authorize(IdToken.Parse("aabbccdd"));
+            //var response03b  = await chargingStation1.Authorize(IdToken.Parse("000000"));
+            //var response04a  = await chargingStation1.SendStatusNotification(Connector_Id.Parse(1), ChargePointStatus.Available, ChargePointErrorCodes.NoError, "info 1", DateTime.UtcNow, "GD", "VEC01");
+            //var response05a  = await chargingStation1.TransferData("GD", "Message1", "Data1");
+            //var response06a  = await chargingStation1.SendDiagnosticsStatusNotification(DiagnosticsStatus.UploadFailed);
+            //var response07a  = await chargingStation1.SendFirmwareStatusNotification(FirmwareStatus.Installed);
 
 
-            //    await Task.Delay(10);
-            //    var firstTimestamp = DateTime.UtcNow;
-            //    var response1o  = await chargingStation1.SendMeterValues (Connector_Id.Parse(1), new MeterValue[] {
-            //                                                                                         new MeterValue(startTimestamp,
-            //                                                                                                        new SampledValue[] {
-            //                                                                                                            new SampledValue("0",
-            //                                                                                                                             ReadingContexts.TransactionBegin,
-            //                                                                                                                             ValueFormats.Raw,
-            //                                                                                                                             Measurands.EnergyActiveImportRegister,
-            //                                                                                                                             null,//Phases.L1,
-            //                                                                                                                             Locations.Outlet,
-            //                                                                                                                             UnitsOfMeasure.kWh),
-            //                                                                                                            new SampledValue("0 - but secure!",
-            //                                                                                                                             ReadingContexts.TransactionBegin,
-            //                                                                                                                             ValueFormats.SignedData,
-            //                                                                                                                             Measurands.CurrentImport,
-            //                                                                                                                             null,//Phases.L1,
-            //                                                                                                                             Locations.Outlet,
-            //                                                                                                                             UnitsOfMeasure.kWh)
-            //                                                                                                        }),
-            //                                                                                         new MeterValue(firstTimestamp,
-            //                                                                                                        new SampledValue[] {
-            //                                                                                                            new SampledValue("20",
-            //                                                                                                                             ReadingContexts.SamplePeriodic,
-            //                                                                                                                             ValueFormats.SignedData,
-            //                                                                                                                             Measurands.EnergyActiveImportRegister,
-            //                                                                                                                             null,//Phases.Unknown,
-            //                                                                                                                             Locations.Outlet,
-            //                                                                                                                             UnitsOfMeasure.kWh)
-            //                                                                                                        })
-            //                                                                                     });
+            //var response21a  = await testCentralSystem.Reset(chargingStation1.ChargeBoxId, ResetTypes.Soft);
+            //var response22a  = await testCentralSystem.Reset(chargingStation1.ChargeBoxId, ResetTypes.Hard);
 
-            //    await Task.Delay(10);
-            //    var stopTimestamp = DateTime.UtcNow;
-            //    var response1p  = await chargingStation1.StopTransaction(response1n.TransactionId,
-            //                                                             DateTime.Now,
-            //                                                             80,
-            //                                                             validToken,
-            //                                                             Reasons.EVDisconnected,
-            //                                                             new MeterValue[] {
-            //                                                                 new MeterValue(startTimestamp,
-            //                                                                                new SampledValue[] {
-            //                                                                                    new SampledValue("0",
-            //                                                                                                     ReadingContexts.TransactionBegin,
-            //                                                                                                     ValueFormats.Raw,
-            //                                                                                                     Measurands.EnergyActiveImportRegister,
-            //                                                                                                     null,//Phases.L1,
-            //                                                                                                     Locations.Outlet,
-            //                                                                                                     UnitsOfMeasure.kWh),
-            //                                                                                    new SampledValue("0 kWh - but secure!",
-            //                                                                                                     ReadingContexts.TransactionBegin,
-            //                                                                                                     ValueFormats.SignedData,
-            //                                                                                                     Measurands.EnergyActiveImportRegister,
-            //                                                                                                     null,//Phases.L1,
-            //                                                                                                     Locations.Outlet,
-            //                                                                                                     UnitsOfMeasure.kWh)
-            //                                                                                }),
-            //                                                                 new MeterValue(firstTimestamp,
-            //                                                                                new SampledValue[] {
-            //                                                                                    new SampledValue("20",
-            //                                                                                                     ReadingContexts.SamplePeriodic,
-            //                                                                                                     ValueFormats.Raw,
-            //                                                                                                     Measurands.EnergyActiveImportRegister,
-            //                                                                                                     null,//Phases.L1,
-            //                                                                                                     Locations.Outlet,
-            //                                                                                                     UnitsOfMeasure.kWh),
-            //                                                                                    new SampledValue("20 kWh - but secure!",
-            //                                                                                                     ReadingContexts.SamplePeriodic,
-            //                                                                                                     ValueFormats.SignedData,
-            //                                                                                                     Measurands.EnergyActiveImportRegister,
-            //                                                                                                     null,//Phases.L1,
-            //                                                                                                     Locations.Outlet,
-            //                                                                                                     UnitsOfMeasure.kWh)
-            //                                                                                }),
-            //                                                                 new MeterValue(stopTimestamp,
-            //                                                                                new SampledValue[] {
-            //                                                                                    new SampledValue("40",
-            //                                                                                                     ReadingContexts.TransactionEnd,
-            //                                                                                                     ValueFormats.Raw,
-            //                                                                                                     Measurands.EnergyActiveImportRegister,
-            //                                                                                                     null,//Phases.L1,
-            //                                                                                                     Locations.Outlet,
-            //                                                                                                     UnitsOfMeasure.kWh),
-            //                                                                                    new SampledValue("40 kWh - but secure!",
-            //                                                                                                     ReadingContexts.TransactionEnd,
-            //                                                                                                     ValueFormats.SignedData,
-            //                                                                                                     Measurands.EnergyActiveImportRegister,
-            //                                                                                                     null,//Phases.L1,
-            //                                                                                                     Locations.Outlet,
-            //                                                                                                     UnitsOfMeasure.kWh)
-            //                                                                                })
-            //                                                             });
+            var xx = "y";
 
-            //    var response1q = await chargingStation1.SendStatusNotification(Connector_Id.Parse(1), ChargePointStatus.Finishing, ChargePointErrorCodes.NoError, "info 3", DateTime.UtcNow, "GD", "VEC03");
-            //    await Task.Delay(10);
-            //    var response1r = await chargingStation1.SendStatusNotification(Connector_Id.Parse(1), ChargePointStatus.Available, ChargePointErrorCodes.NoError, "info 4", DateTime.UtcNow, "GD", "VEC04");
-
-            //}
-
-            var xy = 23;
 
             #region SOAP
 
@@ -593,18 +412,21 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                         if (command == "trigger"                && commandArray.Length == 3 && commandArray[2].ToLower() == "BootNotification".ToLower())
                         {
                             var response = await testCentralSystem.TriggerMessage(ChargeBox_Id.Parse(commandArray[1]), MessageTriggers.BootNotification);
+                            Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
                             Console.WriteLine(response.ToJSON());
                         }
 
                         if (command == "trigger"                && commandArray.Length == 3 && commandArray[2].ToLower() == "StatusNotification".ToLower())
                         {
                             var response = await testCentralSystem.TriggerMessage(ChargeBox_Id.Parse(commandArray[1]), MessageTriggers.StatusNotification);
+                            Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
                             Console.WriteLine(response.ToJSON());
                         }
 
                         if (command == "trigger"                && commandArray.Length == 4 && commandArray[3].ToLower() == "MeterValues".ToLower())
                         {
                             var response = await testCentralSystem.TriggerMessage(ChargeBox_Id.Parse(commandArray[1]), MessageTriggers.MeterValues, Connector_Id.Parse(commandArray[2]));
+                            Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
                             Console.WriteLine(response.ToJSON());
                         }
 
@@ -612,66 +434,77 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                         if (command == "hardreset"              && commandArray.Length == 2)
                         {
                             var response = await testCentralSystem.Reset(ChargeBox_Id.Parse(commandArray[1]), ResetTypes.Hard);
+                            Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
                             Console.WriteLine(response.ToJSON());
                         }
 
                         if (command == "softreset"              && commandArray.Length == 2)
                         {
                             var response = await testCentralSystem.Reset(ChargeBox_Id.Parse(commandArray[1]), ResetTypes.Soft);
+                            Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
                             Console.WriteLine(response.ToJSON());
                         }
 
                         if (command == "setinoperative"         && commandArray.Length == 3)
                         {
                             var response = await testCentralSystem.ChangeAvailability(ChargeBox_Id.Parse(commandArray[1]), Connector_Id.Parse(commandArray[2]), Availabilities.Inoperative);
+                            Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
                             Console.WriteLine(response.ToJSON());
                         }
 
                         if (command == "setoperative"           && commandArray.Length == 3)
                         {
                             var response = await testCentralSystem.ChangeAvailability(ChargeBox_Id.Parse(commandArray[1]), Connector_Id.Parse(commandArray[2]), Availabilities.Operative);
+                            Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
                             Console.WriteLine(response.ToJSON());
                         }
 
                         if (command == "getdiag"                && commandArray.Length == 3)
                         {
                             var response = await testCentralSystem.GetDiagnostics(ChargeBox_Id.Parse(commandArray[1]), commandArray[2]); // http://95.89.178.27:9901/diagnostics/
+                            Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
                             Console.WriteLine(response.ToJSON());
                         }
 
                         if (command == "getconf"                && commandArray.Length == 2)
                         {
                             var response = await testCentralSystem.GetConfiguration(ChargeBox_Id.Parse(commandArray[1]));
+                            Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
                             Console.WriteLine(response.ToJSON());
                         }
 
                         if (command == "getconf"                && commandArray.Length > 2)
                         {
                             var response = await testCentralSystem.GetConfiguration(ChargeBox_Id.Parse(commandArray[1]), commandArray.Skip(2));
+                            Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
                             Console.WriteLine(response.ToJSON());
                         }
 
                         if (command == "changeconfiguration"    && commandArray.Length == 4)
                         {
                             var response = await testCentralSystem.ChangeConfiguration(ChargeBox_Id.Parse(commandArray[1]), commandArray[2], commandArray[3]);
+                            Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
                             Console.WriteLine(response.ToJSON());
                         }
 
                         if (command == "transferdata"           && commandArray.Length == 5)
                         {
                             var response = await testCentralSystem.DataTransfer(ChargeBox_Id.Parse(commandArray[1]), commandArray[2], commandArray[3], commandArray[4]);
+                            Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
                             Console.WriteLine(response.ToJSON());
                         }
 
                         if (command == "reserve"                && commandArray.Length == 5)
                         {
                             var response = await testCentralSystem.ReserveNow(ChargeBox_Id.Parse(commandArray[1]), Connector_Id.Parse(commandArray[2]), Reservation_Id.Parse(commandArray[3]), DateTime.UtcNow + TimeSpan.FromMinutes(15), IdToken.Parse(commandArray[4]));
+                            Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
                             Console.WriteLine(response.ToJSON());
                         }
 
                         if (command == "cancelrreservation"     && commandArray.Length == 3)
                         {
                             var response = await testCentralSystem.CancelReservation(ChargeBox_Id.Parse(commandArray[1]), Reservation_Id.Parse(commandArray[2]));
+                            Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
                             Console.WriteLine(response.ToJSON());
                         }
 
@@ -679,24 +512,28 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                         if (command == "remotestart"            && commandArray.Length == 4)
                         {
                             var response = await testCentralSystem.RemoteStartTransaction(ChargeBox_Id.Parse(commandArray[1]), IdToken.Parse(commandArray[2]), Connector_Id.Parse(commandArray[3]));
+                            Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
                             Console.WriteLine(response.ToJSON());
                         }
 
                         if (command == "remotestop"             && commandArray.Length == 3)
                         {
                             var response = await testCentralSystem.RemoteStopTransaction(ChargeBox_Id.Parse(commandArray[1]), Transaction_Id.Parse(commandArray[2]));
+                            Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
                             Console.WriteLine(response.ToJSON());
                         }
 
                         if (command == "unlock"                 && commandArray.Length == 3)
                         {
                             var response = await testCentralSystem.UnlockConnector(ChargeBox_Id.Parse(commandArray[1]), Connector_Id.Parse(commandArray[2]));
+                            Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
                             Console.WriteLine(response.ToJSON());
                         }
 
                         if (command == "getlocallistversion"    && commandArray.Length == 2)
                         {
                             var response = await testCentralSystem.GetLocalListVersion(ChargeBox_Id.Parse(commandArray[1]));
+                            Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
                             Console.WriteLine(response.ToJSON());
                         }
 
@@ -710,12 +547,14 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                                                                                      new AuthorizationData(IdToken.Parse("aabbcc22"), new IdTagInfo(AuthorizationStatus.Accepted)),
                                                                                      new AuthorizationData(IdToken.Parse("aabbcc33"), new IdTagInfo(AuthorizationStatus.Accepted))
                                                                                  });
+                            Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
                             Console.WriteLine(response.ToJSON());
                         }
 
                         if (command == "clearcache"             && commandArray.Length == 2)
                         {
                             var response = await testCentralSystem.ClearCache(ChargeBox_Id.Parse(commandArray[1]));
+                            Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
                             Console.WriteLine(response.ToJSON());
                         }
 
