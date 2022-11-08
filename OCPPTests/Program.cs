@@ -134,21 +134,43 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
             //                                 AutoStart:  true
             //                             );
 
-            testCentralSystem.AddBasicAuth("GD001", "1234");
+            testCentralSystem.AddHTTPBasicAuth(ChargeBox_Id.Parse("GD001"), "1234");
 
             (testCentralSystem.CentralSystemServers.First() as WebSocketServer).OnNewWebSocketConnection += async (timestamp, server, connection, eventTrackingId, ct) => {
                 DebugX.Log(String.Concat("HTTP web socket server on ", server.IPSocket, " new connection with ", connection.TryGetCustomData("chargeBoxId") + " (" + connection.RemoteSocket + ")"));
+                lock (testCentralSystem)
+                {
+                    File.AppendAllText(Path.Combine(AppContext.BaseDirectory, "TextMessages.log"),
+                                       String.Concat(timestamp.ToIso8601(), "\tNEW\t", connection.TryGetCustomData("chargeBoxId"), "\t", connection.RemoteSocket, Environment.NewLine));
+                }
             };
 
             (testCentralSystem.CentralSystemServers.First() as WebSocketServer).OnTextMessageRequest     += async (timestamp, server, connection, message, eventTrackingId) => {
                 DebugX.Log(String.Concat("Received a web socket TEXT message: '", message, "'!"));
+                lock (testCentralSystem)
+                {
+                    File.AppendAllText(Path.Combine(AppContext.BaseDirectory, "TextMessages.log"),
+                                       String.Concat(timestamp.ToIso8601(), "\tIN\t", connection.TryGetCustomData("chargeBoxId"), "\t", connection.RemoteSocket, "\t", message, Environment.NewLine));
+                }
             };
 
             (testCentralSystem.CentralSystemServers.First() as WebSocketServer).OnTextMessageSent        += async (timestamp, server, connection, message, eventTrackingId) => {
                 DebugX.Log(String.Concat("Sent     a web socket TEXT message: '", message, "'!"));
+                lock (testCentralSystem)
+                {
+                    File.AppendAllText(Path.Combine(AppContext.BaseDirectory, "TextMessages.log"),
+                                       String.Concat(timestamp.ToIso8601(), "\tOUT\t", connection.TryGetCustomData("chargeBoxId"), "\t", connection.RemoteSocket, "\t", message, Environment.NewLine));
+                }
             };
 
-
+            (testCentralSystem.CentralSystemServers.First() as WebSocketServer).OnCloseMessageReceived += async (timestamp, server, connection, eventTrackingId, ct) => {
+                DebugX.Log(String.Concat("HTTP web socket server on ", server.IPSocket, " closed connection with ", connection.TryGetCustomData("chargeBoxId") + " (" + connection.RemoteSocket + ")"));
+                lock (testCentralSystem)
+                {
+                    File.AppendAllText(Path.Combine(AppContext.BaseDirectory, "TextMessages.log"),
+                                       String.Concat(timestamp.ToIso8601(), "\tCLOSE\t", connection.TryGetCustomData("chargeBoxId"), "\t", connection.RemoteSocket, Environment.NewLine));
+                }
+            };
 
 
 
@@ -156,14 +178,29 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
 
             (testCentralSystem.CentralSystemServers.First() as WebSocketServer).OnPingMessageReceived += async (timestamp, server, connection, frame, eventTrackingId) => {
                 DebugX.Log(nameof(WebSocketServer) + ": Ping received: '" + frame.Payload.ToUTF8String() + "' (" + connection.TryGetCustomData("chargeBoxId") + ", " + connection.RemoteSocket + ")");
+                lock (testCentralSystem)
+                {
+                    File.AppendAllText(Path.Combine(AppContext.BaseDirectory, "TextMessages.log"),
+                                       String.Concat(timestamp.ToIso8601(), "\tPING IN\t", connection.TryGetCustomData("chargeBoxId"), "\t", connection.RemoteSocket, Environment.NewLine));
+                }
             };
 
             (testCentralSystem.CentralSystemServers.First() as WebSocketServer).OnPingMessageSent     += async (timestamp, server, connection, frame, eventTrackingId) => {
                 DebugX.Log(nameof(WebSocketServer) + ": Ping sent:     '" + frame.Payload.ToUTF8String() + "' (" + connection.TryGetCustomData("chargeBoxId") + ", " + connection.RemoteSocket + ")");
+                lock (testCentralSystem)
+                {
+                    File.AppendAllText(Path.Combine(AppContext.BaseDirectory, "TextMessages.log"),
+                                       String.Concat(timestamp.ToIso8601(), "\tPING OUT\t", connection.TryGetCustomData("chargeBoxId"), "\t", connection.RemoteSocket, Environment.NewLine));
+                }
             };
 
             (testCentralSystem.CentralSystemServers.First() as WebSocketServer).OnPongMessageReceived += async (timestamp, server, connection, frame, eventTrackingId) => {
                 DebugX.Log(nameof(WebSocketServer) + ": Pong received: '" + frame.Payload.ToUTF8String() + "' (" + connection.TryGetCustomData("chargeBoxId") + ", " + connection.RemoteSocket + ")");
+                lock (testCentralSystem)
+                {
+                    File.AppendAllText(Path.Combine(AppContext.BaseDirectory, "TextMessages.log"),
+                                       String.Concat(timestamp.ToIso8601(), "\tPONG IN\t", connection.TryGetCustomData("chargeBoxId"), "\t", connection.RemoteSocket, Environment.NewLine));
+                }
             };
 
 
@@ -409,169 +446,506 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                         if (command == "q")
                             quit = true;
 
-                        if (command == "trigger"                && commandArray.Length == 3 && commandArray[2].ToLower() == "BootNotification".ToLower())
-                        {
-                            var response = await testCentralSystem.TriggerMessage(ChargeBox_Id.Parse(commandArray[1]), MessageTriggers.BootNotification);
-                            Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
-                            Console.WriteLine(response.ToJSON());
-                        }
 
-                        if (command == "trigger"                && commandArray.Length == 3 && commandArray[2].ToLower() == "StatusNotification".ToLower())
-                        {
-                            var response = await testCentralSystem.TriggerMessage(ChargeBox_Id.Parse(commandArray[1]), MessageTriggers.StatusNotification);
-                            Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
-                            Console.WriteLine(response.ToJSON());
-                        }
-
-                        if (command == "trigger"                && commandArray.Length == 4 && commandArray[3].ToLower() == "MeterValues".ToLower())
-                        {
-                            var response = await testCentralSystem.TriggerMessage(ChargeBox_Id.Parse(commandArray[1]), MessageTriggers.MeterValues, Connector_Id.Parse(commandArray[2]));
-                            Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
-                            Console.WriteLine(response.ToJSON());
-                        }
-
-
+                        // Reset
+                        //   hardreset GD002
                         if (command == "hardreset"              && commandArray.Length == 2)
                         {
-                            var response = await testCentralSystem.Reset(ChargeBox_Id.Parse(commandArray[1]), ResetTypes.Hard);
+
+                            var response = await testCentralSystem.Reset(ChargeBoxId:  ChargeBox_Id.Parse(commandArray[1]),
+                                                                         ResetType:    ResetTypes.Hard);
+
                             Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
                             Console.WriteLine(response.ToJSON());
+
                         }
 
+                        //   softreset GD002
                         if (command == "softreset"              && commandArray.Length == 2)
                         {
-                            var response = await testCentralSystem.Reset(ChargeBox_Id.Parse(commandArray[1]), ResetTypes.Soft);
+
+                            var response = await testCentralSystem.Reset(ChargeBoxId:  ChargeBox_Id.Parse(commandArray[1]),
+                                                                         ResetType:    ResetTypes.Soft);
+
                             Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
                             Console.WriteLine(response.ToJSON());
+
                         }
 
-                        if (command == "setinoperative"         && commandArray.Length == 3)
+
+                        // Change Availability
+                        //   set inoperative GD002 1
+                        if (command == "set"                    && commandArray.Length == 4 && commandArray[1] == "inoperative")
                         {
-                            var response = await testCentralSystem.ChangeAvailability(ChargeBox_Id.Parse(commandArray[1]), Connector_Id.Parse(commandArray[2]), Availabilities.Inoperative);
+
+                            var response = await testCentralSystem.ChangeAvailability(ChargeBoxId:   ChargeBox_Id.Parse(commandArray[2]),
+                                                                                      ConnectorId:   Connector_Id.Parse(commandArray[3]),
+                                                                                      Availability:  Availabilities.Inoperative);
+
                             Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
                             Console.WriteLine(response.ToJSON());
+
                         }
 
-                        if (command == "setoperative"           && commandArray.Length == 3)
+                        //   set operative GD002 1
+                        if (command == "set"                    && commandArray.Length == 4 && commandArray[1] == "operative")
                         {
-                            var response = await testCentralSystem.ChangeAvailability(ChargeBox_Id.Parse(commandArray[1]), Connector_Id.Parse(commandArray[2]), Availabilities.Operative);
+
+                            var response = await testCentralSystem.ChangeAvailability(ChargeBoxId:   ChargeBox_Id.Parse(commandArray[2]),
+                                                                                      ConnectorId:   Connector_Id.Parse(commandArray[3]),
+                                                                                      Availability:  Availabilities.Operative);
+
                             Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
                             Console.WriteLine(response.ToJSON());
+
                         }
 
-                        if (command == "getdiag"                && commandArray.Length == 3)
-                        {
-                            var response = await testCentralSystem.GetDiagnostics(ChargeBox_Id.Parse(commandArray[1]), commandArray[2]); // http://95.89.178.27:9901/diagnostics/
-                            Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
-                            Console.WriteLine(response.ToJSON());
-                        }
 
+                        // Get Configuration
+                        //   getconf GD002
                         if (command == "getconf"                && commandArray.Length == 2)
                         {
-                            var response = await testCentralSystem.GetConfiguration(ChargeBox_Id.Parse(commandArray[1]));
+
+                            var response = await testCentralSystem.GetConfiguration(ChargeBoxId:  ChargeBox_Id.Parse(commandArray[1]));
+
                             Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
                             Console.WriteLine(response.ToJSON());
+
                         }
 
+                        //   getconf GD002 key
+                        //   getconf GD002 key1 key2
                         if (command == "getconf"                && commandArray.Length > 2)
                         {
-                            var response = await testCentralSystem.GetConfiguration(ChargeBox_Id.Parse(commandArray[1]), commandArray.Skip(2));
+
+                            var response = await testCentralSystem.GetConfiguration(ChargeBoxId:  ChargeBox_Id.Parse(commandArray[1]),
+                                                                                    Keys:         commandArray.Skip(2));
+
                             Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
                             Console.WriteLine(response.ToJSON());
+
                         }
 
-                        if (command == "changeconfiguration"    && commandArray.Length == 4)
+
+                        // Change Configuration
+                        //   setconf GD002 key value
+                        if (command == "setconf"                && commandArray.Length == 4)
                         {
-                            var response = await testCentralSystem.ChangeConfiguration(ChargeBox_Id.Parse(commandArray[1]), commandArray[2], commandArray[3]);
+
+                            var response = await testCentralSystem.ChangeConfiguration(ChargeBoxId:  ChargeBox_Id.Parse(commandArray[1]),
+                                                                                       Key:          commandArray[2],
+                                                                                       Value:        commandArray[3]);
+
                             Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
                             Console.WriteLine(response.ToJSON());
+
                         }
 
+
+                        // Data Transfer
+                        //   transferdata GD002 graphdefined
+                        if (command == "transferdata"           && commandArray.Length == 3)
+                        {
+
+                            var response = await testCentralSystem.DataTransfer(ChargeBoxId:  ChargeBox_Id.Parse(commandArray[1]),
+                                                                                VendorId:     commandArray[2]);
+
+                            Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
+                            Console.WriteLine(response.ToJSON());
+
+                        }
+
+                        //   transferdata GD002 graphdefined message
+                        if (command == "transferdata"           && commandArray.Length == 4)
+                        {
+
+                            var response = await testCentralSystem.DataTransfer(ChargeBoxId:  ChargeBox_Id.Parse(commandArray[1]),
+                                                                                VendorId:     commandArray[2],
+                                                                                MessageId:    commandArray[3]);
+
+                            Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
+                            Console.WriteLine(response.ToJSON());
+
+                        }
+
+                        //   transferdata GD002 graphdefined message data
                         if (command == "transferdata"           && commandArray.Length == 5)
                         {
-                            var response = await testCentralSystem.DataTransfer(ChargeBox_Id.Parse(commandArray[1]), commandArray[2], commandArray[3], commandArray[4]);
+
+                            var response = await testCentralSystem.DataTransfer(ChargeBoxId:  ChargeBox_Id.Parse(commandArray[1]),
+                                                                                VendorId:     commandArray[2],
+                                                                                MessageId:    commandArray[3],
+                                                                                Data:         commandArray[4]);
+
                             Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
                             Console.WriteLine(response.ToJSON());
+
                         }
 
+
+                        // Get Diagnostics
+                        //   getdiag GD002 http://95.89.178.27:9901/diagnostics/
+                        if (command == "getdiag"                && commandArray.Length == 3)
+                        {
+
+                            var response = await testCentralSystem.GetDiagnostics(ChargeBoxId:    ChargeBox_Id.Parse(commandArray[1]),
+                                                                                  Location:       commandArray[2],
+                                                                                  StartTime:      null,
+                                                                                  StopTime:       null,
+                                                                                  Retries:        null,
+                                                                                  RetryInterval:  null);
+
+                            Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
+                            Console.WriteLine(response.ToJSON());
+
+                        }
+
+                        //   getdiag GD002 http://95.89.178.27:9901/diagnostics/ 2022-11-08T10:00:00Z 2022-11-12T18:00:00Z 3 30
+                        if (command == "getdiag"                && commandArray.Length == 7)
+                        {
+
+                            var response = await testCentralSystem.GetDiagnostics(ChargeBoxId:    ChargeBox_Id.Parse(commandArray[1]),
+                                                                                  Location:       commandArray[2],
+                                                                                  StartTime:      DateTime.Parse(commandArray[3]).ToUniversalTime(),
+                                                                                  StopTime:       DateTime.Parse(commandArray[4]).ToUniversalTime(),
+                                                                                  Retries:        Byte.Parse(commandArray[5]),
+                                                                                  RetryInterval:  TimeSpan.FromSeconds(Byte.Parse(commandArray[6])));
+
+                            Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
+                            Console.WriteLine(response.ToJSON());
+
+                        }
+
+
+                        // Trigger Message
+                        //   trigger GD002 BootNotification
+                        if (command == "trigger"                && commandArray.Length == 3 && commandArray[2].ToLower() == "BootNotification".ToLower())
+                        {
+
+                            var response = await testCentralSystem.TriggerMessage(ChargeBoxId:       ChargeBox_Id.Parse(commandArray[1]),
+                                                                                  RequestedMessage:  MessageTriggers.BootNotification);
+
+                            Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
+                            Console.WriteLine(response.ToJSON());
+
+                        }
+
+                        //   trigger GD002 DiagnosticsStatusNotification
+                        if (command == "trigger"                && commandArray.Length == 3 && commandArray[2].ToLower() == "DiagnosticsStatusNotification".ToLower())
+                        {
+
+                            var response = await testCentralSystem.TriggerMessage(ChargeBoxId:       ChargeBox_Id.Parse(commandArray[1]),
+                                                                                  RequestedMessage:  MessageTriggers.DiagnosticsStatusNotification);
+
+                            Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
+                            Console.WriteLine(response.ToJSON());
+
+                        }
+
+                        //   trigger GD002 FirmwareStatusNotification
+                        if (command == "trigger"                && commandArray.Length == 3 && commandArray[2].ToLower() == "FirmwareStatusNotification".ToLower())
+                        {
+
+                            var response = await testCentralSystem.TriggerMessage(ChargeBoxId:       ChargeBox_Id.Parse(commandArray[1]),
+                                                                                  RequestedMessage:  MessageTriggers.FirmwareStatusNotification);
+
+                            Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
+                            Console.WriteLine(response.ToJSON());
+
+                        }
+
+                        //   trigger GD002 Heartbeat
+                        if (command == "trigger"                && commandArray.Length == 3 && commandArray[2].ToLower() == "Heartbeat".ToLower())
+                        {
+
+                            var response = await testCentralSystem.TriggerMessage(ChargeBoxId:       ChargeBox_Id.Parse(commandArray[1]),
+                                                                                  RequestedMessage:  MessageTriggers.Heartbeat);
+
+                            Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
+                            Console.WriteLine(response.ToJSON());
+
+                        }
+
+                        //   trigger GD002 MeterValues 1
+                        if (command == "trigger"                && commandArray.Length == 4 && commandArray[3].ToLower() == "MeterValues".ToLower())
+                        {
+
+                            var response = await testCentralSystem.TriggerMessage(ChargeBoxId:       ChargeBox_Id.Parse(commandArray[1]),
+                                                                                  RequestedMessage:  MessageTriggers.MeterValues,
+                                                                                  ConnectorId:       Connector_Id.Parse(commandArray[2]));
+
+                            Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
+                            Console.WriteLine(response.ToJSON());
+
+                        }
+
+                        //   trigger GD002 StatusNotification 1
+                        if (command == "trigger"                && commandArray.Length == 3 && commandArray[2].ToLower() == "StatusNotification".ToLower())
+                        {
+
+                            var response = await testCentralSystem.TriggerMessage(ChargeBoxId:       ChargeBox_Id.Parse(commandArray[1]),
+                                                                                  RequestedMessage:  MessageTriggers.StatusNotification,
+                                                                                  ConnectorId:       Connector_Id.Parse(commandArray[2]));
+
+                            Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
+                            Console.WriteLine(response.ToJSON());
+
+                        }
+
+
+                        // Update Firmware
+                        //   updatefw GD002 http://95.89.178.27:9901/firmware.bin
+                        if (command == "updatefw"               && commandArray.Length == 3)
+                        {
+
+                            var response = await testCentralSystem.UpdateFirmware(ChargeBoxId:   ChargeBox_Id.Parse(commandArray[1]),
+                                                                                  Location:      commandArray[2],
+                                                                                  RetrieveDate:  DateTime.UtcNow + TimeSpan.FromHours(3));
+
+                            Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
+                            Console.WriteLine(response.ToJSON());
+
+                        }
+
+
+
+                        // Reserve Now
+                        //   reserve GD002 1 1234 aabbccdd
                         if (command == "reserve"                && commandArray.Length == 5)
                         {
-                            var response = await testCentralSystem.ReserveNow(ChargeBox_Id.Parse(commandArray[1]), Connector_Id.Parse(commandArray[2]), Reservation_Id.Parse(commandArray[3]), DateTime.UtcNow + TimeSpan.FromMinutes(15), IdToken.Parse(commandArray[4]));
+
+                            var response = await testCentralSystem.ReserveNow(ChargeBoxId:    ChargeBox_Id.  Parse(commandArray[1]),
+                                                                              ConnectorId:    Connector_Id.  Parse(commandArray[2]),
+                                                                              ReservationId:  Reservation_Id.Parse(commandArray[3]),
+                                                                              ExpiryDate:     DateTime.UtcNow + TimeSpan.FromMinutes(15),
+                                                                              IdTag:          IdToken.       Parse(commandArray[4]));
+
                             Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
                             Console.WriteLine(response.ToJSON());
+
                         }
 
-                        if (command == "cancelrreservation"     && commandArray.Length == 3)
+                        // Cancel Reservation
+                        //   cancelreservation GD002 1234
+                        if (command == "cancelreservation"      && commandArray.Length == 3)
                         {
-                            var response = await testCentralSystem.CancelReservation(ChargeBox_Id.Parse(commandArray[1]), Reservation_Id.Parse(commandArray[2]));
+
+                            var response = await testCentralSystem.CancelReservation(ChargeBoxId:    ChargeBox_Id.  Parse(commandArray[1]),
+                                                                                     ReservationId:  Reservation_Id.Parse(commandArray[2]));
+
                             Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
                             Console.WriteLine(response.ToJSON());
+
                         }
 
 
+                        // Remote Start Transaction
+                        //   remotestart GD002 aabbccdd 1
                         if (command == "remotestart"            && commandArray.Length == 4)
                         {
-                            var response = await testCentralSystem.RemoteStartTransaction(ChargeBox_Id.Parse(commandArray[1]), IdToken.Parse(commandArray[2]), Connector_Id.Parse(commandArray[3]));
+
+                            var response = await testCentralSystem.RemoteStartTransaction(ChargeBoxId:  ChargeBox_Id.Parse(commandArray[1]),
+                                                                                          IdTag:        IdToken.     Parse(commandArray[2]),
+                                                                                          ConnectorId:  Connector_Id.Parse(commandArray[3]));;
+
                             Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
                             Console.WriteLine(response.ToJSON());
+
                         }
 
+
+                        // Remote Stop Transaction
+                        //   remotestop GD002 58378535
                         if (command == "remotestop"             && commandArray.Length == 3)
                         {
-                            var response = await testCentralSystem.RemoteStopTransaction(ChargeBox_Id.Parse(commandArray[1]), Transaction_Id.Parse(commandArray[2]));
+
+                            var response = await testCentralSystem.RemoteStopTransaction(ChargeBoxId:    ChargeBox_Id.  Parse(commandArray[1]),
+                                                                                         TransactionId:  Transaction_Id.Parse(commandArray[2]));
+
                             Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
                             Console.WriteLine(response.ToJSON());
+
                         }
 
+
+                        // SetChargingProfile
+                        //   setprofile1 GD002 1
+                        if (command == "setprofile1"            && commandArray.Length == 3)
+                        {
+
+                            var response = await testCentralSystem.SetChargingProfile(ChargeBoxId:      ChargeBox_Id.Parse(commandArray[1]),
+                                                                                      ConnectorId:      Connector_Id.Parse(commandArray[2]),
+                                                                                      ChargingProfile:  new ChargingProfile(
+                                                                                                            ChargingProfile_Id.Parse("100"),
+                                                                                                            0,
+                                                                                                            ChargingProfilePurposes.TxDefaultProfile,
+                                                                                                            ChargingProfileKinds.Recurring,
+                                                                                                            new ChargingSchedule(
+                                                                                                                ChargingRateUnit:         ChargingRateUnits.Watts,
+                                                                                                                ChargingSchedulePeriods:  new ChargingSchedulePeriod[] {
+                                                                                                                                              new ChargingSchedulePeriod(
+                                                                                                                                                  StartPeriod:   0,       // == 00:00 Uhr
+                                                                                                                                                  Limit:         11000,
+                                                                                                                                                  NumberPhases:  3
+                                                                                                                                              ),
+                                                                                                                                              new ChargingSchedulePeriod(
+                                                                                                                                                  StartPeriod:   28800,   // == 08:00 Uhr
+                                                                                                                                                  Limit:         6000,
+                                                                                                                                                  NumberPhases:  3
+                                                                                                                                              ),
+                                                                                                                                              new ChargingSchedulePeriod(
+                                                                                                                                                  StartPeriod:   72000,   // == 20:00 Uhr
+                                                                                                                                                  Limit:         11000,
+                                                                                                                                                  NumberPhases:  3
+                                                                                                                                              )
+                                                                                                                                          },
+                                                                                                                Duration:                 TimeSpan.FromHours(24),
+                                                                                                                StartSchedule:            DateTime.Parse("2022-11-01T00:00:00Z").ToUniversalTime()
+
+                                                                                                            ),
+                                                                                                            Transaction_Id.TryParse("5678"),
+                                                                                                            RecurrencyKinds.Daily,
+                                                                                                            DateTime.Parse("2022-11-01T00:00:00Z").ToUniversalTime(),
+                                                                                                            DateTime.Parse("2022-12-01T00:00:00Z").ToUniversalTime()
+                                                                                                        ));
+
+                            Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
+                            Console.WriteLine(response.ToJSON());
+
+                        }
+
+                        //   setprofile2 GD002 1
+                        if (command == "setprofile2"            && commandArray.Length == 3)
+                        {
+
+                            var response = await testCentralSystem.SetChargingProfile(ChargeBoxId:      ChargeBox_Id.Parse(commandArray[1]),
+                                                                                      ConnectorId:      Connector_Id.Parse(commandArray[2]),
+                                                                                      ChargingProfile:  new ChargingProfile(
+                                                                                                            ChargingProfile_Id.Parse("100"),
+                                                                                                            0,
+                                                                                                            ChargingProfilePurposes.TxDefaultProfile,
+                                                                                                            ChargingProfileKinds.Recurring,
+                                                                                                            new ChargingSchedule(
+                                                                                                                ChargingRateUnit:         ChargingRateUnits.Watts,
+                                                                                                                ChargingSchedulePeriods:  new ChargingSchedulePeriod[] {
+                                                                                                                                              new ChargingSchedulePeriod(
+                                                                                                                                                  StartPeriod:   0,       // == 00:00 Uhr
+                                                                                                                                                  Limit:         11000,
+                                                                                                                                                  NumberPhases:  3
+                                                                                                                                              ),
+                                                                                                                                              new ChargingSchedulePeriod(
+                                                                                                                                                  StartPeriod:   21600,   // == 06:00 Uhr
+                                                                                                                                                  Limit:         10000,
+                                                                                                                                                  NumberPhases:  3
+                                                                                                                                              ),
+                                                                                                                                              new ChargingSchedulePeriod(
+                                                                                                                                                  StartPeriod:   75600,   // == 21:00 Uhr
+                                                                                                                                                  Limit:         11000,
+                                                                                                                                                  NumberPhases:  3
+                                                                                                                                              )
+                                                                                                                                          },
+                                                                                                                Duration:                 TimeSpan.FromHours(24),
+                                                                                                                StartSchedule:            DateTime.Parse("2022-11-01T00:00:00Z").ToUniversalTime()
+
+                                                                                                            ),
+                                                                                                            Transaction_Id.TryParse("5678"),
+                                                                                                            RecurrencyKinds.Daily,
+                                                                                                            DateTime.Parse("2022-11-01T00:00:00Z").ToUniversalTime(),
+                                                                                                            DateTime.Parse("2022-12-01T00:00:00Z").ToUniversalTime()
+                                                                                                        ));
+
+                            Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
+                            Console.WriteLine(response.ToJSON());
+
+                        }
+
+
+                        // ClearChargingProfile
+                        //   clearprofile GD002 1 100
+                        if (command == "clearprofile"           && commandArray.Length >= 2)
+                        {
+
+                            var response = await testCentralSystem.ClearChargingProfile(ChargeBoxId:        ChargeBox_Id.Parse(commandArray[1]),
+                                                                                        ChargingProfileId:  commandArray.Length >= 4 ? ChargingProfile_Id.Parse(commandArray[3]) : null,
+                                                                                        ConnectorId:        commandArray.Length >= 3 ? Connector_Id.      Parse(commandArray[2]) : null);
+
+                            Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
+                            Console.WriteLine(response.ToJSON());
+
+                        }
+
+
+                        // GetCompositeSchedule
+                        //   clearprofile GD002 1 3600
+                        if (command == "getschedule"            && commandArray.Length == 4)
+                        {
+
+                            var response = await testCentralSystem.GetCompositeSchedule(ChargeBoxId:  ChargeBox_Id.               Parse(commandArray[1]),
+                                                                                        ConnectorId:  Connector_Id.               Parse(commandArray[2]),
+                                                                                        Duration:     TimeSpan.FromSeconds(UInt32.Parse(commandArray[3])));
+
+                            Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
+                            Console.WriteLine(response.ToJSON());
+
+                        }
+
+
+                        // Unlock Connector
+                        //   unlock GD002 1
                         if (command == "unlock"                 && commandArray.Length == 3)
                         {
-                            var response = await testCentralSystem.UnlockConnector(ChargeBox_Id.Parse(commandArray[1]), Connector_Id.Parse(commandArray[2]));
+
+                            var response = await testCentralSystem.UnlockConnector(ChargeBoxId:  ChargeBox_Id.Parse(commandArray[1]),
+                                                                                   ConnectorId:  Connector_Id.Parse(commandArray[2]));
+
                             Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
                             Console.WriteLine(response.ToJSON());
+
                         }
 
+
+
+                        // GetLocalListVersion
+                        //   getlocallistversion GD002
                         if (command == "getlocallistversion"    && commandArray.Length == 2)
                         {
+
                             var response = await testCentralSystem.GetLocalListVersion(ChargeBox_Id.Parse(commandArray[1]));
+
                             Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
                             Console.WriteLine(response.ToJSON());
+
                         }
 
+                        // SendLocalList
+                        //   sendlocallist GD002
                         if (command == "sendlocallist"          && commandArray.Length == 2)
                         {
+
                             var response = await testCentralSystem.SendLocalList(ChargeBox_Id.Parse(commandArray[1]),
                                                                                  0,
                                                                                  UpdateTypes.Full,
                                                                                  new AuthorizationData[] {
                                                                                      new AuthorizationData(IdToken.Parse("aabbcc11"), new IdTagInfo(AuthorizationStatus.Accepted)),
                                                                                      new AuthorizationData(IdToken.Parse("aabbcc22"), new IdTagInfo(AuthorizationStatus.Accepted)),
-                                                                                     new AuthorizationData(IdToken.Parse("aabbcc33"), new IdTagInfo(AuthorizationStatus.Accepted))
+                                                                                     new AuthorizationData(IdToken.Parse("aabbcc33"), new IdTagInfo(AuthorizationStatus.Accepted)),
+                                                                                     new AuthorizationData(IdToken.Parse("aabbcc44"), new IdTagInfo(AuthorizationStatus.Blocked))
                                                                                  });
+
                             Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
                             Console.WriteLine(response.ToJSON());
+
                         }
 
+                        // ClearCache
+                        //   clearcache GD002
                         if (command == "clearcache"             && commandArray.Length == 2)
                         {
+
                             var response = await testCentralSystem.ClearCache(ChargeBox_Id.Parse(commandArray[1]));
+
                             Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
                             Console.WriteLine(response.ToJSON());
-                        }
-
-
-                        if (command == "s")
-                        {
-
-                            //var bb = WSServer.RemoteStartTransaction(ChargeBox_Id.Parse("CP3211"),
-                            //                                         IdToken.     Parse("AABBCCDD"),
-                            //                                         Connector_Id.Parse(1)).Result;
-
-                            //Console.WriteLine(bb);
-
-                            //var aa = WSServer.Send("CP3211",
-                            //                       "TESTACTION",
-                            //                       new Newtonsoft.Json.Linq.JObject(new Newtonsoft.Json.Linq.JProperty("prop1", "value1")),
-                            //                       DateTime.UtcNow + TimeSpan.FromMinutes(2)).Result;
 
                         }
 
