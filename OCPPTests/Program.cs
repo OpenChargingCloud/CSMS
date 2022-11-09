@@ -40,6 +40,7 @@ using cloud.charging.open.protocols.OCPPv1_6;
 using System.Runtime.CompilerServices;
 using System.Reflection.Emit;
 using com.GraphDefined.SMSApi.API.Response;
+using Org.BouncyCastle.Asn1;
 
 //using OCPPv2_0 = cloud.charging.open.protocols.OCPPv1_6;
 
@@ -948,6 +949,174 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                             Console.WriteLine(response.ToJSON());
 
                         }
+
+
+
+                        // CertificateSigned
+                        //   certificatesigned GD002
+                        if (command == "certificatesigned"      && commandArray.Length == 2)
+                        {
+
+                            var response = await testCentralSystem.CertificateSigned(ChargeBox_Id.Parse(commandArray[1]),
+                                                                                     "xxx");
+
+                            Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
+                            Console.WriteLine(response.ToJSON());
+
+                        }
+
+
+                        // DeleteCertificate
+                        //   deletecertificate GD002
+                        if (command == "deletecertificate"      && commandArray.Length == 2)
+                        {
+
+                            var response = await testCentralSystem.DeleteCertificate(ChargeBox_Id.Parse(commandArray[1]),
+                                                                                     new CertificateHashData(
+                                                                                         HashAlgorithms.SHA256,
+                                                                                         "xxx",
+                                                                                         "yyy",
+                                                                                         "123"
+                                                                                     ));
+
+                            Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
+                            Console.WriteLine(response.ToJSON());
+
+                        }
+
+
+                        // ExtendedTriggerMessage
+                        //   extendedtrigger GD002 Heartbeat
+                        if (command == "extendedtrigger"        && commandArray.Length == 3 && commandArray[2].ToLower() == "Heartbeat".ToLower())
+                        {
+
+                            var response = await testCentralSystem.ExtendedTriggerMessage(ChargeBoxId:       ChargeBox_Id.Parse(commandArray[1]),
+                                                                                          RequestedMessage:  MessageTriggers.Heartbeat);
+
+                            Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
+                            Console.WriteLine(response.ToJSON());
+
+                        }
+
+
+                        // GetInstalledCertificateIds
+                        //   getcerts GD002 csrc
+                        if (command == "getcerts"               && commandArray.Length == 3 && commandArray[2].ToLower() == "csrc".ToLower())
+                        {
+
+                            var response = await testCentralSystem.GetInstalledCertificateIds(ChargeBoxId: ChargeBox_Id.Parse(commandArray[1]),
+                                                                                              CertificateUse.CentralSystemRootCertificate);
+
+                            Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
+                            Console.WriteLine(response.ToJSON());
+
+                        }
+
+                        //   getcerts GD002 mrc
+                        if (command == "getcerts"               && commandArray.Length == 3 && commandArray[2].ToLower() == "mrc".ToLower())
+                        {
+
+                            var response = await testCentralSystem.GetInstalledCertificateIds(ChargeBoxId: ChargeBox_Id.Parse(commandArray[1]),
+                                                                                              CertificateUse.ManufacturerRootCertificate);
+
+                            Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
+                            Console.WriteLine(response.ToJSON());
+
+                        }
+
+
+                        // GetLog
+                        //   getlog GD002 diagnostics
+                        if (command == "getlog"                 && commandArray.Length == 3 && commandArray[2].ToLower() == "diagnostics".ToLower())
+                        {
+
+                            var response = await testCentralSystem.GetLog(ChargeBoxId:    ChargeBox_Id.Parse(commandArray[1]),
+                                                                          LogType:        LogTypes.DiagnosticsLog,
+                                                                          LogRequestId:   1,
+                                                                          Log:            new LogParameters(
+                                                                                              RemoteLocation:   URL.Parse("https://api2.ocpp.charging.cloud:9901/diagnostics0001.log"),
+                                                                                              OldestTimestamp:  null,
+                                                                                              LatestTimestamp:  null
+                                                                                          ),
+                                                                          Retries:        null,
+                                                                          RetryInterval:  null);
+
+                            Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
+                            Console.WriteLine(response.ToJSON());
+
+                        }
+
+                        //   getlog GD002 security
+                        if (command == "getlog"                 && commandArray.Length == 3 && commandArray[2].ToLower() == "security".ToLower())
+                        {
+
+                            var response = await testCentralSystem.GetLog(ChargeBoxId:    ChargeBox_Id.Parse(commandArray[1]),
+                                                                          LogType:        LogTypes.SecurityLog,
+                                                                          LogRequestId:   1,
+                                                                          Log:            new LogParameters(
+                                                                                              RemoteLocation:   URL.Parse("https://api2.ocpp.charging.cloud:9901/security0001.log"),
+                                                                                              OldestTimestamp:  null,
+                                                                                              LatestTimestamp:  null
+                                                                                          ),
+                                                                          Retries:        null,
+                                                                          RetryInterval:  null);
+
+                            Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
+                            Console.WriteLine(response.ToJSON());
+
+                        }
+
+
+                        // InstallCertificate
+                        //   installcertificate GD002 csrc
+                        if (command == "installcertificate"     && commandArray.Length == 3 && commandArray[2].ToLower() == "csrc".ToLower())
+                        {
+
+                            var response = await testCentralSystem.InstallCertificate(ChargeBoxId:      ChargeBox_Id.Parse(commandArray[1]),
+                                                                                      CertificateType:  CertificateUse.CentralSystemRootCertificate,
+                                                                                      Certificate:      "xxx");
+
+                            Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
+                            Console.WriteLine(response.ToJSON());
+
+                        }
+
+                        //   installcertificate GD002 mrc
+                        if (command == "installcertificate"     && commandArray.Length == 3 && commandArray[2].ToLower() == "mrc".ToLower())
+                        {
+
+                            var response = await testCentralSystem.InstallCertificate(ChargeBoxId:      ChargeBox_Id.Parse(commandArray[1]),
+                                                                                      CertificateType:  CertificateUse.ManufacturerRootCertificate,
+                                                                                      Certificate:      "xxx");
+
+                            Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
+                            Console.WriteLine(response.ToJSON());
+
+                        }
+
+
+                        // SignedUpdateFirmware
+                        //   signedupdatefirmware GD002 csrc
+                        if (command == "signedupdatefirmware" && commandArray.Length == 3 && commandArray[2].ToLower() == "csrc".ToLower())
+                        {
+
+                            var response = await testCentralSystem.SignedUpdateFirmware(ChargeBoxId:      ChargeBox_Id.Parse(commandArray[1]),
+                                                                                        Firmware:         new FirmwareImage(
+                                                                                                              RemoteLocation:      URL.Parse("https://api2.ocpp.charging.cloud:9901/security0001.log"),
+                                                                                                              RetrieveTimestamp:   DateTime.UtcNow,
+                                                                                                              SigningCertificate:  "xxx",
+                                                                                                              Signature:           "yyy"
+                                                                                                          ),
+                                                                                        UpdateRequestId:  1,
+                                                                                        Retries:          null,
+                                                                                        RetryInterval:    null);
+
+                            Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
+                            Console.WriteLine(response.ToJSON());
+
+                        }
+
+
 
                     }
 
