@@ -8,4 +8,4 @@ cd OpenChargingCloudAPI; versionHash_OpenChargingCloudAPI=$(git rev-list --max-c
 cd ..
 
 cd OCPPTests
-dotnet run $versionHash_UsersAPI $versionHash_OpenChargingCloudAPI
+dotnet run -no-build --no-restore $versionHash_UsersAPI $versionHash_OpenChargingCloudAPI
