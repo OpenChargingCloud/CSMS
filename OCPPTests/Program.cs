@@ -135,7 +135,8 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
             //                                 AutoStart:  true
             //                             );
 
-            testCentralSystem.AddHTTPBasicAuth(ChargeBox_Id.Parse("GD001"), "1234");
+            testCentralSystem.AddHTTPBasicAuth(ChargeBox_Id.Parse("GD001"),         "1234");
+            testCentralSystem.AddHTTPBasicAuth(ChargeBox_Id.Parse("NLHLXELAAD002"), "minimumzestienkarakters");
 
             (testCentralSystem.CentralSystemServers.First() as WebSocketServer).OnNewWebSocketConnection += async (timestamp, server, connection, eventTrackingId, ct) => {
                 DebugX.Log(String.Concat("HTTP web socket server on ", server.IPSocket, " new connection with ", connection.TryGetCustomData("chargeBoxId") + " (" + connection.RemoteSocket + ")"));
@@ -165,11 +166,20 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
             };
 
             (testCentralSystem.CentralSystemServers.First() as WebSocketServer).OnCloseMessageReceived += async (timestamp, server, connection, eventTrackingId, ct) => {
-                DebugX.Log(String.Concat("HTTP web socket server on ", server.IPSocket, " closed connection with ", connection.TryGetCustomData("chargeBoxId") + " (" + connection.RemoteSocket + ")"));
+                DebugX.Log(String.Concat("HTTP web socket server on ", server.IPSocket, " charge box ", connection.TryGetCustomData("chargeBoxId") + " (" + connection.RemoteSocket + ") closed web socket connection"));
                 lock (testCentralSystem)
                 {
                     File.AppendAllText(Path.Combine(AppContext.BaseDirectory, "TextMessages.log"),
                                        String.Concat(timestamp.ToIso8601(), "\tCLOSE\t", connection.TryGetCustomData("chargeBoxId"), "\t", connection.RemoteSocket, Environment.NewLine));
+                }
+            };
+
+            (testCentralSystem.CentralSystemServers.First() as WebSocketServer).OnTCPConnectionClosed += async (timestamp, server, connection, eventTrackingId, ct) => {
+                DebugX.Log(String.Concat("HTTP web socket server on ", server.IPSocket, " closed TCP connection with ", connection.TryGetCustomData("chargeBoxId") + " (" + connection.RemoteSocket + ")"));
+                lock (testCentralSystem)
+                {
+                    File.AppendAllText(Path.Combine(AppContext.BaseDirectory, "TextMessages.log"),
+                                       String.Concat(timestamp.ToIso8601(), "\tQUIT\t", connection.TryGetCustomData("chargeBoxId"), "\t", connection.RemoteSocket, Environment.NewLine));
                 }
             };
 
@@ -448,6 +458,15 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                             quit = true;
 
 
+
+                        // AddHTTPBasicAuth
+                        //   AddHTTPBasicAuth GD002 abcd1234
+                        if (command == "AddHTTPBasicAuth" && commandArray.Length == 3)
+                        {
+                            testCentralSystem.AddHTTPBasicAuth(ChargeBox_Id.Parse(commandArray[1]), commandArray[2]);
+                        }
+
+
                         // Reset
                         //   hardreset GD002
                         if (command == "hardreset"              && commandArray.Length == 2)
@@ -701,7 +720,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
 
                             var response = await testCentralSystem.UpdateFirmware(ChargeBoxId:   ChargeBox_Id.Parse(commandArray[1]),
                                                                                   Location:      commandArray[2],
-                                                                                  RetrieveDate:  DateTime.UtcNow + TimeSpan.FromHours(3));
+                                                                                  RetrieveDate:  DateTime.UtcNow + TimeSpan.FromMinutes(1));
 
                             Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
                             Console.WriteLine(response.ToJSON());
@@ -804,7 +823,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                                                                                                                 StartSchedule:            DateTime.Parse("2022-11-01T00:00:00Z").ToUniversalTime()
 
                                                                                                             ),
-                                                                                                            Transaction_Id.TryParse("5678"),
+                                                                                                            Transaction_Id.TryParse(5678),
                                                                                                             RecurrencyKinds.Daily,
                                                                                                             DateTime.Parse("2022-11-01T00:00:00Z").ToUniversalTime(),
                                                                                                             DateTime.Parse("2022-12-01T00:00:00Z").ToUniversalTime()
@@ -849,7 +868,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                                                                                                                 StartSchedule:            DateTime.Parse("2022-11-01T00:00:00Z").ToUniversalTime()
 
                                                                                                             ),
-                                                                                                            Transaction_Id.TryParse("5678"),
+                                                                                                            Transaction_Id.TryParse(6789),
                                                                                                             RecurrencyKinds.Daily,
                                                                                                             DateTime.Parse("2022-11-01T00:00:00Z").ToUniversalTime(),
                                                                                                             DateTime.Parse("2022-12-01T00:00:00Z").ToUniversalTime()
@@ -877,7 +896,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
 
 
                         // GetCompositeSchedule
-                        //   clearprofile GD002 1 3600
+                        //   getschedule GD002 1 3600
                         if (command == "getschedule"            && commandArray.Length == 4)
                         {
 
@@ -924,13 +943,14 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                         {
 
                             var response = await testCentralSystem.SendLocalList(ChargeBox_Id.Parse(commandArray[1]),
-                                                                                 0,
+                                                                                 2, // 0 is not allowed!
                                                                                  UpdateTypes.Full,
                                                                                  new AuthorizationData[] {
-                                                                                     new AuthorizationData(IdToken.Parse("aabbcc11"), new IdTagInfo(AuthorizationStatus.Accepted)),
-                                                                                     new AuthorizationData(IdToken.Parse("aabbcc22"), new IdTagInfo(AuthorizationStatus.Accepted)),
-                                                                                     new AuthorizationData(IdToken.Parse("aabbcc33"), new IdTagInfo(AuthorizationStatus.Accepted)),
-                                                                                     new AuthorizationData(IdToken.Parse("aabbcc44"), new IdTagInfo(AuthorizationStatus.Blocked))
+                                                                                     new AuthorizationData(IdToken.Parse("046938f2fc6880"), new IdTagInfo(AuthorizationStatus.Blocked)),
+                                                                                     new AuthorizationData(IdToken.Parse("aabbcc11"),       new IdTagInfo(AuthorizationStatus.Accepted)),
+                                                                                     new AuthorizationData(IdToken.Parse("aabbcc22"),       new IdTagInfo(AuthorizationStatus.Accepted)),
+                                                                                     new AuthorizationData(IdToken.Parse("aabbcc33"),       new IdTagInfo(AuthorizationStatus.Accepted)),
+                                                                                     new AuthorizationData(IdToken.Parse("aabbcc44"),       new IdTagInfo(AuthorizationStatus.Blocked))
                                                                                  });
 
                             Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
@@ -958,7 +978,38 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                         {
 
                             var response = await testCentralSystem.CertificateSigned(ChargeBox_Id.Parse(commandArray[1]),
-                                                                                     "xxx");
+                                                                                     String.Concat(
+                                                                                         "-----BEGIN CERTIFICATE-----\n",
+                                                                                         "MIIFNjCCBB6gAwIBAgISBOChwuPxlU25hKJ2AT4zX+4kMA0GCSqGSIb3DQEBCwUA\n",
+                                                                                         "MDIxCzAJBgNVBAYTAlVTMRYwFAYDVQQKEw1MZXQncyBFbmNyeXB0MQswCQYDVQQD\n",
+                                                                                         "EwJSMzAeFw0yMjExMDEwNDA1NThaFw0yMzAxMzAwNDA1NTdaMCMxITAfBgNVBAMT\n",
+                                                                                         "GGFwaTEub2NwcC5jaGFyZ2luZy5jbG91ZDCCASIwDQYJKoZIhvcNAQEBBQADggEP\n",
+                                                                                         "ADCCAQoCggEBANXXEPaMYd8g3BmOuNLbJC9j5KHEOQebZ71dQcPGrD5pm8TICEmr\n",
+                                                                                         "PnAVh/TjF61dco/Bw0HjDz+mI62RHe3tBXggN7p7THKTBLcEMXNMYaEIgp+N1GDV\n",
+                                                                                         "4N1ooT9TcnAPID38mjNN/zdPZ2L9IOcE3S9e0AB1a7oJDppvAKIixej+gymuugvy\n",
+                                                                                         "DqwDfugfyFXGpuEXm+xl//D5RjN8Mgsj5nzBOm+2TqAJBhb9cp35Isaq+fbvFXlE\n",
+                                                                                         "8ICldVHnZKNPfExnTK5FY6T6yDcjBEMnkJQMEMlMCwmuhbwO7iCDicT5hzdnH6MX\n",
+                                                                                         "QreKShgB65c/+cu4mHT3StHQg8kRnpvW1N8CAwEAAaOCAlMwggJPMA4GA1UdDwEB\n",
+                                                                                         "/wQEAwIFoDAdBgNVHSUEFjAUBggrBgEFBQcDAQYIKwYBBQUHAwIwDAYDVR0TAQH/\n",
+                                                                                         "BAIwADAdBgNVHQ4EFgQUeMQw3IPBaOXfPhNaJ+wtXg3puG0wHwYDVR0jBBgwFoAU\n",
+                                                                                         "FC6zF7dYVsuuUAlA5h+vnYsUwsYwVQYIKwYBBQUHAQEESTBHMCEGCCsGAQUFBzAB\n",
+                                                                                         "hhVodHRwOi8vcjMuby5sZW5jci5vcmcwIgYIKwYBBQUHMAKGFmh0dHA6Ly9yMy5p\n",
+                                                                                         "LmxlbmNyLm9yZy8wIwYDVR0RBBwwGoIYYXBpMS5vY3BwLmNoYXJnaW5nLmNsb3Vk\n",
+                                                                                         "MEwGA1UdIARFMEMwCAYGZ4EMAQIBMDcGCysGAQQBgt8TAQEBMCgwJgYIKwYBBQUH\n",
+                                                                                         "AgEWGmh0dHA6Ly9jcHMubGV0c2VuY3J5cHQub3JnMIIBBAYKKwYBBAHWeQIEAgSB\n",
+                                                                                         "9QSB8gDwAHYAtz77JN+cTbp18jnFulj0bF38Qs96nzXEnh0JgSXttJkAAAGEMZT8\n",
+                                                                                         "+gAABAMARzBFAiEAt1Z1wpuOQxqEICwha69HzjkPRbbFQOqamN/Bn4lMvywCIDbf\n",
+                                                                                         "b+KSkG8u8QqcyhJMTBY3liwAk7Gi2LiJjGVeHpKmAHYAejKMVNi3LbYg6jjgUh7p\n",
+                                                                                         "hBZwMhOFTTvSK8E6V6NS61IAAAGEMZT9QAAABAMARzBFAiEAvk1Tl2hPxpjRnqxI\n",
+                                                                                         "evSxkIpa2QvDt4ASdOLdOVsbIqMCIGFUVMjdkTmKu9kCGcbRHp2CthkQIhMVzyXK\n",
+                                                                                         "F05iCTTaMA0GCSqGSIb3DQEBCwUAA4IBAQCRQCvNR+eVFs2eqxgWIKIKxk/7QZD1\n",
+                                                                                         "kdpIPuDYoJ/5EDLj1j4jHBiPe4PsIbrPojWnk3XmAtq8EOSVYjspimQjUZMIe3nx\n",
+                                                                                         "Q4T+i+siYwUapAfQep8f004EfJRC0xG9p6D1X6bBWmZgSYINM4VCLQ2P6dEv/ZFc\n",
+                                                                                         "IQFMw0/Iv6emxDP1mGsOjoeZs86DqPwJBOb5Qn+MNqEh49bkFVPno8SoPDcxHZur\n",
+                                                                                         "akYhAo/LuuRLPkfhkhBESsX3dTnvivjkP2nz4M58tHSkZit5y9Zx4NOahnvj4L1J\n",
+                                                                                         "cJLtsZ6AwDqdkoVg/i9nqEGOLzYuLDoQsUW9koyP5FM2/qctVi3ZkEzG\n",
+                                                                                         "-----END CERTIFICATE-----\n\n"
+                                                                                     ));
 
                             Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
                             Console.WriteLine(response.ToJSON());
@@ -974,9 +1025,9 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                             var response = await testCentralSystem.DeleteCertificate(ChargeBox_Id.Parse(commandArray[1]),
                                                                                      new CertificateHashData(
                                                                                          HashAlgorithms.SHA256,
-                                                                                         "xxx",
-                                                                                         "yyy",
-                                                                                         "123"
+                                                                                         "bde18ac64b30e7e33c6407fcc625b80a8be4e59000aefe703506d2bf7645f810",
+                                                                                         "b44b3ed74a4ce77d54469463bf1042cbd8d0c1981a71febac58b23342fda07b9",
+                                                                                         "4E0A1C2E3F1954DB984A276013E335FEE24"
                                                                                      ));
 
                             Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
@@ -1034,7 +1085,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                                                                           LogType:        LogTypes.DiagnosticsLog,
                                                                           LogRequestId:   1,
                                                                           Log:            new LogParameters(
-                                                                                              RemoteLocation:   URL.Parse("https://api2.ocpp.charging.cloud:9901/diagnostics0001.log"),
+                                                                                              RemoteLocation:   URL.Parse("https://api2.ocpp.charging.cloud:9901"),
                                                                                               OldestTimestamp:  null,
                                                                                               LatestTimestamp:  null
                                                                                           ),
@@ -1054,7 +1105,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                                                                           LogType:        LogTypes.SecurityLog,
                                                                           LogRequestId:   1,
                                                                           Log:            new LogParameters(
-                                                                                              RemoteLocation:   URL.Parse("https://api2.ocpp.charging.cloud:9901/security0001.log"),
+                                                                                              RemoteLocation:   URL.Parse("https://api2.ocpp.charging.cloud:9901"),
                                                                                               OldestTimestamp:  null,
                                                                                               LatestTimestamp:  null
                                                                                           ),
@@ -1074,7 +1125,38 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
 
                             var response = await testCentralSystem.InstallCertificate(ChargeBoxId:      ChargeBox_Id.Parse(commandArray[1]),
                                                                                       CertificateType:  CertificateUse.CentralSystemRootCertificate,
-                                                                                      Certificate:      "xxx");
+                                                                                      Certificate:      String.Concat(
+                                                                                                            "-----BEGIN CERTIFICATE-----" + "\n",
+                                                                                                            "MIIFNjCCBB6gAwIBAgISBOChwuPxlU25hKJ2AT4zX+4kMA0GCSqGSIb3DQEBCwUA" + "\n",
+                                                                                                            "MDIxCzAJBgNVBAYTAlVTMRYwFAYDVQQKEw1MZXQncyBFbmNyeXB0MQswCQYDVQQD" + "\n",
+                                                                                                            "EwJSMzAeFw0yMjExMDEwNDA1NThaFw0yMzAxMzAwNDA1NTdaMCMxITAfBgNVBAMT" + "\n",
+                                                                                                            "GGFwaTEub2NwcC5jaGFyZ2luZy5jbG91ZDCCASIwDQYJKoZIhvcNAQEBBQADggEP" + "\n",
+                                                                                                            "ADCCAQoCggEBANXXEPaMYd8g3BmOuNLbJC9j5KHEOQebZ71dQcPGrD5pm8TICEmr" + "\n",
+                                                                                                            "PnAVh/TjF61dco/Bw0HjDz+mI62RHe3tBXggN7p7THKTBLcEMXNMYaEIgp+N1GDV" + "\n",
+                                                                                                            "4N1ooT9TcnAPID38mjNN/zdPZ2L9IOcE3S9e0AB1a7oJDppvAKIixej+gymuugvy" + "\n",
+                                                                                                            "DqwDfugfyFXGpuEXm+xl//D5RjN8Mgsj5nzBOm+2TqAJBhb9cp35Isaq+fbvFXlE" + "\n",
+                                                                                                            "8ICldVHnZKNPfExnTK5FY6T6yDcjBEMnkJQMEMlMCwmuhbwO7iCDicT5hzdnH6MX" + "\n",
+                                                                                                            "QreKShgB65c/+cu4mHT3StHQg8kRnpvW1N8CAwEAAaOCAlMwggJPMA4GA1UdDwEB" + "\n",
+                                                                                                            "/wQEAwIFoDAdBgNVHSUEFjAUBggrBgEFBQcDAQYIKwYBBQUHAwIwDAYDVR0TAQH/" + "\n",
+                                                                                                            "BAIwADAdBgNVHQ4EFgQUeMQw3IPBaOXfPhNaJ+wtXg3puG0wHwYDVR0jBBgwFoAU" + "\n",
+                                                                                                            "FC6zF7dYVsuuUAlA5h+vnYsUwsYwVQYIKwYBBQUHAQEESTBHMCEGCCsGAQUFBzAB" + "\n",
+                                                                                                            "hhVodHRwOi8vcjMuby5sZW5jci5vcmcwIgYIKwYBBQUHMAKGFmh0dHA6Ly9yMy5p" + "\n",
+                                                                                                            "LmxlbmNyLm9yZy8wIwYDVR0RBBwwGoIYYXBpMS5vY3BwLmNoYXJnaW5nLmNsb3Vk" + "\n",
+                                                                                                            "MEwGA1UdIARFMEMwCAYGZ4EMAQIBMDcGCysGAQQBgt8TAQEBMCgwJgYIKwYBBQUH" + "\n",
+                                                                                                            "AgEWGmh0dHA6Ly9jcHMubGV0c2VuY3J5cHQub3JnMIIBBAYKKwYBBAHWeQIEAgSB" + "\n",
+                                                                                                            "9QSB8gDwAHYAtz77JN+cTbp18jnFulj0bF38Qs96nzXEnh0JgSXttJkAAAGEMZT8" + "\n",
+                                                                                                            "+gAABAMARzBFAiEAt1Z1wpuOQxqEICwha69HzjkPRbbFQOqamN/Bn4lMvywCIDbf" + "\n",
+                                                                                                            "b+KSkG8u8QqcyhJMTBY3liwAk7Gi2LiJjGVeHpKmAHYAejKMVNi3LbYg6jjgUh7p" + "\n",
+                                                                                                            "hBZwMhOFTTvSK8E6V6NS61IAAAGEMZT9QAAABAMARzBFAiEAvk1Tl2hPxpjRnqxI" + "\n",
+                                                                                                            "evSxkIpa2QvDt4ASdOLdOVsbIqMCIGFUVMjdkTmKu9kCGcbRHp2CthkQIhMVzyXK" + "\n",
+                                                                                                            "F05iCTTaMA0GCSqGSIb3DQEBCwUAA4IBAQCRQCvNR+eVFs2eqxgWIKIKxk/7QZD1" + "\n",
+                                                                                                            "kdpIPuDYoJ/5EDLj1j4jHBiPe4PsIbrPojWnk3XmAtq8EOSVYjspimQjUZMIe3nx" + "\n",
+                                                                                                            "Q4T+i+siYwUapAfQep8f004EfJRC0xG9p6D1X6bBWmZgSYINM4VCLQ2P6dEv/ZFc" + "\n",
+                                                                                                            "IQFMw0/Iv6emxDP1mGsOjoeZs86DqPwJBOb5Qn+MNqEh49bkFVPno8SoPDcxHZur" + "\n",
+                                                                                                            "akYhAo/LuuRLPkfhkhBESsX3dTnvivjkP2nz4M58tHSkZit5y9Zx4NOahnvj4L1J" + "\n",
+                                                                                                            "cJLtsZ6AwDqdkoVg/i9nqEGOLzYuLDoQsUW9koyP5FM2/qctVi3ZkEzG" + "\n",
+                                                                                                            "-----END CERTIFICATE-----" + "\n" + "\n"
+                                                                                                        ));
 
                             Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
                             Console.WriteLine(response.ToJSON());
@@ -1115,8 +1197,6 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                             Console.WriteLine(response.ToJSON());
 
                         }
-
-
 
                     }
 
