@@ -117,7 +117,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
 
             var testCentralSystem      = new TestCentralSystem(
                                              CentralSystemId:             CentralSystem_Id.Parse("OCPPTest01"),
-                                             RequireAuthentication:       false,
+                                             RequireAuthentication:       true,
                                              HTTPUploadPort:              IPPort.Parse(9901),
                                              DNSClient:                   API_DNSClient
                                          );
@@ -136,7 +136,9 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
             //                             );
 
             testCentralSystem.AddHTTPBasicAuth(ChargeBox_Id.Parse("GD001"),         "1234");
-            testCentralSystem.AddHTTPBasicAuth(ChargeBox_Id.Parse("NLHLXELAAD002"), "minimumzestienkarakters");
+            //testCentralSystem.AddHTTPBasicAuth(ChargeBox_Id.Parse("NLHLXELAAD002"), "minimumzestienkarakters");
+            //testCentralSystem.AddHTTPBasicAuth(ChargeBox_Id.Parse("suby0200000328"), "plugXest20221110");
+            testCentralSystem.AddHTTPBasicAuth(ChargeBox_Id.Parse("kostal_elaad_teststation"),  "plugXest20221110");
 
             (testCentralSystem.CentralSystemServers.First() as WebSocketServer).OnNewWebSocketConnection += async (timestamp, server, connection, eventTrackingId, ct) => {
                 DebugX.Log(String.Concat("HTTP web socket server on ", server.IPSocket, " new connection with ", connection.TryGetCustomData("chargeBoxId") + " (" + connection.RemoteSocket + ")"));
@@ -604,7 +606,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
 
 
                         // Get Diagnostics
-                        //   getdiag GD002 http://95.89.178.27:9901/diagnostics/
+                        //   getdiag GD002 http://23.88.66.160:9901/diagnostics/
                         if (command == "getdiag"                && commandArray.Length == 3)
                         {
 
@@ -620,7 +622,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
 
                         }
 
-                        //   getdiag GD002 http://95.89.178.27:9901/diagnostics/ 2022-11-08T10:00:00Z 2022-11-12T18:00:00Z 3 30
+                        //   getdiag GD002 http://23.88.66.160:9901/diagnostics/ 2022-11-08T10:00:00Z 2022-11-12T18:00:00Z 3 30
                         if (command == "getdiag"                && commandArray.Length == 7)
                         {
 
@@ -687,12 +689,12 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                         }
 
                         //   trigger GD002 MeterValues 1
-                        if (command == "trigger"                && commandArray.Length == 4 && commandArray[3].ToLower() == "MeterValues".ToLower())
+                        if (command == "trigger"                && commandArray.Length == 4 && commandArray[2].ToLower() == "MeterValues".ToLower())
                         {
 
                             var response = await testCentralSystem.TriggerMessage(ChargeBoxId:       ChargeBox_Id.Parse(commandArray[1]),
                                                                                   RequestedMessage:  MessageTriggers.MeterValues,
-                                                                                  ConnectorId:       Connector_Id.Parse(commandArray[2]));
+                                                                                  ConnectorId:       Connector_Id.Parse(commandArray[3]));
 
                             Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
                             Console.WriteLine(response.ToJSON());
@@ -700,12 +702,12 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                         }
 
                         //   trigger GD002 StatusNotification 1
-                        if (command == "trigger"                && commandArray.Length == 3 && commandArray[2].ToLower() == "StatusNotification".ToLower())
+                        if (command == "trigger"                && commandArray.Length == 4 && commandArray[2].ToLower() == "StatusNotification".ToLower())
                         {
 
                             var response = await testCentralSystem.TriggerMessage(ChargeBoxId:       ChargeBox_Id.Parse(commandArray[1]),
                                                                                   RequestedMessage:  MessageTriggers.StatusNotification,
-                                                                                  ConnectorId:       Connector_Id.Parse(commandArray[2]));
+                                                                                  ConnectorId:       Connector_Id.Parse(commandArray[3]));
 
                             Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
                             Console.WriteLine(response.ToJSON());
@@ -823,7 +825,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                                                                                                                 StartSchedule:            DateTime.Parse("2022-11-01T00:00:00Z").ToUniversalTime()
 
                                                                                                             ),
-                                                                                                            Transaction_Id.TryParse(5678),
+                                                                                                            null, //Transaction_Id.TryParse(5678),
                                                                                                             RecurrencyKinds.Daily,
                                                                                                             DateTime.Parse("2022-11-01T00:00:00Z").ToUniversalTime(),
                                                                                                             DateTime.Parse("2022-12-01T00:00:00Z").ToUniversalTime()
@@ -842,7 +844,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                                                                                       ConnectorId:      Connector_Id.Parse(commandArray[2]),
                                                                                       ChargingProfile:  new ChargingProfile(
                                                                                                             ChargingProfile_Id.Parse("100"),
-                                                                                                            0,
+                                                                                                            1,
                                                                                                             ChargingProfilePurposes.TxDefaultProfile,
                                                                                                             ChargingProfileKinds.Recurring,
                                                                                                             new ChargingSchedule(
@@ -868,7 +870,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                                                                                                                 StartSchedule:            DateTime.Parse("2022-11-01T00:00:00Z").ToUniversalTime()
 
                                                                                                             ),
-                                                                                                            Transaction_Id.TryParse(6789),
+                                                                                                            null, //Transaction_Id.TryParse(6789),
                                                                                                             RecurrencyKinds.Daily,
                                                                                                             DateTime.Parse("2022-11-01T00:00:00Z").ToUniversalTime(),
                                                                                                             DateTime.Parse("2022-12-01T00:00:00Z").ToUniversalTime()
