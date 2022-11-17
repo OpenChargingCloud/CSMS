@@ -980,6 +980,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                         {
 
                             var response = await testCentralSystem.CertificateSigned(ChargeBox_Id.Parse(commandArray[1]),
+                                                                                     CertificateChain.Parse(
                                                                                      String.Concat(
                                                                                          "-----BEGIN CERTIFICATE-----\n",
                                                                                          "MIIFNjCCBB6gAwIBAgISBOChwuPxlU25hKJ2AT4zX+4kMA0GCSqGSIb3DQEBCwUA\n",
@@ -1011,7 +1012,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                                                                                          "akYhAo/LuuRLPkfhkhBESsX3dTnvivjkP2nz4M58tHSkZit5y9Zx4NOahnvj4L1J\n",
                                                                                          "cJLtsZ6AwDqdkoVg/i9nqEGOLzYuLDoQsUW9koyP5FM2/qctVi3ZkEzG\n",
                                                                                          "-----END CERTIFICATE-----\n\n"
-                                                                                     ));
+                                                                                     )));
 
                             Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
                             Console.WriteLine(response.ToJSON());
@@ -1127,7 +1128,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
 
                             var response = await testCentralSystem.InstallCertificate(ChargeBoxId:      ChargeBox_Id.Parse(commandArray[1]),
                                                                                       CertificateType:  CertificateUse.CentralSystemRootCertificate,
-                                                                                      Certificate:      String.Concat(
+                                                                                      Certificate:      Certificate.Parse(String.Concat(
                                                                                                             "-----BEGIN CERTIFICATE-----" + "\n",
                                                                                                             "MIIFNjCCBB6gAwIBAgISBOChwuPxlU25hKJ2AT4zX+4kMA0GCSqGSIb3DQEBCwUA" + "\n",
                                                                                                             "MDIxCzAJBgNVBAYTAlVTMRYwFAYDVQQKEw1MZXQncyBFbmNyeXB0MQswCQYDVQQD" + "\n",
@@ -1158,7 +1159,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                                                                                                             "akYhAo/LuuRLPkfhkhBESsX3dTnvivjkP2nz4M58tHSkZit5y9Zx4NOahnvj4L1J" + "\n",
                                                                                                             "cJLtsZ6AwDqdkoVg/i9nqEGOLzYuLDoQsUW9koyP5FM2/qctVi3ZkEzG" + "\n",
                                                                                                             "-----END CERTIFICATE-----" + "\n" + "\n"
-                                                                                                        ));
+                                                                                                        )));
 
                             Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
                             Console.WriteLine(response.ToJSON());
@@ -1171,7 +1172,38 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
 
                             var response = await testCentralSystem.InstallCertificate(ChargeBoxId:      ChargeBox_Id.Parse(commandArray[1]),
                                                                                       CertificateType:  CertificateUse.ManufacturerRootCertificate,
-                                                                                      Certificate:      "xxx");
+                                                                                      Certificate:      Certificate.Parse(String.Concat(
+                                                                                                            "-----BEGIN CERTIFICATE-----" + "\n",
+                                                                                                            "MIIFNjCCBB6gAwIBAgISBOChwuPxlU25hKJ2AT4zX+4kMA0GCSqGSIb3DQEBCwUA" + "\n",
+                                                                                                            "MDIxCzAJBgNVBAYTAlVTMRYwFAYDVQQKEw1MZXQncyBFbmNyeXB0MQswCQYDVQQD" + "\n",
+                                                                                                            "EwJSMzAeFw0yMjExMDEwNDA1NThaFw0yMzAxMzAwNDA1NTdaMCMxITAfBgNVBAMT" + "\n",
+                                                                                                            "GGFwaTEub2NwcC5jaGFyZ2luZy5jbG91ZDCCASIwDQYJKoZIhvcNAQEBBQADggEP" + "\n",
+                                                                                                            "ADCCAQoCggEBANXXEPaMYd8g3BmOuNLbJC9j5KHEOQebZ71dQcPGrD5pm8TICEmr" + "\n",
+                                                                                                            "PnAVh/TjF61dco/Bw0HjDz+mI62RHe3tBXggN7p7THKTBLcEMXNMYaEIgp+N1GDV" + "\n",
+                                                                                                            "4N1ooT9TcnAPID38mjNN/zdPZ2L9IOcE3S9e0AB1a7oJDppvAKIixej+gymuugvy" + "\n",
+                                                                                                            "DqwDfugfyFXGpuEXm+xl//D5RjN8Mgsj5nzBOm+2TqAJBhb9cp35Isaq+fbvFXlE" + "\n",
+                                                                                                            "8ICldVHnZKNPfExnTK5FY6T6yDcjBEMnkJQMEMlMCwmuhbwO7iCDicT5hzdnH6MX" + "\n",
+                                                                                                            "QreKShgB65c/+cu4mHT3StHQg8kRnpvW1N8CAwEAAaOCAlMwggJPMA4GA1UdDwEB" + "\n",
+                                                                                                            "/wQEAwIFoDAdBgNVHSUEFjAUBggrBgEFBQcDAQYIKwYBBQUHAwIwDAYDVR0TAQH/" + "\n",
+                                                                                                            "BAIwADAdBgNVHQ4EFgQUeMQw3IPBaOXfPhNaJ+wtXg3puG0wHwYDVR0jBBgwFoAU" + "\n",
+                                                                                                            "FC6zF7dYVsuuUAlA5h+vnYsUwsYwVQYIKwYBBQUHAQEESTBHMCEGCCsGAQUFBzAB" + "\n",
+                                                                                                            "hhVodHRwOi8vcjMuby5sZW5jci5vcmcwIgYIKwYBBQUHMAKGFmh0dHA6Ly9yMy5p" + "\n",
+                                                                                                            "LmxlbmNyLm9yZy8wIwYDVR0RBBwwGoIYYXBpMS5vY3BwLmNoYXJnaW5nLmNsb3Vk" + "\n",
+                                                                                                            "MEwGA1UdIARFMEMwCAYGZ4EMAQIBMDcGCysGAQQBgt8TAQEBMCgwJgYIKwYBBQUH" + "\n",
+                                                                                                            "AgEWGmh0dHA6Ly9jcHMubGV0c2VuY3J5cHQub3JnMIIBBAYKKwYBBAHWeQIEAgSB" + "\n",
+                                                                                                            "9QSB8gDwAHYAtz77JN+cTbp18jnFulj0bF38Qs96nzXEnh0JgSXttJkAAAGEMZT8" + "\n",
+                                                                                                            "+gAABAMARzBFAiEAt1Z1wpuOQxqEICwha69HzjkPRbbFQOqamN/Bn4lMvywCIDbf" + "\n",
+                                                                                                            "b+KSkG8u8QqcyhJMTBY3liwAk7Gi2LiJjGVeHpKmAHYAejKMVNi3LbYg6jjgUh7p" + "\n",
+                                                                                                            "hBZwMhOFTTvSK8E6V6NS61IAAAGEMZT9QAAABAMARzBFAiEAvk1Tl2hPxpjRnqxI" + "\n",
+                                                                                                            "evSxkIpa2QvDt4ASdOLdOVsbIqMCIGFUVMjdkTmKu9kCGcbRHp2CthkQIhMVzyXK" + "\n",
+                                                                                                            "F05iCTTaMA0GCSqGSIb3DQEBCwUAA4IBAQCRQCvNR+eVFs2eqxgWIKIKxk/7QZD1" + "\n",
+                                                                                                            "kdpIPuDYoJ/5EDLj1j4jHBiPe4PsIbrPojWnk3XmAtq8EOSVYjspimQjUZMIe3nx" + "\n",
+                                                                                                            "Q4T+i+siYwUapAfQep8f004EfJRC0xG9p6D1X6bBWmZgSYINM4VCLQ2P6dEv/ZFc" + "\n",
+                                                                                                            "IQFMw0/Iv6emxDP1mGsOjoeZs86DqPwJBOb5Qn+MNqEh49bkFVPno8SoPDcxHZur" + "\n",
+                                                                                                            "akYhAo/LuuRLPkfhkhBESsX3dTnvivjkP2nz4M58tHSkZit5y9Zx4NOahnvj4L1J" + "\n",
+                                                                                                            "cJLtsZ6AwDqdkoVg/i9nqEGOLzYuLDoQsUW9koyP5FM2/qctVi3ZkEzG" + "\n",
+                                                                                                            "-----END CERTIFICATE-----" + "\n" + "\n"
+                                                                                                        )));
 
                             Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
                             Console.WriteLine(response.ToJSON());
@@ -1181,7 +1213,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
 
                         // SignedUpdateFirmware
                         //   signedupdatefirmware GD002 csrc
-                        if (command == "signedupdatefirmware" && commandArray.Length == 3 && commandArray[2].ToLower() == "csrc".ToLower())
+                        if (command == "signedupdatefirmware"   && commandArray.Length == 3 && commandArray[2].ToLower() == "csrc".ToLower())
                         {
 
                             var response = await testCentralSystem.SignedUpdateFirmware(ChargeBoxId:      ChargeBox_Id.Parse(commandArray[1]),
