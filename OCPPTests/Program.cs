@@ -806,17 +806,17 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                                                                                                                 ChargingRateUnit:         ChargingRateUnits.Watts,
                                                                                                                 ChargingSchedulePeriods:  new ChargingSchedulePeriod[] {
                                                                                                                                               new ChargingSchedulePeriod(
-                                                                                                                                                  StartPeriod:   0,       // == 00:00 Uhr
+                                                                                                                                                  StartPeriod:   TimeSpan.FromHours(0),  // == 00:00 Uhr
                                                                                                                                                   Limit:         11000,
                                                                                                                                                   NumberPhases:  3
                                                                                                                                               ),
                                                                                                                                               new ChargingSchedulePeriod(
-                                                                                                                                                  StartPeriod:   28800,   // == 08:00 Uhr
+                                                                                                                                                  StartPeriod:   TimeSpan.FromHours(8),  // == 08:00 Uhr
                                                                                                                                                   Limit:         6000,
                                                                                                                                                   NumberPhases:  3
                                                                                                                                               ),
                                                                                                                                               new ChargingSchedulePeriod(
-                                                                                                                                                  StartPeriod:   72000,   // == 20:00 Uhr
+                                                                                                                                                  StartPeriod:   TimeSpan.FromHours(20), // == 20:00 Uhr
                                                                                                                                                   Limit:         11000,
                                                                                                                                                   NumberPhases:  3
                                                                                                                                               )
@@ -851,17 +851,17 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                                                                                                                 ChargingRateUnit:         ChargingRateUnits.Watts,
                                                                                                                 ChargingSchedulePeriods:  new ChargingSchedulePeriod[] {
                                                                                                                                               new ChargingSchedulePeriod(
-                                                                                                                                                  StartPeriod:   0,       // == 00:00 Uhr
+                                                                                                                                                  StartPeriod:   TimeSpan.FromHours(0),  // == 00:00 Uhr
                                                                                                                                                   Limit:         11000,
                                                                                                                                                   NumberPhases:  3
                                                                                                                                               ),
                                                                                                                                               new ChargingSchedulePeriod(
-                                                                                                                                                  StartPeriod:   21600,   // == 06:00 Uhr
+                                                                                                                                                  StartPeriod:   TimeSpan.FromHours(6),  // == 06:00 Uhr
                                                                                                                                                   Limit:         10000,
                                                                                                                                                   NumberPhases:  3
                                                                                                                                               ),
                                                                                                                                               new ChargingSchedulePeriod(
-                                                                                                                                                  StartPeriod:   75600,   // == 21:00 Uhr
+                                                                                                                                                  StartPeriod:   TimeSpan.FromHours(21), // == 21:00 Uhr
                                                                                                                                                   Limit:         11000,
                                                                                                                                                   NumberPhases:  3
                                                                                                                                               )
