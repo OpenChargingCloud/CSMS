@@ -720,9 +720,9 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                         if (command == "updatefw"               && commandArray.Length == 3)
                         {
 
-                            var response = await testCentralSystem.UpdateFirmware(ChargeBoxId:   ChargeBox_Id.Parse(commandArray[1]),
-                                                                                  Location:      commandArray[2],
-                                                                                  RetrieveDate:  DateTime.UtcNow + TimeSpan.FromMinutes(1));
+                            var response = await testCentralSystem.UpdateFirmware(ChargeBoxId:        ChargeBox_Id.Parse(commandArray[1]),
+                                                                                  FirmwareURL:        URL.Parse(commandArray[2]),
+                                                                                  RetrieveTimestamp:  DateTime.UtcNow + TimeSpan.FromMinutes(1));
 
                             Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
                             Console.WriteLine(response.ToJSON());
