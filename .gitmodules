@@ -25,3 +25,6 @@
 [submodule "libs/TelegramBotAPI"]
 	path = libs/TelegramBotAPI
 	url = ssh://git@git.graphdefined.com:5001/APIs/TelegramBotAPI.git
+[submodule "libs/WWCP_ISO15118_20"]
+	path = libs/WWCP_ISO15118_20
+	url = ssh://git@git.graphdefined.com:5001/OpenChargingCloud/WWCP_ISO15118_20.git
