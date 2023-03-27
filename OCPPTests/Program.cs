@@ -34,15 +34,7 @@ using org.GraphDefined.Vanaheimr.Hermod.HTTP;
 using org.GraphDefined.Vanaheimr.Hermod.WebSocket;
 
 using OCPPv1_6 = cloud.charging.open.protocols.OCPPv1_6;
-using cloud.charging.open.protocols.OCPPv1_6.CS;
-using cloud.charging.open.protocols.OCPPv1_6.CP;
-using cloud.charging.open.protocols.OCPPv1_6;
-using System.Runtime.CompilerServices;
-using System.Reflection.Emit;
-using com.GraphDefined.SMSApi.API.Response;
-using Org.BouncyCastle.Asn1;
-
-//using OCPPv2_0 = cloud.charging.open.protocols.OCPPv1_6;
+using OCPPv2_0 = cloud.charging.open.protocols.OCPPv2_0;
 
 #endregion
 
@@ -113,16 +105,18 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
             Directory.CreateDirectory(Path.Combine(AppContext.BaseDirectory, "HTTPSSEs"));
 
 
+            #region Setup CSMS v1.6
+
             // Support "gzip" and "deflate" HTTP compression
 
-            var testCentralSystem      = new TestCentralSystem(
-                                             CentralSystemId:             CentralSystem_Id.Parse("OCPPTest01"),
+            var testCSMSv1_6           = new OCPPv1_6.TestCentralSystem(
+                                             CentralSystemId:             OCPPv1_6.CentralSystem_Id.Parse("OCPPv1_6-Test01"),
                                              RequireAuthentication:       true,
                                              HTTPUploadPort:              IPPort.Parse(9901),
                                              DNSClient:                   API_DNSClient
                                          );
 
-            var testBackendWebSockets  = testCentralSystem.CreateWebSocketService(
+            var testBackendWebSockets  = testCSMSv1_6.CreateWebSocketService(
                                              TCPPort:                     IPPort.Parse(9900),
                                              //DisableWebSocketPings:       true,
                                              //SlowNetworkSimulationDelay:  TimeSpan.FromMilliseconds(10),
@@ -135,50 +129,50 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
             //                                 AutoStart:  true
             //                             );
 
-            testCentralSystem.AddHTTPBasicAuth(ChargeBox_Id.Parse("GD001"),         "1234");
+            testCSMSv1_6.AddHTTPBasicAuth(OCPPv1_6.ChargeBox_Id.Parse("GD001"),         "1234");
             //testCentralSystem.AddHTTPBasicAuth(ChargeBox_Id.Parse("NLHLXELAAD002"), "minimumzestienkarakters");
             //testCentralSystem.AddHTTPBasicAuth(ChargeBox_Id.Parse("suby0200000328"), "plugXest20221110");
-            testCentralSystem.AddHTTPBasicAuth(ChargeBox_Id.Parse("kostal_elaad_teststation"),  "plugXest20221110");
+            testCSMSv1_6.AddHTTPBasicAuth(OCPPv1_6.ChargeBox_Id.Parse("kostal_elaad_teststation"),  "plugXest20221110");
 
-            (testCentralSystem.CentralSystemServers.First() as WebSocketServer).OnNewWebSocketConnection += async (timestamp, server, connection, eventTrackingId, ct) => {
+            (testCSMSv1_6.CentralSystemServers.First() as WebSocketServer).OnNewWebSocketConnection += async (timestamp, server, connection, eventTrackingId, ct) => {
                 DebugX.Log(String.Concat("HTTP web socket server on ", server.IPSocket, " new connection with ", connection.TryGetCustomData("chargeBoxId") + " (" + connection.RemoteSocket + ")"));
-                lock (testCentralSystem)
+                lock (testCSMSv1_6)
                 {
                     File.AppendAllText(Path.Combine(AppContext.BaseDirectory, "TextMessages.log"),
                                        String.Concat(timestamp.ToIso8601(), "\tNEW\t", connection.TryGetCustomData("chargeBoxId"), "\t", connection.RemoteSocket, Environment.NewLine));
                 }
             };
 
-            (testCentralSystem.CentralSystemServers.First() as WebSocketServer).OnTextMessageRequest     += async (timestamp, server, connection, message, eventTrackingId) => {
+            (testCSMSv1_6.CentralSystemServers.First() as WebSocketServer).OnTextMessageRequest     += async (timestamp, server, connection, message, eventTrackingId) => {
                 DebugX.Log(String.Concat("Received a web socket TEXT message: '", message, "'!"));
-                lock (testCentralSystem)
+                lock (testCSMSv1_6)
                 {
                     File.AppendAllText(Path.Combine(AppContext.BaseDirectory, "TextMessages.log"),
                                        String.Concat(timestamp.ToIso8601(), "\tIN\t", connection.TryGetCustomData("chargeBoxId"), "\t", connection.RemoteSocket, "\t", message, Environment.NewLine));
                 }
             };
 
-            (testCentralSystem.CentralSystemServers.First() as WebSocketServer).OnTextMessageSent        += async (timestamp, server, connection, message, eventTrackingId) => {
+            (testCSMSv1_6.CentralSystemServers.First() as WebSocketServer).OnTextMessageSent        += async (timestamp, server, connection, message, eventTrackingId) => {
                 DebugX.Log(String.Concat("Sent     a web socket TEXT message: '", message, "'!"));
-                lock (testCentralSystem)
+                lock (testCSMSv1_6)
                 {
                     File.AppendAllText(Path.Combine(AppContext.BaseDirectory, "TextMessages.log"),
                                        String.Concat(timestamp.ToIso8601(), "\tOUT\t", connection.TryGetCustomData("chargeBoxId"), "\t", connection.RemoteSocket, "\t", message, Environment.NewLine));
                 }
             };
 
-            (testCentralSystem.CentralSystemServers.First() as WebSocketServer).OnCloseMessageReceived += async (timestamp, server, connection, eventTrackingId, ct) => {
+            (testCSMSv1_6.CentralSystemServers.First() as WebSocketServer).OnCloseMessageReceived += async (timestamp, server, connection, eventTrackingId, ct) => {
                 DebugX.Log(String.Concat("HTTP web socket server on ", server.IPSocket, " charge box ", connection.TryGetCustomData("chargeBoxId") + " (" + connection.RemoteSocket + ") closed web socket connection"));
-                lock (testCentralSystem)
+                lock (testCSMSv1_6)
                 {
                     File.AppendAllText(Path.Combine(AppContext.BaseDirectory, "TextMessages.log"),
                                        String.Concat(timestamp.ToIso8601(), "\tCLOSE\t", connection.TryGetCustomData("chargeBoxId"), "\t", connection.RemoteSocket, Environment.NewLine));
                 }
             };
 
-            (testCentralSystem.CentralSystemServers.First() as WebSocketServer).OnTCPConnectionClosed += async (timestamp, server, connection, eventTrackingId, ct) => {
+            (testCSMSv1_6.CentralSystemServers.First() as WebSocketServer).OnTCPConnectionClosed += async (timestamp, server, connection, eventTrackingId, ct) => {
                 DebugX.Log(String.Concat("HTTP web socket server on ", server.IPSocket, " closed TCP connection with ", connection.TryGetCustomData("chargeBoxId") + " (" + connection.RemoteSocket + ")"));
-                lock (testCentralSystem)
+                lock (testCSMSv1_6)
                 {
                     File.AppendAllText(Path.Combine(AppContext.BaseDirectory, "TextMessages.log"),
                                        String.Concat(timestamp.ToIso8601(), "\tQUIT\t", connection.TryGetCustomData("chargeBoxId"), "\t", connection.RemoteSocket, Environment.NewLine));
@@ -189,75 +183,95 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
 
 
 
-            (testCentralSystem.CentralSystemServers.First() as WebSocketServer).OnPingMessageReceived += async (timestamp, server, connection, frame, eventTrackingId) => {
+            (testCSMSv1_6.CentralSystemServers.First() as WebSocketServer).OnPingMessageReceived += async (timestamp, server, connection, frame, eventTrackingId) => {
                 DebugX.Log(nameof(WebSocketServer) + ": Ping received: '" + frame.Payload.ToUTF8String() + "' (" + connection.TryGetCustomData("chargeBoxId") + ", " + connection.RemoteSocket + ")");
-                lock (testCentralSystem)
+                lock (testCSMSv1_6)
                 {
                     File.AppendAllText(Path.Combine(AppContext.BaseDirectory, "TextMessages.log"),
                                        String.Concat(timestamp.ToIso8601(), "\tPING IN\t", connection.TryGetCustomData("chargeBoxId"), "\t", connection.RemoteSocket, Environment.NewLine));
                 }
             };
 
-            (testCentralSystem.CentralSystemServers.First() as WebSocketServer).OnPingMessageSent     += async (timestamp, server, connection, frame, eventTrackingId) => {
+            (testCSMSv1_6.CentralSystemServers.First() as WebSocketServer).OnPingMessageSent     += async (timestamp, server, connection, frame, eventTrackingId) => {
                 DebugX.Log(nameof(WebSocketServer) + ": Ping sent:     '" + frame.Payload.ToUTF8String() + "' (" + connection.TryGetCustomData("chargeBoxId") + ", " + connection.RemoteSocket + ")");
-                lock (testCentralSystem)
+                lock (testCSMSv1_6)
                 {
                     File.AppendAllText(Path.Combine(AppContext.BaseDirectory, "TextMessages.log"),
                                        String.Concat(timestamp.ToIso8601(), "\tPING OUT\t", connection.TryGetCustomData("chargeBoxId"), "\t", connection.RemoteSocket, Environment.NewLine));
                 }
             };
 
-            (testCentralSystem.CentralSystemServers.First() as WebSocketServer).OnPongMessageReceived += async (timestamp, server, connection, frame, eventTrackingId) => {
+            (testCSMSv1_6.CentralSystemServers.First() as WebSocketServer).OnPongMessageReceived += async (timestamp, server, connection, frame, eventTrackingId) => {
                 DebugX.Log(nameof(WebSocketServer) + ": Pong received: '" + frame.Payload.ToUTF8String() + "' (" + connection.TryGetCustomData("chargeBoxId") + ", " + connection.RemoteSocket + ")");
-                lock (testCentralSystem)
+                lock (testCSMSv1_6)
                 {
                     File.AppendAllText(Path.Combine(AppContext.BaseDirectory, "TextMessages.log"),
                                        String.Concat(timestamp.ToIso8601(), "\tPONG IN\t", connection.TryGetCustomData("chargeBoxId"), "\t", connection.RemoteSocket, Environment.NewLine));
                 }
             };
 
+            #endregion
 
-            var chargingStation1  = new TestChargePoint(
-                                        ChargeBoxId:              ChargeBox_Id.Parse("GD001"),
-                                        ChargePointVendor:        "GraphDefined",
-                                        ChargePointModel:         "VCP.1",
-                                        NumberOfConnectors:       2,
+            #region Setup CSMS v2.0
 
-                                        Description:              I18NString.Create(Languages.en, "Our first virtual charging station!"),
-                                        ChargePointSerialNumber:  "SN-CP0001",
-                                        ChargeBoxSerialNumber:    "SN-CB0001",
-                                        FirmwareVersion:          "v0.1",
-                                        Iccid:                    "0000",
-                                        IMSI:                     "1111",
-                                        MeterType:                "Virtual Energy Meter",
-                                        MeterSerialNumber:        "SN-EN0001",
-                                        MeterPublicKey:           "0xcafebabe",
+            var testCSMSv2_0           = new OCPPv2_0.TestCSMS(
+                                             CSMSId:                      OCPPv2_0.CSMS_Id.Parse("OCPPv2_0-Test01"),
+                                             RequireAuthentication:       true,
+                                             HTTPUploadPort:              IPPort.Parse(9911),
+                                             DNSClient:                   API_DNSClient
+                                         );
 
-                                        //DisableSendHeartbeats:    true,
+            var testBackendWebSockets2 = testCSMSv2_0.CreateWebSocketService(
+                                             TCPPort:                     IPPort.Parse(9910),
+                                             DisableWebSocketPings:       true,
+                                             //SlowNetworkSimulationDelay:  TimeSpan.FromMilliseconds(10),
+                                             Autostart:                   true
+                                         );
 
-                                        //HTTPBasicAuth:            new Tuple<String, String>("OLI_001", "1234"),
-                                        //HTTPBasicAuth:            new Tuple<String, String>("GD001", "1234"),
-                                        DNSClient:                API_DNSClient
-                                    );
+            #endregion
 
-            var chargingStation2  = new TestChargePoint(
-                                        ChargeBoxId:              ChargeBox_Id.Parse("CP002"),
-                                        ChargePointVendor:        "GraphDefined",
-                                        ChargePointModel:         "VCP.2",
-                                        NumberOfConnectors:       2,
 
-                                        Description:              I18NString.Create(Languages.en, "Our 2nd virtual charging station!"),
-                                        ChargePointSerialNumber:  "SN-CP0002",
-                                        ChargeBoxSerialNumber:    "SN-CB0002",
-                                        FirmwareVersion:          "v0.1",
-                                        Iccid:                    "3333",
-                                        IMSI:                     "4444",
-                                        MeterType:                "Virtual Energy Meter",
-                                        MeterSerialNumber:        "SN-EN0002",
-                                        MeterPublicKey:           "0xbabecafe",
+            //var chargingStation1  = new TestChargePoint(
+            //                            ChargeBoxId:              OCPPv1_6.ChargeBox_Id.Parse("GD001"),
+            //                            ChargePointVendor:        "GraphDefined",
+            //                            ChargePointModel:         "VCP.1",
+            //                            NumberOfConnectors:       2,
 
-                                        DNSClient:                API_DNSClient
-                                    );
+            //                            Description:              I18NString.Create(Languages.en, "Our first virtual charging station!"),
+            //                            ChargePointSerialNumber:  "SN-CP0001",
+            //                            ChargeBoxSerialNumber:    "SN-CB0001",
+            //                            FirmwareVersion:          "v0.1",
+            //                            Iccid:                    "0000",
+            //                            IMSI:                     "1111",
+            //                            MeterType:                "Virtual Energy Meter",
+            //                            MeterSerialNumber:        "SN-EN0001",
+            //                            MeterPublicKey:           "0xcafebabe",
+
+            //                            //DisableSendHeartbeats:    true,
+
+            //                            //HTTPBasicAuth:            new Tuple<String, String>("OLI_001", "1234"),
+            //                            //HTTPBasicAuth:            new Tuple<String, String>("GD001", "1234"),
+            //                            DNSClient:                API_DNSClient
+            //                        );
+
+            //var chargingStation2  = new TestChargePoint(
+            //                            ChargeBoxId:              OCPPv1_6.ChargeBox_Id.Parse("CP002"),
+            //                            ChargePointVendor:        "GraphDefined",
+            //                            ChargePointModel:         "VCP.2",
+            //                            NumberOfConnectors:       2,
+
+            //                            Description:              I18NString.Create(Languages.en, "Our 2nd virtual charging station!"),
+            //                            ChargePointSerialNumber:  "SN-CP0002",
+            //                            ChargeBoxSerialNumber:    "SN-CB0002",
+            //                            FirmwareVersion:          "v0.1",
+            //                            Iccid:                    "3333",
+            //                            IMSI:                     "4444",
+            //                            MeterType:                "Virtual Energy Meter",
+            //                            MeterSerialNumber:        "SN-EN0002",
+            //                            MeterPublicKey:           "0xbabecafe",
+
+            //                            DNSClient:                API_DNSClient
+            //                        );
 
 
             //var response1  =  await chargingStation1.ConnectWebSocket("From:GD001",
@@ -297,7 +311,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
             var xx = "y";
 
 
-            #region SOAP
+            #region OCPP v1.6 SOAP Tests
 
             //await chargingStation2.InitSOAP("From:CP002",
             //                                "To:OCPPTest01",
@@ -438,6 +452,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
 
             #region Wait for key 'Q' pressed... and quit.
 
+            var       version       = 1;
             var       quit          = false;
             String[]? commandArray  = null;
 
@@ -460,25 +475,53 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                             quit = true;
 
 
+                        if (command == "switch" && commandArray.Length == 2)
+                        {
+
+                            if (commandArray[1] == "1" || commandArray[1] == "v1.6")
+                                version = 1;
+
+                            if (commandArray[1] == "2" || commandArray[1] == "v2.0")
+                                version = 2;
+
+                        }
+
 
                         // AddHTTPBasicAuth
                         //   AddHTTPBasicAuth GD002 abcd1234
                         if (command == "AddHTTPBasicAuth" && commandArray.Length == 3)
                         {
-                            testCentralSystem.AddHTTPBasicAuth(ChargeBox_Id.Parse(commandArray[1]), commandArray[2]);
+                            testCSMSv1_6.AddHTTPBasicAuth(OCPPv1_6.ChargeBox_Id.Parse(commandArray[1]), commandArray[2]);
+                            testCSMSv2_0.AddHTTPBasicAuth(OCPPv2_0.ChargeBox_Id.Parse(commandArray[1]), commandArray[2]);
                         }
 
 
-                        // Reset
+                        #region Reset
+
                         //   hardreset GD002
                         if (command == "hardreset"              && commandArray.Length == 2)
                         {
 
-                            var response = await testCentralSystem.Reset(ChargeBoxId:  ChargeBox_Id.Parse(commandArray[1]),
-                                                                         ResetType:    ResetTypes.Hard);
+                            if (version == 1)
+                            {
 
-                            Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
-                            Console.WriteLine(response.ToJSON());
+                                var response = await testCSMSv1_6.Reset(ChargeBoxId:  OCPPv1_6.ChargeBox_Id.Parse(commandArray[1]),
+                                                                        ResetType:    OCPPv1_6.ResetTypes.Hard);
+
+                                Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
+                                Console.WriteLine(response.ToJSON());
+
+                            }
+                            else
+                            {
+
+                                var response = await testCSMSv2_0.Reset(ChargeBoxId:  OCPPv2_0.ChargeBox_Id.Parse(commandArray[1]),
+                                                                        ResetType:    OCPPv2_0.ResetTypes.Immediate);
+
+                                Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
+                                Console.WriteLine(response.ToJSON());
+
+                            }
 
                         }
 
@@ -486,41 +529,132 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                         if (command == "softreset"              && commandArray.Length == 2)
                         {
 
-                            var response = await testCentralSystem.Reset(ChargeBoxId:  ChargeBox_Id.Parse(commandArray[1]),
-                                                                         ResetType:    ResetTypes.Soft);
+                            if (version == 1)
+                            {
 
-                            Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
-                            Console.WriteLine(response.ToJSON());
+                                var response = await testCSMSv1_6.Reset(ChargeBoxId:  OCPPv1_6.ChargeBox_Id.Parse(commandArray[1]),
+                                                                        ResetType:    OCPPv1_6.ResetTypes.Soft);
+
+                                Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
+                                Console.WriteLine(response.ToJSON());
+
+                            }
+                            else
+                            {
+
+                                var response = await testCSMSv2_0.Reset(ChargeBoxId:  OCPPv2_0.ChargeBox_Id.Parse(commandArray[1]),
+                                                                        ResetType:    OCPPv2_0.ResetTypes.OnIdle);
+
+                                Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
+                                Console.WriteLine(response.ToJSON());
+
+                            }
 
                         }
 
+                        #endregion
 
-                        // Change Availability
+                        #region Change Availability
+
                         //   set inoperative GD002 1
                         if (command == "set"                    && commandArray.Length == 4 && commandArray[1] == "inoperative")
                         {
 
-                            var response = await testCentralSystem.ChangeAvailability(ChargeBoxId:   ChargeBox_Id.Parse(commandArray[2]),
-                                                                                      ConnectorId:   Connector_Id.Parse(commandArray[3]),
-                                                                                      Availability:  Availabilities.Inoperative);
+                            if (version == 1)
+                            {
 
-                            Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
-                            Console.WriteLine(response.ToJSON());
+                                var response = await testCSMSv1_6.ChangeAvailability(ChargeBoxId:   OCPPv1_6.ChargeBox_Id.Parse(commandArray[2]),
+                                                                                     ConnectorId:   OCPPv1_6.Connector_Id.Parse(commandArray[3]),
+                                                                                     Availability:  OCPPv1_6.Availabilities.Inoperative);
 
+                                Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
+                                Console.WriteLine(response.ToJSON());
+
+                            }
+                            else
+                            {
+
+                                var response = await testCSMSv2_0.ChangeAvailability(ChargeBoxId:        OCPPv2_0.ChargeBox_Id.Parse(commandArray[2]),
+                                                                                     OperationalStatus:  OCPPv2_0.OperationalStatus.Inoperative,
+                                                                                     EVSE:               new OCPPv2_0.EVSE(
+                                                                                                             Id:  OCPPv2_0.EVSE_Id.Parse(commandArray[3])
+                                                                                                         ));
+
+                                Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
+                                Console.WriteLine(response.ToJSON());
+
+                            }
+
+                        }
+
+                        if (command == "set"                    && commandArray.Length == 5 && commandArray[1] == "inoperative")
+                        {
+                            if (version == 2)
+                            {
+
+                                var response = await testCSMSv2_0.ChangeAvailability(ChargeBoxId:        OCPPv2_0.ChargeBox_Id.Parse(commandArray[2]),
+                                                                                     OperationalStatus:  OCPPv2_0.OperationalStatus.Inoperative,
+                                                                                     EVSE:               new OCPPv2_0.EVSE(
+                                                                                                             Id:           OCPPv2_0.EVSE_Id.     Parse(commandArray[3]),
+                                                                                                             ConnectorId:  OCPPv2_0.Connector_Id.Parse(commandArray[4])
+                                                                                                         ));
+
+                                Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
+                                Console.WriteLine(response.ToJSON());
+
+                            }
                         }
 
                         //   set operative GD002 1
                         if (command == "set"                    && commandArray.Length == 4 && commandArray[1] == "operative")
                         {
 
-                            var response = await testCentralSystem.ChangeAvailability(ChargeBoxId:   ChargeBox_Id.Parse(commandArray[2]),
-                                                                                      ConnectorId:   Connector_Id.Parse(commandArray[3]),
-                                                                                      Availability:  Availabilities.Operative);
+                            if (version == 1)
+                            {
 
-                            Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
-                            Console.WriteLine(response.ToJSON());
+                                var response = await testCSMSv1_6.ChangeAvailability(ChargeBoxId:   OCPPv1_6.ChargeBox_Id.Parse(commandArray[2]),
+                                                                                     ConnectorId:   OCPPv1_6.Connector_Id.Parse(commandArray[3]),
+                                                                                     Availability:  OCPPv1_6.Availabilities.Operative);
+
+                                Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
+                                Console.WriteLine(response.ToJSON());
+
+                            }
+                            else
+                            {
+
+                                var response = await testCSMSv2_0.ChangeAvailability(ChargeBoxId:        OCPPv2_0.ChargeBox_Id.Parse(commandArray[2]),
+                                                                                     OperationalStatus:  OCPPv2_0.OperationalStatus.Operative,
+                                                                                     EVSE:               new OCPPv2_0.EVSE(
+                                                                                                             Id:  OCPPv2_0.EVSE_Id.Parse(commandArray[3])
+                                                                                                         ));
+
+                                Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
+                                Console.WriteLine(response.ToJSON());
+
+                            }
 
                         }
+
+                        if (command == "set"                    && commandArray.Length == 5 && commandArray[1] == "operative")
+                        {
+                            if (version == 2)
+                            {
+
+                                var response = await testCSMSv2_0.ChangeAvailability(ChargeBoxId:        OCPPv2_0.ChargeBox_Id.Parse(commandArray[2]),
+                                                                                     OperationalStatus:  OCPPv2_0.OperationalStatus.Operative,
+                                                                                     EVSE:               new OCPPv2_0.EVSE(
+                                                                                                             Id:           OCPPv2_0.EVSE_Id.     Parse(commandArray[3]),
+                                                                                                             ConnectorId:  OCPPv2_0.Connector_Id.Parse(commandArray[4])
+                                                                                                         ));
+
+                                Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
+                                Console.WriteLine(response.ToJSON());
+
+                            }
+                        }
+
+                        #endregion
 
 
                         // Get Configuration
@@ -528,7 +662,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                         if (command == "getconf"                && commandArray.Length == 2)
                         {
 
-                            var response = await testCentralSystem.GetConfiguration(ChargeBoxId:  ChargeBox_Id.Parse(commandArray[1]));
+                            var response = await testCSMSv1_6.GetConfiguration(ChargeBoxId: OCPPv1_6.ChargeBox_Id.Parse(commandArray[1]));
 
                             Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
                             Console.WriteLine(response.ToJSON());
@@ -540,8 +674,8 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                         if (command == "getconf"                && commandArray.Length > 2)
                         {
 
-                            var response = await testCentralSystem.GetConfiguration(ChargeBoxId:  ChargeBox_Id.Parse(commandArray[1]),
-                                                                                    Keys:         commandArray.Skip(2));
+                            var response = await testCSMSv1_6.GetConfiguration(ChargeBoxId:  OCPPv1_6.ChargeBox_Id.Parse(commandArray[1]),
+                                                                               Keys:         commandArray.Skip(2));
 
                             Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
                             Console.WriteLine(response.ToJSON());
@@ -554,9 +688,9 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                         if (command == "setconf"                && commandArray.Length == 4)
                         {
 
-                            var response = await testCentralSystem.ChangeConfiguration(ChargeBoxId:  ChargeBox_Id.Parse(commandArray[1]),
-                                                                                       Key:          commandArray[2],
-                                                                                       Value:        commandArray[3]);
+                            var response = await testCSMSv1_6.ChangeConfiguration(ChargeBoxId:  OCPPv1_6.ChargeBox_Id.Parse(commandArray[1]),
+                                                                                  Key:          commandArray[2],
+                                                                                  Value:        commandArray[3]);
 
                             Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
                             Console.WriteLine(response.ToJSON());
@@ -564,13 +698,14 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                         }
 
 
-                        // Data Transfer
+                        #region Transfer Data
+
                         //   transferdata GD002 graphdefined
                         if (command == "transferdata"           && commandArray.Length == 3)
                         {
 
-                            var response = await testCentralSystem.DataTransfer(ChargeBoxId:  ChargeBox_Id.Parse(commandArray[1]),
-                                                                                VendorId:     commandArray[2]);
+                            var response = await testCSMSv1_6.DataTransfer(ChargeBoxId:  OCPPv1_6.ChargeBox_Id.Parse(commandArray[1]),
+                                                                           VendorId:     commandArray[2]);
 
                             Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
                             Console.WriteLine(response.ToJSON());
@@ -581,9 +716,9 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                         if (command == "transferdata"           && commandArray.Length == 4)
                         {
 
-                            var response = await testCentralSystem.DataTransfer(ChargeBoxId:  ChargeBox_Id.Parse(commandArray[1]),
-                                                                                VendorId:     commandArray[2],
-                                                                                MessageId:    commandArray[3]);
+                            var response = await testCSMSv1_6.DataTransfer(ChargeBoxId:  OCPPv1_6.ChargeBox_Id.Parse(commandArray[1]),
+                                                                           VendorId:     commandArray[2],
+                                                                           MessageId:    commandArray[3]);
 
                             Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
                             Console.WriteLine(response.ToJSON());
@@ -594,15 +729,17 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                         if (command == "transferdata"           && commandArray.Length == 5)
                         {
 
-                            var response = await testCentralSystem.DataTransfer(ChargeBoxId:  ChargeBox_Id.Parse(commandArray[1]),
-                                                                                VendorId:     commandArray[2],
-                                                                                MessageId:    commandArray[3],
-                                                                                Data:         commandArray[4]);
+                            var response = await testCSMSv1_6.DataTransfer(ChargeBoxId:  OCPPv1_6.ChargeBox_Id.Parse(commandArray[1]),
+                                                                           VendorId:     commandArray[2],
+                                                                           MessageId:    commandArray[3],
+                                                                           Data:         commandArray[4]);
 
                             Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
                             Console.WriteLine(response.ToJSON());
 
                         }
+
+                        #endregion
 
 
                         // Get Diagnostics
@@ -610,12 +747,12 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                         if (command == "getdiag"                && commandArray.Length == 3)
                         {
 
-                            var response = await testCentralSystem.GetDiagnostics(ChargeBoxId:    ChargeBox_Id.Parse(commandArray[1]),
-                                                                                  Location:       commandArray[2],
-                                                                                  StartTime:      null,
-                                                                                  StopTime:       null,
-                                                                                  Retries:        null,
-                                                                                  RetryInterval:  null);
+                            var response = await testCSMSv1_6.GetDiagnostics(ChargeBoxId:    OCPPv1_6.ChargeBox_Id.Parse(commandArray[1]),
+                                                                             Location:       commandArray[2],
+                                                                             StartTime:      null,
+                                                                             StopTime:       null,
+                                                                             Retries:        null,
+                                                                             RetryInterval:  null);
 
                             Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
                             Console.WriteLine(response.ToJSON());
@@ -626,12 +763,12 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                         if (command == "getdiag"                && commandArray.Length == 7)
                         {
 
-                            var response = await testCentralSystem.GetDiagnostics(ChargeBoxId:    ChargeBox_Id.Parse(commandArray[1]),
-                                                                                  Location:       commandArray[2],
-                                                                                  StartTime:      DateTime.Parse(commandArray[3]).ToUniversalTime(),
-                                                                                  StopTime:       DateTime.Parse(commandArray[4]).ToUniversalTime(),
-                                                                                  Retries:        Byte.Parse(commandArray[5]),
-                                                                                  RetryInterval:  TimeSpan.FromSeconds(Byte.Parse(commandArray[6])));
+                            var response = await testCSMSv1_6.GetDiagnostics(ChargeBoxId:    OCPPv1_6.ChargeBox_Id.Parse(commandArray[1]),
+                                                                             Location:       commandArray[2],
+                                                                             StartTime:      DateTime.Parse(commandArray[3]).ToUniversalTime(),
+                                                                             StopTime:       DateTime.Parse(commandArray[4]).ToUniversalTime(),
+                                                                             Retries:        Byte.Parse(commandArray[5]),
+                                                                             RetryInterval:  TimeSpan.FromSeconds(Byte.Parse(commandArray[6])));
 
                             Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
                             Console.WriteLine(response.ToJSON());
@@ -639,13 +776,14 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                         }
 
 
-                        // Trigger Message
+                        #region Trigger Message
+
                         //   trigger GD002 BootNotification
                         if (command == "trigger"                && commandArray.Length == 3 && commandArray[2].ToLower() == "BootNotification".ToLower())
                         {
 
-                            var response = await testCentralSystem.TriggerMessage(ChargeBoxId:       ChargeBox_Id.Parse(commandArray[1]),
-                                                                                  RequestedMessage:  MessageTriggers.BootNotification);
+                            var response = await testCSMSv1_6.TriggerMessage(ChargeBoxId:       OCPPv1_6.ChargeBox_Id.Parse(commandArray[1]),
+                                                                             RequestedMessage:  OCPPv1_6.MessageTriggers.BootNotification);
 
                             Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
                             Console.WriteLine(response.ToJSON());
@@ -656,8 +794,8 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                         if (command == "trigger"                && commandArray.Length == 3 && commandArray[2].ToLower() == "DiagnosticsStatusNotification".ToLower())
                         {
 
-                            var response = await testCentralSystem.TriggerMessage(ChargeBoxId:       ChargeBox_Id.Parse(commandArray[1]),
-                                                                                  RequestedMessage:  MessageTriggers.DiagnosticsStatusNotification);
+                            var response = await testCSMSv1_6.TriggerMessage(ChargeBoxId:       OCPPv1_6.ChargeBox_Id.Parse(commandArray[1]),
+                                                                             RequestedMessage:  OCPPv1_6.MessageTriggers.DiagnosticsStatusNotification);
 
                             Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
                             Console.WriteLine(response.ToJSON());
@@ -668,8 +806,8 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                         if (command == "trigger"                && commandArray.Length == 3 && commandArray[2].ToLower() == "FirmwareStatusNotification".ToLower())
                         {
 
-                            var response = await testCentralSystem.TriggerMessage(ChargeBoxId:       ChargeBox_Id.Parse(commandArray[1]),
-                                                                                  RequestedMessage:  MessageTriggers.FirmwareStatusNotification);
+                            var response = await testCSMSv1_6.TriggerMessage(ChargeBoxId:       OCPPv1_6.ChargeBox_Id.Parse(commandArray[1]),
+                                                                             RequestedMessage:  OCPPv1_6.MessageTriggers.FirmwareStatusNotification);
 
                             Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
                             Console.WriteLine(response.ToJSON());
@@ -680,8 +818,8 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                         if (command == "trigger"                && commandArray.Length == 3 && commandArray[2].ToLower() == "Heartbeat".ToLower())
                         {
 
-                            var response = await testCentralSystem.TriggerMessage(ChargeBoxId:       ChargeBox_Id.Parse(commandArray[1]),
-                                                                                  RequestedMessage:  MessageTriggers.Heartbeat);
+                            var response = await testCSMSv1_6.TriggerMessage(ChargeBoxId:       OCPPv1_6.ChargeBox_Id.Parse(commandArray[1]),
+                                                                             RequestedMessage:  OCPPv1_6.MessageTriggers.Heartbeat);
 
                             Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
                             Console.WriteLine(response.ToJSON());
@@ -692,9 +830,9 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                         if (command == "trigger"                && commandArray.Length == 4 && commandArray[2].ToLower() == "MeterValues".ToLower())
                         {
 
-                            var response = await testCentralSystem.TriggerMessage(ChargeBoxId:       ChargeBox_Id.Parse(commandArray[1]),
-                                                                                  RequestedMessage:  MessageTriggers.MeterValues,
-                                                                                  ConnectorId:       Connector_Id.Parse(commandArray[3]));
+                            var response = await testCSMSv1_6.TriggerMessage(ChargeBoxId:       OCPPv1_6.ChargeBox_Id.Parse(commandArray[1]),
+                                                                             RequestedMessage:  OCPPv1_6.MessageTriggers.MeterValues,
+                                                                             ConnectorId:       OCPPv1_6.Connector_Id.Parse(commandArray[3]));
 
                             Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
                             Console.WriteLine(response.ToJSON());
@@ -705,9 +843,9 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                         if (command == "trigger"                && commandArray.Length == 4 && commandArray[2].ToLower() == "StatusNotification".ToLower())
                         {
 
-                            var response = await testCentralSystem.TriggerMessage(ChargeBoxId:       ChargeBox_Id.Parse(commandArray[1]),
-                                                                                  RequestedMessage:  MessageTriggers.StatusNotification,
-                                                                                  ConnectorId:       Connector_Id.Parse(commandArray[3]));
+                            var response = await testCSMSv1_6.TriggerMessage(ChargeBoxId:       OCPPv1_6.ChargeBox_Id.Parse(commandArray[1]),
+                                                                             RequestedMessage:  OCPPv1_6.MessageTriggers.StatusNotification,
+                                                                             ConnectorId:       OCPPv1_6.Connector_Id.Parse(commandArray[3]));
 
                             Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
                             Console.WriteLine(response.ToJSON());
@@ -720,15 +858,16 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                         if (command == "updatefw"               && commandArray.Length == 3)
                         {
 
-                            var response = await testCentralSystem.UpdateFirmware(ChargeBoxId:        ChargeBox_Id.Parse(commandArray[1]),
-                                                                                  FirmwareURL:        URL.Parse(commandArray[2]),
-                                                                                  RetrieveTimestamp:  DateTime.UtcNow + TimeSpan.FromMinutes(1));
+                            var response = await testCSMSv1_6.UpdateFirmware(ChargeBoxId:        OCPPv1_6.ChargeBox_Id.Parse(commandArray[1]),
+                                                                             FirmwareURL:        URL.Parse(commandArray[2]),
+                                                                             RetrieveTimestamp:  DateTime.UtcNow + TimeSpan.FromMinutes(1));
 
                             Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
                             Console.WriteLine(response.ToJSON());
 
                         }
 
+                        #endregion
 
 
                         // Reserve Now
@@ -736,11 +875,11 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                         if (command == "reserve"                && commandArray.Length == 5)
                         {
 
-                            var response = await testCentralSystem.ReserveNow(ChargeBoxId:    ChargeBox_Id.  Parse(commandArray[1]),
-                                                                              ConnectorId:    Connector_Id.  Parse(commandArray[2]),
-                                                                              ReservationId:  Reservation_Id.Parse(commandArray[3]),
-                                                                              ExpiryDate:     DateTime.UtcNow + TimeSpan.FromMinutes(15),
-                                                                              IdTag:          IdToken.       Parse(commandArray[4]));
+                            var response = await testCSMSv1_6.ReserveNow(ChargeBoxId:    OCPPv1_6.ChargeBox_Id.  Parse(commandArray[1]),
+                                                                         ConnectorId:    OCPPv1_6.Connector_Id.  Parse(commandArray[2]),
+                                                                         ReservationId:  OCPPv1_6.Reservation_Id.Parse(commandArray[3]),
+                                                                         ExpiryDate:     DateTime.UtcNow + TimeSpan.FromMinutes(15),
+                                                                         IdTag:          OCPPv1_6.IdToken.       Parse(commandArray[4]));
 
                             Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
                             Console.WriteLine(response.ToJSON());
@@ -752,8 +891,8 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                         if (command == "cancelreservation"      && commandArray.Length == 3)
                         {
 
-                            var response = await testCentralSystem.CancelReservation(ChargeBoxId:    ChargeBox_Id.  Parse(commandArray[1]),
-                                                                                     ReservationId:  Reservation_Id.Parse(commandArray[2]));
+                            var response = await testCSMSv1_6.CancelReservation(ChargeBoxId:    OCPPv1_6.ChargeBox_Id.  Parse(commandArray[1]),
+                                                                                ReservationId:  OCPPv1_6.Reservation_Id.Parse(commandArray[2]));
 
                             Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
                             Console.WriteLine(response.ToJSON());
@@ -766,9 +905,9 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                         if (command == "remotestart"            && commandArray.Length == 4)
                         {
 
-                            var response = await testCentralSystem.RemoteStartTransaction(ChargeBoxId:  ChargeBox_Id.Parse(commandArray[1]),
-                                                                                          IdTag:        IdToken.     Parse(commandArray[2]),
-                                                                                          ConnectorId:  Connector_Id.Parse(commandArray[3]));;
+                            var response = await testCSMSv1_6.RemoteStartTransaction(ChargeBoxId:  OCPPv1_6.ChargeBox_Id.Parse(commandArray[1]),
+                                                                                     IdTag:        OCPPv1_6.IdToken.     Parse(commandArray[2]),
+                                                                                     ConnectorId:  OCPPv1_6.Connector_Id.Parse(commandArray[3]));;
 
                             Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
                             Console.WriteLine(response.ToJSON());
@@ -781,8 +920,8 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                         if (command == "remotestop"             && commandArray.Length == 3)
                         {
 
-                            var response = await testCentralSystem.RemoteStopTransaction(ChargeBoxId:    ChargeBox_Id.  Parse(commandArray[1]),
-                                                                                         TransactionId:  Transaction_Id.Parse(commandArray[2]));
+                            var response = await testCSMSv1_6.RemoteStopTransaction(ChargeBoxId:    OCPPv1_6.ChargeBox_Id.  Parse(commandArray[1]),
+                                                                                    TransactionId:  OCPPv1_6.Transaction_Id.Parse(commandArray[2]));
 
                             Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
                             Console.WriteLine(response.ToJSON());
@@ -795,41 +934,41 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                         if (command == "setprofile1"            && commandArray.Length == 3)
                         {
 
-                            var response = await testCentralSystem.SetChargingProfile(ChargeBoxId:      ChargeBox_Id.Parse(commandArray[1]),
-                                                                                      ConnectorId:      Connector_Id.Parse(commandArray[2]),
-                                                                                      ChargingProfile:  new ChargingProfile(
-                                                                                                            ChargingProfile_Id.Parse("100"),
-                                                                                                            0,
-                                                                                                            ChargingProfilePurposes.TxDefaultProfile,
-                                                                                                            ChargingProfileKinds.Recurring,
-                                                                                                            new ChargingSchedule(
-                                                                                                                ChargingRateUnit:         ChargingRateUnits.Watts,
-                                                                                                                ChargingSchedulePeriods:  new ChargingSchedulePeriod[] {
-                                                                                                                                              new ChargingSchedulePeriod(
-                                                                                                                                                  StartPeriod:   TimeSpan.FromHours(0),  // == 00:00 Uhr
-                                                                                                                                                  Limit:         11000,
-                                                                                                                                                  NumberPhases:  3
-                                                                                                                                              ),
-                                                                                                                                              new ChargingSchedulePeriod(
-                                                                                                                                                  StartPeriod:   TimeSpan.FromHours(8),  // == 08:00 Uhr
-                                                                                                                                                  Limit:         6000,
-                                                                                                                                                  NumberPhases:  3
-                                                                                                                                              ),
-                                                                                                                                              new ChargingSchedulePeriod(
-                                                                                                                                                  StartPeriod:   TimeSpan.FromHours(20), // == 20:00 Uhr
-                                                                                                                                                  Limit:         11000,
-                                                                                                                                                  NumberPhases:  3
-                                                                                                                                              )
-                                                                                                                                          },
-                                                                                                                Duration:                 TimeSpan.FromHours(24),
-                                                                                                                StartSchedule:            DateTime.Parse("2022-11-01T00:00:00Z").ToUniversalTime()
+                            var response = await testCSMSv1_6.SetChargingProfile(ChargeBoxId:      OCPPv1_6.ChargeBox_Id.Parse(commandArray[1]),
+                                                                                 ConnectorId:      OCPPv1_6.Connector_Id.Parse(commandArray[2]),
+                                                                                 ChargingProfile:  new OCPPv1_6.ChargingProfile(
+                                                                                                       OCPPv1_6.ChargingProfile_Id.Parse("100"),
+                                                                                                       0,
+                                                                                                       OCPPv1_6.ChargingProfilePurposes.TxDefaultProfile,
+                                                                                                       OCPPv1_6.ChargingProfileKinds.Recurring,
+                                                                                                       new OCPPv1_6.ChargingSchedule(
+                                                                                                           ChargingRateUnit:         OCPPv1_6.ChargingRateUnits.Watts,
+                                                                                                           ChargingSchedulePeriods:  new OCPPv1_6.ChargingSchedulePeriod[] {
+                                                                                                                                         new OCPPv1_6.ChargingSchedulePeriod(
+                                                                                                                                             StartPeriod:   TimeSpan.FromHours(0),  // == 00:00 Uhr
+                                                                                                                                             Limit:         11000,
+                                                                                                                                             NumberPhases:  3
+                                                                                                                                         ),
+                                                                                                                                         new OCPPv1_6.ChargingSchedulePeriod(
+                                                                                                                                             StartPeriod:   TimeSpan.FromHours(8),  // == 08:00 Uhr
+                                                                                                                                             Limit:         6000,
+                                                                                                                                             NumberPhases:  3
+                                                                                                                                         ),
+                                                                                                                                         new OCPPv1_6.ChargingSchedulePeriod(
+                                                                                                                                             StartPeriod:   TimeSpan.FromHours(20), // == 20:00 Uhr
+                                                                                                                                             Limit:         11000,
+                                                                                                                                             NumberPhases:  3
+                                                                                                                                         )
+                                                                                                                                     },
+                                                                                                           Duration:                 TimeSpan.FromHours(24),
+                                                                                                           StartSchedule:            DateTime.Parse("2022-11-01T00:00:00Z").ToUniversalTime()
 
-                                                                                                            ),
-                                                                                                            null, //Transaction_Id.TryParse(5678),
-                                                                                                            RecurrencyKinds.Daily,
-                                                                                                            DateTime.Parse("2022-11-01T00:00:00Z").ToUniversalTime(),
-                                                                                                            DateTime.Parse("2022-12-01T00:00:00Z").ToUniversalTime()
-                                                                                                        ));
+                                                                                                       ),
+                                                                                                       null, //Transaction_Id.TryParse(5678),
+                                                                                                       OCPPv1_6.RecurrencyKinds.Daily,
+                                                                                                       DateTime.Parse("2022-11-01T00:00:00Z").ToUniversalTime(),
+                                                                                                       DateTime.Parse("2022-12-01T00:00:00Z").ToUniversalTime()
+                                                                                                   ));
 
                             Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
                             Console.WriteLine(response.ToJSON());
@@ -840,41 +979,41 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                         if (command == "setprofile2"            && commandArray.Length == 3)
                         {
 
-                            var response = await testCentralSystem.SetChargingProfile(ChargeBoxId:      ChargeBox_Id.Parse(commandArray[1]),
-                                                                                      ConnectorId:      Connector_Id.Parse(commandArray[2]),
-                                                                                      ChargingProfile:  new ChargingProfile(
-                                                                                                            ChargingProfile_Id.Parse("100"),
-                                                                                                            1,
-                                                                                                            ChargingProfilePurposes.TxDefaultProfile,
-                                                                                                            ChargingProfileKinds.Recurring,
-                                                                                                            new ChargingSchedule(
-                                                                                                                ChargingRateUnit:         ChargingRateUnits.Watts,
-                                                                                                                ChargingSchedulePeriods:  new ChargingSchedulePeriod[] {
-                                                                                                                                              new ChargingSchedulePeriod(
-                                                                                                                                                  StartPeriod:   TimeSpan.FromHours(0),  // == 00:00 Uhr
-                                                                                                                                                  Limit:         11000,
-                                                                                                                                                  NumberPhases:  3
-                                                                                                                                              ),
-                                                                                                                                              new ChargingSchedulePeriod(
-                                                                                                                                                  StartPeriod:   TimeSpan.FromHours(6),  // == 06:00 Uhr
-                                                                                                                                                  Limit:         10000,
-                                                                                                                                                  NumberPhases:  3
-                                                                                                                                              ),
-                                                                                                                                              new ChargingSchedulePeriod(
-                                                                                                                                                  StartPeriod:   TimeSpan.FromHours(21), // == 21:00 Uhr
-                                                                                                                                                  Limit:         11000,
-                                                                                                                                                  NumberPhases:  3
-                                                                                                                                              )
-                                                                                                                                          },
-                                                                                                                Duration:                 TimeSpan.FromHours(24),
-                                                                                                                StartSchedule:            DateTime.Parse("2022-11-01T00:00:00Z").ToUniversalTime()
+                            var response = await testCSMSv1_6.SetChargingProfile(ChargeBoxId:      OCPPv1_6.ChargeBox_Id.Parse(commandArray[1]),
+                                                                                 ConnectorId:      OCPPv1_6.Connector_Id.Parse(commandArray[2]),
+                                                                                 ChargingProfile:  new OCPPv1_6.ChargingProfile(
+                                                                                                       OCPPv1_6.ChargingProfile_Id.Parse("100"),
+                                                                                                       1,
+                                                                                                       OCPPv1_6.ChargingProfilePurposes.TxDefaultProfile,
+                                                                                                       OCPPv1_6.ChargingProfileKinds.Recurring,
+                                                                                                       new OCPPv1_6.ChargingSchedule(
+                                                                                                           ChargingRateUnit:         OCPPv1_6.ChargingRateUnits.Watts,
+                                                                                                           ChargingSchedulePeriods:  new OCPPv1_6.ChargingSchedulePeriod[] {
+                                                                                                                                         new OCPPv1_6.ChargingSchedulePeriod(
+                                                                                                                                             StartPeriod:   TimeSpan.FromHours(0),  // == 00:00 Uhr
+                                                                                                                                             Limit:         11000,
+                                                                                                                                             NumberPhases:  3
+                                                                                                                                         ),
+                                                                                                                                         new OCPPv1_6.ChargingSchedulePeriod(
+                                                                                                                                             StartPeriod:   TimeSpan.FromHours(6),  // == 06:00 Uhr
+                                                                                                                                             Limit:         10000,
+                                                                                                                                             NumberPhases:  3
+                                                                                                                                         ),
+                                                                                                                                         new OCPPv1_6.ChargingSchedulePeriod(
+                                                                                                                                             StartPeriod:   TimeSpan.FromHours(21), // == 21:00 Uhr
+                                                                                                                                             Limit:         11000,
+                                                                                                                                             NumberPhases:  3
+                                                                                                                                         )
+                                                                                                                                     },
+                                                                                                           Duration:                 TimeSpan.FromHours(24),
+                                                                                                           StartSchedule:            DateTime.Parse("2022-11-01T00:00:00Z").ToUniversalTime()
 
-                                                                                                            ),
-                                                                                                            null, //Transaction_Id.TryParse(6789),
-                                                                                                            RecurrencyKinds.Daily,
-                                                                                                            DateTime.Parse("2022-11-01T00:00:00Z").ToUniversalTime(),
-                                                                                                            DateTime.Parse("2022-12-01T00:00:00Z").ToUniversalTime()
-                                                                                                        ));
+                                                                                                       ),
+                                                                                                       null, //Transaction_Id.TryParse(6789),
+                                                                                                       OCPPv1_6.RecurrencyKinds.Daily,
+                                                                                                       DateTime.Parse("2022-11-01T00:00:00Z").ToUniversalTime(),
+                                                                                                       DateTime.Parse("2022-12-01T00:00:00Z").ToUniversalTime()
+                                                                                                   ));
 
                             Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
                             Console.WriteLine(response.ToJSON());
@@ -887,9 +1026,9 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                         if (command == "clearprofile"           && commandArray.Length >= 2)
                         {
 
-                            var response = await testCentralSystem.ClearChargingProfile(ChargeBoxId:        ChargeBox_Id.Parse(commandArray[1]),
-                                                                                        ChargingProfileId:  commandArray.Length >= 4 ? ChargingProfile_Id.Parse(commandArray[3]) : null,
-                                                                                        ConnectorId:        commandArray.Length >= 3 ? Connector_Id.      Parse(commandArray[2]) : null);
+                            var response = await testCSMSv1_6.ClearChargingProfile(ChargeBoxId:        OCPPv1_6.ChargeBox_Id.Parse(commandArray[1]),
+                                                                                   ChargingProfileId:  commandArray.Length >= 4 ? OCPPv1_6.ChargingProfile_Id.Parse(commandArray[3]) : null,
+                                                                                   ConnectorId:        commandArray.Length >= 3 ? OCPPv1_6.Connector_Id.      Parse(commandArray[2]) : null);
 
                             Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
                             Console.WriteLine(response.ToJSON());
@@ -902,9 +1041,9 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                         if (command == "getschedule"            && commandArray.Length == 4)
                         {
 
-                            var response = await testCentralSystem.GetCompositeSchedule(ChargeBoxId:  ChargeBox_Id.               Parse(commandArray[1]),
-                                                                                        ConnectorId:  Connector_Id.               Parse(commandArray[2]),
-                                                                                        Duration:     TimeSpan.FromSeconds(UInt32.Parse(commandArray[3])));
+                            var response = await testCSMSv1_6.GetCompositeSchedule(ChargeBoxId:  OCPPv1_6.ChargeBox_Id.               Parse(commandArray[1]),
+                                                                                   ConnectorId:  OCPPv1_6.Connector_Id.               Parse(commandArray[2]),
+                                                                                   Duration:     TimeSpan.FromSeconds(UInt32.Parse(commandArray[3])));
 
                             Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
                             Console.WriteLine(response.ToJSON());
@@ -917,8 +1056,8 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                         if (command == "unlock"                 && commandArray.Length == 3)
                         {
 
-                            var response = await testCentralSystem.UnlockConnector(ChargeBoxId:  ChargeBox_Id.Parse(commandArray[1]),
-                                                                                   ConnectorId:  Connector_Id.Parse(commandArray[2]));
+                            var response = await testCSMSv1_6.UnlockConnector(ChargeBoxId:  OCPPv1_6.ChargeBox_Id.Parse(commandArray[1]),
+                                                                              ConnectorId:  OCPPv1_6.Connector_Id.Parse(commandArray[2]));
 
                             Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
                             Console.WriteLine(response.ToJSON());
@@ -932,7 +1071,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                         if (command == "getlocallistversion"    && commandArray.Length == 2)
                         {
 
-                            var response = await testCentralSystem.GetLocalListVersion(ChargeBox_Id.Parse(commandArray[1]));
+                            var response = await testCSMSv1_6.GetLocalListVersion(OCPPv1_6.ChargeBox_Id.Parse(commandArray[1]));
 
                             Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
                             Console.WriteLine(response.ToJSON());
@@ -944,15 +1083,15 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                         if (command == "sendlocallist"          && commandArray.Length == 2)
                         {
 
-                            var response = await testCentralSystem.SendLocalList(ChargeBox_Id.Parse(commandArray[1]),
+                            var response = await testCSMSv1_6.SendLocalList(OCPPv1_6.ChargeBox_Id.Parse(commandArray[1]),
                                                                                  2, // 0 is not allowed!
-                                                                                 UpdateTypes.Full,
-                                                                                 new AuthorizationData[] {
-                                                                                     new AuthorizationData(IdToken.Parse("046938f2fc6880"), new IdTagInfo(AuthorizationStatus.Blocked)),
-                                                                                     new AuthorizationData(IdToken.Parse("aabbcc11"),       new IdTagInfo(AuthorizationStatus.Accepted)),
-                                                                                     new AuthorizationData(IdToken.Parse("aabbcc22"),       new IdTagInfo(AuthorizationStatus.Accepted)),
-                                                                                     new AuthorizationData(IdToken.Parse("aabbcc33"),       new IdTagInfo(AuthorizationStatus.Accepted)),
-                                                                                     new AuthorizationData(IdToken.Parse("aabbcc44"),       new IdTagInfo(AuthorizationStatus.Blocked))
+                                                                                 OCPPv1_6.UpdateTypes.Full,
+                                                                                 new OCPPv1_6.AuthorizationData[] {
+                                                                                     new OCPPv1_6.AuthorizationData(OCPPv1_6.IdToken.Parse("046938f2fc6880"), new OCPPv1_6.IdTagInfo(OCPPv1_6.AuthorizationStatus.Blocked)),
+                                                                                     new OCPPv1_6.AuthorizationData(OCPPv1_6.IdToken.Parse("aabbcc11"),       new OCPPv1_6.IdTagInfo(OCPPv1_6.AuthorizationStatus.Accepted)),
+                                                                                     new OCPPv1_6.AuthorizationData(OCPPv1_6.IdToken.Parse("aabbcc22"),       new OCPPv1_6.IdTagInfo(OCPPv1_6.AuthorizationStatus.Accepted)),
+                                                                                     new OCPPv1_6.AuthorizationData(OCPPv1_6.IdToken.Parse("aabbcc33"),       new OCPPv1_6.IdTagInfo(OCPPv1_6.AuthorizationStatus.Accepted)),
+                                                                                     new OCPPv1_6.AuthorizationData(OCPPv1_6.IdToken.Parse("aabbcc44"),       new OCPPv1_6.IdTagInfo(OCPPv1_6.AuthorizationStatus.Blocked))
                                                                                  });
 
                             Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
@@ -965,7 +1104,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                         if (command == "clearcache"             && commandArray.Length == 2)
                         {
 
-                            var response = await testCentralSystem.ClearCache(ChargeBox_Id.Parse(commandArray[1]));
+                            var response = await testCSMSv1_6.ClearCache(OCPPv1_6.ChargeBox_Id.Parse(commandArray[1]));
 
                             Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
                             Console.WriteLine(response.ToJSON());
@@ -979,8 +1118,8 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                         if (command == "certificatesigned"      && commandArray.Length == 2)
                         {
 
-                            var response = await testCentralSystem.CertificateSigned(ChargeBox_Id.Parse(commandArray[1]),
-                                                                                     CertificateChain.Parse(
+                            var response = await testCSMSv1_6.CertificateSigned(OCPPv1_6.ChargeBox_Id.Parse(commandArray[1]),
+                                                                                     OCPPv1_6.CertificateChain.Parse(
                                                                                      String.Concat(
                                                                                          "-----BEGIN CERTIFICATE-----\n",
                                                                                          "MIIFNjCCBB6gAwIBAgISBOChwuPxlU25hKJ2AT4zX+4kMA0GCSqGSIb3DQEBCwUA\n",
@@ -1025,13 +1164,13 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                         if (command == "deletecertificate"      && commandArray.Length == 2)
                         {
 
-                            var response = await testCentralSystem.DeleteCertificate(ChargeBox_Id.Parse(commandArray[1]),
-                                                                                     new CertificateHashData(
-                                                                                         HashAlgorithms.SHA256,
-                                                                                         "bde18ac64b30e7e33c6407fcc625b80a8be4e59000aefe703506d2bf7645f810",
-                                                                                         "b44b3ed74a4ce77d54469463bf1042cbd8d0c1981a71febac58b23342fda07b9",
-                                                                                         "4E0A1C2E3F1954DB984A276013E335FEE24"
-                                                                                     ));
+                            var response = await testCSMSv1_6.DeleteCertificate(OCPPv1_6.ChargeBox_Id.Parse(commandArray[1]),
+                                                                                new OCPPv1_6.CertificateHashData(
+                                                                                    OCPPv1_6.HashAlgorithms.SHA256,
+                                                                                    "bde18ac64b30e7e33c6407fcc625b80a8be4e59000aefe703506d2bf7645f810",
+                                                                                    "b44b3ed74a4ce77d54469463bf1042cbd8d0c1981a71febac58b23342fda07b9",
+                                                                                    "4E0A1C2E3F1954DB984A276013E335FEE24"
+                                                                                ));
 
                             Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
                             Console.WriteLine(response.ToJSON());
@@ -1044,8 +1183,8 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                         if (command == "extendedtrigger"        && commandArray.Length == 3 && commandArray[2].ToLower() == "Heartbeat".ToLower())
                         {
 
-                            var response = await testCentralSystem.ExtendedTriggerMessage(ChargeBoxId:       ChargeBox_Id.Parse(commandArray[1]),
-                                                                                          RequestedMessage:  MessageTriggers.Heartbeat);
+                            var response = await testCSMSv1_6.ExtendedTriggerMessage(ChargeBoxId:       OCPPv1_6.ChargeBox_Id.Parse(commandArray[1]),
+                                                                                     RequestedMessage:  OCPPv1_6.MessageTriggers.Heartbeat);
 
                             Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
                             Console.WriteLine(response.ToJSON());
@@ -1058,8 +1197,8 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                         if (command == "getcerts"               && commandArray.Length == 3 && commandArray[2].ToLower() == "csrc".ToLower())
                         {
 
-                            var response = await testCentralSystem.GetInstalledCertificateIds(ChargeBoxId: ChargeBox_Id.Parse(commandArray[1]),
-                                                                                              CertificateUse.CentralSystemRootCertificate);
+                            var response = await testCSMSv1_6.GetInstalledCertificateIds(OCPPv1_6.ChargeBox_Id.Parse(commandArray[1]),
+                                                                                         OCPPv1_6.CertificateUse.CentralSystemRootCertificate);
 
                             Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
                             Console.WriteLine(response.ToJSON());
@@ -1070,8 +1209,8 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                         if (command == "getcerts"               && commandArray.Length == 3 && commandArray[2].ToLower() == "mrc".ToLower())
                         {
 
-                            var response = await testCentralSystem.GetInstalledCertificateIds(ChargeBoxId: ChargeBox_Id.Parse(commandArray[1]),
-                                                                                              CertificateUse.ManufacturerRootCertificate);
+                            var response = await testCSMSv1_6.GetInstalledCertificateIds(OCPPv1_6.ChargeBox_Id.Parse(commandArray[1]),
+                                                                                         OCPPv1_6.CertificateUse.ManufacturerRootCertificate);
 
                             Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
                             Console.WriteLine(response.ToJSON());
@@ -1084,16 +1223,16 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                         if (command == "getlog"                 && commandArray.Length == 3 && commandArray[2].ToLower() == "diagnostics".ToLower())
                         {
 
-                            var response = await testCentralSystem.GetLog(ChargeBoxId:    ChargeBox_Id.Parse(commandArray[1]),
-                                                                          LogType:        LogTypes.DiagnosticsLog,
-                                                                          LogRequestId:   1,
-                                                                          Log:            new LogParameters(
-                                                                                              RemoteLocation:   URL.Parse("https://api2.ocpp.charging.cloud:9901"),
-                                                                                              OldestTimestamp:  null,
-                                                                                              LatestTimestamp:  null
-                                                                                          ),
-                                                                          Retries:        null,
-                                                                          RetryInterval:  null);
+                            var response = await testCSMSv1_6.GetLog(ChargeBoxId:    OCPPv1_6.ChargeBox_Id.Parse(commandArray[1]),
+                                                                     LogType:        OCPPv1_6.LogTypes.DiagnosticsLog,
+                                                                     LogRequestId:   1,
+                                                                     Log:            new OCPPv1_6.LogParameters(
+                                                                                         RemoteLocation:   URL.Parse("https://api2.ocpp.charging.cloud:9901"),
+                                                                                         OldestTimestamp:  null,
+                                                                                         LatestTimestamp:  null
+                                                                                     ),
+                                                                     Retries:        null,
+                                                                     RetryInterval:  null);
 
                             Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
                             Console.WriteLine(response.ToJSON());
@@ -1104,16 +1243,16 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                         if (command == "getlog"                 && commandArray.Length == 3 && commandArray[2].ToLower() == "security".ToLower())
                         {
 
-                            var response = await testCentralSystem.GetLog(ChargeBoxId:    ChargeBox_Id.Parse(commandArray[1]),
-                                                                          LogType:        LogTypes.SecurityLog,
-                                                                          LogRequestId:   1,
-                                                                          Log:            new LogParameters(
-                                                                                              RemoteLocation:   URL.Parse("https://api2.ocpp.charging.cloud:9901"),
-                                                                                              OldestTimestamp:  null,
-                                                                                              LatestTimestamp:  null
-                                                                                          ),
-                                                                          Retries:        null,
-                                                                          RetryInterval:  null);
+                            var response = await testCSMSv1_6.GetLog(ChargeBoxId:    OCPPv1_6.ChargeBox_Id.Parse(commandArray[1]),
+                                                                     LogType:        OCPPv1_6.LogTypes.SecurityLog,
+                                                                     LogRequestId:   1,
+                                                                     Log:            new OCPPv1_6.LogParameters(
+                                                                                         RemoteLocation:   URL.Parse("https://api2.ocpp.charging.cloud:9901"),
+                                                                                         OldestTimestamp:  null,
+                                                                                         LatestTimestamp:  null
+                                                                                     ),
+                                                                     Retries:        null,
+                                                                     RetryInterval:  null);
 
                             Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
                             Console.WriteLine(response.ToJSON());
@@ -1126,40 +1265,40 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                         if (command == "installcertificate"     && commandArray.Length == 3 && commandArray[2].ToLower() == "csrc".ToLower())
                         {
 
-                            var response = await testCentralSystem.InstallCertificate(ChargeBoxId:      ChargeBox_Id.Parse(commandArray[1]),
-                                                                                      CertificateType:  CertificateUse.CentralSystemRootCertificate,
-                                                                                      Certificate:      Certificate.Parse(String.Concat(
-                                                                                                            "-----BEGIN CERTIFICATE-----" + "\n",
-                                                                                                            "MIIFNjCCBB6gAwIBAgISBOChwuPxlU25hKJ2AT4zX+4kMA0GCSqGSIb3DQEBCwUA" + "\n",
-                                                                                                            "MDIxCzAJBgNVBAYTAlVTMRYwFAYDVQQKEw1MZXQncyBFbmNyeXB0MQswCQYDVQQD" + "\n",
-                                                                                                            "EwJSMzAeFw0yMjExMDEwNDA1NThaFw0yMzAxMzAwNDA1NTdaMCMxITAfBgNVBAMT" + "\n",
-                                                                                                            "GGFwaTEub2NwcC5jaGFyZ2luZy5jbG91ZDCCASIwDQYJKoZIhvcNAQEBBQADggEP" + "\n",
-                                                                                                            "ADCCAQoCggEBANXXEPaMYd8g3BmOuNLbJC9j5KHEOQebZ71dQcPGrD5pm8TICEmr" + "\n",
-                                                                                                            "PnAVh/TjF61dco/Bw0HjDz+mI62RHe3tBXggN7p7THKTBLcEMXNMYaEIgp+N1GDV" + "\n",
-                                                                                                            "4N1ooT9TcnAPID38mjNN/zdPZ2L9IOcE3S9e0AB1a7oJDppvAKIixej+gymuugvy" + "\n",
-                                                                                                            "DqwDfugfyFXGpuEXm+xl//D5RjN8Mgsj5nzBOm+2TqAJBhb9cp35Isaq+fbvFXlE" + "\n",
-                                                                                                            "8ICldVHnZKNPfExnTK5FY6T6yDcjBEMnkJQMEMlMCwmuhbwO7iCDicT5hzdnH6MX" + "\n",
-                                                                                                            "QreKShgB65c/+cu4mHT3StHQg8kRnpvW1N8CAwEAAaOCAlMwggJPMA4GA1UdDwEB" + "\n",
-                                                                                                            "/wQEAwIFoDAdBgNVHSUEFjAUBggrBgEFBQcDAQYIKwYBBQUHAwIwDAYDVR0TAQH/" + "\n",
-                                                                                                            "BAIwADAdBgNVHQ4EFgQUeMQw3IPBaOXfPhNaJ+wtXg3puG0wHwYDVR0jBBgwFoAU" + "\n",
-                                                                                                            "FC6zF7dYVsuuUAlA5h+vnYsUwsYwVQYIKwYBBQUHAQEESTBHMCEGCCsGAQUFBzAB" + "\n",
-                                                                                                            "hhVodHRwOi8vcjMuby5sZW5jci5vcmcwIgYIKwYBBQUHMAKGFmh0dHA6Ly9yMy5p" + "\n",
-                                                                                                            "LmxlbmNyLm9yZy8wIwYDVR0RBBwwGoIYYXBpMS5vY3BwLmNoYXJnaW5nLmNsb3Vk" + "\n",
-                                                                                                            "MEwGA1UdIARFMEMwCAYGZ4EMAQIBMDcGCysGAQQBgt8TAQEBMCgwJgYIKwYBBQUH" + "\n",
-                                                                                                            "AgEWGmh0dHA6Ly9jcHMubGV0c2VuY3J5cHQub3JnMIIBBAYKKwYBBAHWeQIEAgSB" + "\n",
-                                                                                                            "9QSB8gDwAHYAtz77JN+cTbp18jnFulj0bF38Qs96nzXEnh0JgSXttJkAAAGEMZT8" + "\n",
-                                                                                                            "+gAABAMARzBFAiEAt1Z1wpuOQxqEICwha69HzjkPRbbFQOqamN/Bn4lMvywCIDbf" + "\n",
-                                                                                                            "b+KSkG8u8QqcyhJMTBY3liwAk7Gi2LiJjGVeHpKmAHYAejKMVNi3LbYg6jjgUh7p" + "\n",
-                                                                                                            "hBZwMhOFTTvSK8E6V6NS61IAAAGEMZT9QAAABAMARzBFAiEAvk1Tl2hPxpjRnqxI" + "\n",
-                                                                                                            "evSxkIpa2QvDt4ASdOLdOVsbIqMCIGFUVMjdkTmKu9kCGcbRHp2CthkQIhMVzyXK" + "\n",
-                                                                                                            "F05iCTTaMA0GCSqGSIb3DQEBCwUAA4IBAQCRQCvNR+eVFs2eqxgWIKIKxk/7QZD1" + "\n",
-                                                                                                            "kdpIPuDYoJ/5EDLj1j4jHBiPe4PsIbrPojWnk3XmAtq8EOSVYjspimQjUZMIe3nx" + "\n",
-                                                                                                            "Q4T+i+siYwUapAfQep8f004EfJRC0xG9p6D1X6bBWmZgSYINM4VCLQ2P6dEv/ZFc" + "\n",
-                                                                                                            "IQFMw0/Iv6emxDP1mGsOjoeZs86DqPwJBOb5Qn+MNqEh49bkFVPno8SoPDcxHZur" + "\n",
-                                                                                                            "akYhAo/LuuRLPkfhkhBESsX3dTnvivjkP2nz4M58tHSkZit5y9Zx4NOahnvj4L1J" + "\n",
-                                                                                                            "cJLtsZ6AwDqdkoVg/i9nqEGOLzYuLDoQsUW9koyP5FM2/qctVi3ZkEzG" + "\n",
-                                                                                                            "-----END CERTIFICATE-----" + "\n" + "\n"
-                                                                                                        )));
+                            var response = await testCSMSv1_6.InstallCertificate(ChargeBoxId:      OCPPv1_6.ChargeBox_Id.Parse(commandArray[1]),
+                                                                                 CertificateType:  OCPPv1_6.CertificateUse.CentralSystemRootCertificate,
+                                                                                 Certificate:      OCPPv1_6.Certificate.Parse(String.Concat(
+                                                                                                       "-----BEGIN CERTIFICATE-----" + "\n",
+                                                                                                       "MIIFNjCCBB6gAwIBAgISBOChwuPxlU25hKJ2AT4zX+4kMA0GCSqGSIb3DQEBCwUA" + "\n",
+                                                                                                       "MDIxCzAJBgNVBAYTAlVTMRYwFAYDVQQKEw1MZXQncyBFbmNyeXB0MQswCQYDVQQD" + "\n",
+                                                                                                       "EwJSMzAeFw0yMjExMDEwNDA1NThaFw0yMzAxMzAwNDA1NTdaMCMxITAfBgNVBAMT" + "\n",
+                                                                                                       "GGFwaTEub2NwcC5jaGFyZ2luZy5jbG91ZDCCASIwDQYJKoZIhvcNAQEBBQADggEP" + "\n",
+                                                                                                       "ADCCAQoCggEBANXXEPaMYd8g3BmOuNLbJC9j5KHEOQebZ71dQcPGrD5pm8TICEmr" + "\n",
+                                                                                                       "PnAVh/TjF61dco/Bw0HjDz+mI62RHe3tBXggN7p7THKTBLcEMXNMYaEIgp+N1GDV" + "\n",
+                                                                                                       "4N1ooT9TcnAPID38mjNN/zdPZ2L9IOcE3S9e0AB1a7oJDppvAKIixej+gymuugvy" + "\n",
+                                                                                                       "DqwDfugfyFXGpuEXm+xl//D5RjN8Mgsj5nzBOm+2TqAJBhb9cp35Isaq+fbvFXlE" + "\n",
+                                                                                                       "8ICldVHnZKNPfExnTK5FY6T6yDcjBEMnkJQMEMlMCwmuhbwO7iCDicT5hzdnH6MX" + "\n",
+                                                                                                       "QreKShgB65c/+cu4mHT3StHQg8kRnpvW1N8CAwEAAaOCAlMwggJPMA4GA1UdDwEB" + "\n",
+                                                                                                       "/wQEAwIFoDAdBgNVHSUEFjAUBggrBgEFBQcDAQYIKwYBBQUHAwIwDAYDVR0TAQH/" + "\n",
+                                                                                                       "BAIwADAdBgNVHQ4EFgQUeMQw3IPBaOXfPhNaJ+wtXg3puG0wHwYDVR0jBBgwFoAU" + "\n",
+                                                                                                       "FC6zF7dYVsuuUAlA5h+vnYsUwsYwVQYIKwYBBQUHAQEESTBHMCEGCCsGAQUFBzAB" + "\n",
+                                                                                                       "hhVodHRwOi8vcjMuby5sZW5jci5vcmcwIgYIKwYBBQUHMAKGFmh0dHA6Ly9yMy5p" + "\n",
+                                                                                                       "LmxlbmNyLm9yZy8wIwYDVR0RBBwwGoIYYXBpMS5vY3BwLmNoYXJnaW5nLmNsb3Vk" + "\n",
+                                                                                                       "MEwGA1UdIARFMEMwCAYGZ4EMAQIBMDcGCysGAQQBgt8TAQEBMCgwJgYIKwYBBQUH" + "\n",
+                                                                                                       "AgEWGmh0dHA6Ly9jcHMubGV0c2VuY3J5cHQub3JnMIIBBAYKKwYBBAHWeQIEAgSB" + "\n",
+                                                                                                       "9QSB8gDwAHYAtz77JN+cTbp18jnFulj0bF38Qs96nzXEnh0JgSXttJkAAAGEMZT8" + "\n",
+                                                                                                       "+gAABAMARzBFAiEAt1Z1wpuOQxqEICwha69HzjkPRbbFQOqamN/Bn4lMvywCIDbf" + "\n",
+                                                                                                       "b+KSkG8u8QqcyhJMTBY3liwAk7Gi2LiJjGVeHpKmAHYAejKMVNi3LbYg6jjgUh7p" + "\n",
+                                                                                                       "hBZwMhOFTTvSK8E6V6NS61IAAAGEMZT9QAAABAMARzBFAiEAvk1Tl2hPxpjRnqxI" + "\n",
+                                                                                                       "evSxkIpa2QvDt4ASdOLdOVsbIqMCIGFUVMjdkTmKu9kCGcbRHp2CthkQIhMVzyXK" + "\n",
+                                                                                                       "F05iCTTaMA0GCSqGSIb3DQEBCwUAA4IBAQCRQCvNR+eVFs2eqxgWIKIKxk/7QZD1" + "\n",
+                                                                                                       "kdpIPuDYoJ/5EDLj1j4jHBiPe4PsIbrPojWnk3XmAtq8EOSVYjspimQjUZMIe3nx" + "\n",
+                                                                                                       "Q4T+i+siYwUapAfQep8f004EfJRC0xG9p6D1X6bBWmZgSYINM4VCLQ2P6dEv/ZFc" + "\n",
+                                                                                                       "IQFMw0/Iv6emxDP1mGsOjoeZs86DqPwJBOb5Qn+MNqEh49bkFVPno8SoPDcxHZur" + "\n",
+                                                                                                       "akYhAo/LuuRLPkfhkhBESsX3dTnvivjkP2nz4M58tHSkZit5y9Zx4NOahnvj4L1J" + "\n",
+                                                                                                       "cJLtsZ6AwDqdkoVg/i9nqEGOLzYuLDoQsUW9koyP5FM2/qctVi3ZkEzG" + "\n",
+                                                                                                       "-----END CERTIFICATE-----" + "\n" + "\n"
+                                                                                                   )));
 
                             Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
                             Console.WriteLine(response.ToJSON());
@@ -1170,40 +1309,40 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                         if (command == "installcertificate"     && commandArray.Length == 3 && commandArray[2].ToLower() == "mrc".ToLower())
                         {
 
-                            var response = await testCentralSystem.InstallCertificate(ChargeBoxId:      ChargeBox_Id.Parse(commandArray[1]),
-                                                                                      CertificateType:  CertificateUse.ManufacturerRootCertificate,
-                                                                                      Certificate:      Certificate.Parse(String.Concat(
-                                                                                                            "-----BEGIN CERTIFICATE-----" + "\n",
-                                                                                                            "MIIFNjCCBB6gAwIBAgISBOChwuPxlU25hKJ2AT4zX+4kMA0GCSqGSIb3DQEBCwUA" + "\n",
-                                                                                                            "MDIxCzAJBgNVBAYTAlVTMRYwFAYDVQQKEw1MZXQncyBFbmNyeXB0MQswCQYDVQQD" + "\n",
-                                                                                                            "EwJSMzAeFw0yMjExMDEwNDA1NThaFw0yMzAxMzAwNDA1NTdaMCMxITAfBgNVBAMT" + "\n",
-                                                                                                            "GGFwaTEub2NwcC5jaGFyZ2luZy5jbG91ZDCCASIwDQYJKoZIhvcNAQEBBQADggEP" + "\n",
-                                                                                                            "ADCCAQoCggEBANXXEPaMYd8g3BmOuNLbJC9j5KHEOQebZ71dQcPGrD5pm8TICEmr" + "\n",
-                                                                                                            "PnAVh/TjF61dco/Bw0HjDz+mI62RHe3tBXggN7p7THKTBLcEMXNMYaEIgp+N1GDV" + "\n",
-                                                                                                            "4N1ooT9TcnAPID38mjNN/zdPZ2L9IOcE3S9e0AB1a7oJDppvAKIixej+gymuugvy" + "\n",
-                                                                                                            "DqwDfugfyFXGpuEXm+xl//D5RjN8Mgsj5nzBOm+2TqAJBhb9cp35Isaq+fbvFXlE" + "\n",
-                                                                                                            "8ICldVHnZKNPfExnTK5FY6T6yDcjBEMnkJQMEMlMCwmuhbwO7iCDicT5hzdnH6MX" + "\n",
-                                                                                                            "QreKShgB65c/+cu4mHT3StHQg8kRnpvW1N8CAwEAAaOCAlMwggJPMA4GA1UdDwEB" + "\n",
-                                                                                                            "/wQEAwIFoDAdBgNVHSUEFjAUBggrBgEFBQcDAQYIKwYBBQUHAwIwDAYDVR0TAQH/" + "\n",
-                                                                                                            "BAIwADAdBgNVHQ4EFgQUeMQw3IPBaOXfPhNaJ+wtXg3puG0wHwYDVR0jBBgwFoAU" + "\n",
-                                                                                                            "FC6zF7dYVsuuUAlA5h+vnYsUwsYwVQYIKwYBBQUHAQEESTBHMCEGCCsGAQUFBzAB" + "\n",
-                                                                                                            "hhVodHRwOi8vcjMuby5sZW5jci5vcmcwIgYIKwYBBQUHMAKGFmh0dHA6Ly9yMy5p" + "\n",
-                                                                                                            "LmxlbmNyLm9yZy8wIwYDVR0RBBwwGoIYYXBpMS5vY3BwLmNoYXJnaW5nLmNsb3Vk" + "\n",
-                                                                                                            "MEwGA1UdIARFMEMwCAYGZ4EMAQIBMDcGCysGAQQBgt8TAQEBMCgwJgYIKwYBBQUH" + "\n",
-                                                                                                            "AgEWGmh0dHA6Ly9jcHMubGV0c2VuY3J5cHQub3JnMIIBBAYKKwYBBAHWeQIEAgSB" + "\n",
-                                                                                                            "9QSB8gDwAHYAtz77JN+cTbp18jnFulj0bF38Qs96nzXEnh0JgSXttJkAAAGEMZT8" + "\n",
-                                                                                                            "+gAABAMARzBFAiEAt1Z1wpuOQxqEICwha69HzjkPRbbFQOqamN/Bn4lMvywCIDbf" + "\n",
-                                                                                                            "b+KSkG8u8QqcyhJMTBY3liwAk7Gi2LiJjGVeHpKmAHYAejKMVNi3LbYg6jjgUh7p" + "\n",
-                                                                                                            "hBZwMhOFTTvSK8E6V6NS61IAAAGEMZT9QAAABAMARzBFAiEAvk1Tl2hPxpjRnqxI" + "\n",
-                                                                                                            "evSxkIpa2QvDt4ASdOLdOVsbIqMCIGFUVMjdkTmKu9kCGcbRHp2CthkQIhMVzyXK" + "\n",
-                                                                                                            "F05iCTTaMA0GCSqGSIb3DQEBCwUAA4IBAQCRQCvNR+eVFs2eqxgWIKIKxk/7QZD1" + "\n",
-                                                                                                            "kdpIPuDYoJ/5EDLj1j4jHBiPe4PsIbrPojWnk3XmAtq8EOSVYjspimQjUZMIe3nx" + "\n",
-                                                                                                            "Q4T+i+siYwUapAfQep8f004EfJRC0xG9p6D1X6bBWmZgSYINM4VCLQ2P6dEv/ZFc" + "\n",
-                                                                                                            "IQFMw0/Iv6emxDP1mGsOjoeZs86DqPwJBOb5Qn+MNqEh49bkFVPno8SoPDcxHZur" + "\n",
-                                                                                                            "akYhAo/LuuRLPkfhkhBESsX3dTnvivjkP2nz4M58tHSkZit5y9Zx4NOahnvj4L1J" + "\n",
-                                                                                                            "cJLtsZ6AwDqdkoVg/i9nqEGOLzYuLDoQsUW9koyP5FM2/qctVi3ZkEzG" + "\n",
-                                                                                                            "-----END CERTIFICATE-----" + "\n" + "\n"
-                                                                                                        )));
+                            var response = await testCSMSv1_6.InstallCertificate(ChargeBoxId:      OCPPv1_6.ChargeBox_Id.Parse(commandArray[1]),
+                                                                                 CertificateType:  OCPPv1_6.CertificateUse.ManufacturerRootCertificate,
+                                                                                 Certificate:      OCPPv1_6.Certificate.Parse(String.Concat(
+                                                                                                       "-----BEGIN CERTIFICATE-----" + "\n",
+                                                                                                       "MIIFNjCCBB6gAwIBAgISBOChwuPxlU25hKJ2AT4zX+4kMA0GCSqGSIb3DQEBCwUA" + "\n",
+                                                                                                       "MDIxCzAJBgNVBAYTAlVTMRYwFAYDVQQKEw1MZXQncyBFbmNyeXB0MQswCQYDVQQD" + "\n",
+                                                                                                       "EwJSMzAeFw0yMjExMDEwNDA1NThaFw0yMzAxMzAwNDA1NTdaMCMxITAfBgNVBAMT" + "\n",
+                                                                                                       "GGFwaTEub2NwcC5jaGFyZ2luZy5jbG91ZDCCASIwDQYJKoZIhvcNAQEBBQADggEP" + "\n",
+                                                                                                       "ADCCAQoCggEBANXXEPaMYd8g3BmOuNLbJC9j5KHEOQebZ71dQcPGrD5pm8TICEmr" + "\n",
+                                                                                                       "PnAVh/TjF61dco/Bw0HjDz+mI62RHe3tBXggN7p7THKTBLcEMXNMYaEIgp+N1GDV" + "\n",
+                                                                                                       "4N1ooT9TcnAPID38mjNN/zdPZ2L9IOcE3S9e0AB1a7oJDppvAKIixej+gymuugvy" + "\n",
+                                                                                                       "DqwDfugfyFXGpuEXm+xl//D5RjN8Mgsj5nzBOm+2TqAJBhb9cp35Isaq+fbvFXlE" + "\n",
+                                                                                                       "8ICldVHnZKNPfExnTK5FY6T6yDcjBEMnkJQMEMlMCwmuhbwO7iCDicT5hzdnH6MX" + "\n",
+                                                                                                       "QreKShgB65c/+cu4mHT3StHQg8kRnpvW1N8CAwEAAaOCAlMwggJPMA4GA1UdDwEB" + "\n",
+                                                                                                       "/wQEAwIFoDAdBgNVHSUEFjAUBggrBgEFBQcDAQYIKwYBBQUHAwIwDAYDVR0TAQH/" + "\n",
+                                                                                                       "BAIwADAdBgNVHQ4EFgQUeMQw3IPBaOXfPhNaJ+wtXg3puG0wHwYDVR0jBBgwFoAU" + "\n",
+                                                                                                       "FC6zF7dYVsuuUAlA5h+vnYsUwsYwVQYIKwYBBQUHAQEESTBHMCEGCCsGAQUFBzAB" + "\n",
+                                                                                                       "hhVodHRwOi8vcjMuby5sZW5jci5vcmcwIgYIKwYBBQUHMAKGFmh0dHA6Ly9yMy5p" + "\n",
+                                                                                                       "LmxlbmNyLm9yZy8wIwYDVR0RBBwwGoIYYXBpMS5vY3BwLmNoYXJnaW5nLmNsb3Vk" + "\n",
+                                                                                                       "MEwGA1UdIARFMEMwCAYGZ4EMAQIBMDcGCysGAQQBgt8TAQEBMCgwJgYIKwYBBQUH" + "\n",
+                                                                                                       "AgEWGmh0dHA6Ly9jcHMubGV0c2VuY3J5cHQub3JnMIIBBAYKKwYBBAHWeQIEAgSB" + "\n",
+                                                                                                       "9QSB8gDwAHYAtz77JN+cTbp18jnFulj0bF38Qs96nzXEnh0JgSXttJkAAAGEMZT8" + "\n",
+                                                                                                       "+gAABAMARzBFAiEAt1Z1wpuOQxqEICwha69HzjkPRbbFQOqamN/Bn4lMvywCIDbf" + "\n",
+                                                                                                       "b+KSkG8u8QqcyhJMTBY3liwAk7Gi2LiJjGVeHpKmAHYAejKMVNi3LbYg6jjgUh7p" + "\n",
+                                                                                                       "hBZwMhOFTTvSK8E6V6NS61IAAAGEMZT9QAAABAMARzBFAiEAvk1Tl2hPxpjRnqxI" + "\n",
+                                                                                                       "evSxkIpa2QvDt4ASdOLdOVsbIqMCIGFUVMjdkTmKu9kCGcbRHp2CthkQIhMVzyXK" + "\n",
+                                                                                                       "F05iCTTaMA0GCSqGSIb3DQEBCwUAA4IBAQCRQCvNR+eVFs2eqxgWIKIKxk/7QZD1" + "\n",
+                                                                                                       "kdpIPuDYoJ/5EDLj1j4jHBiPe4PsIbrPojWnk3XmAtq8EOSVYjspimQjUZMIe3nx" + "\n",
+                                                                                                       "Q4T+i+siYwUapAfQep8f004EfJRC0xG9p6D1X6bBWmZgSYINM4VCLQ2P6dEv/ZFc" + "\n",
+                                                                                                       "IQFMw0/Iv6emxDP1mGsOjoeZs86DqPwJBOb5Qn+MNqEh49bkFVPno8SoPDcxHZur" + "\n",
+                                                                                                       "akYhAo/LuuRLPkfhkhBESsX3dTnvivjkP2nz4M58tHSkZit5y9Zx4NOahnvj4L1J" + "\n",
+                                                                                                       "cJLtsZ6AwDqdkoVg/i9nqEGOLzYuLDoQsUW9koyP5FM2/qctVi3ZkEzG" + "\n",
+                                                                                                       "-----END CERTIFICATE-----" + "\n" + "\n"
+                                                                                                   )));
 
                             Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
                             Console.WriteLine(response.ToJSON());
@@ -1216,16 +1355,16 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                         if (command == "signedupdatefirmware"   && commandArray.Length == 3 && commandArray[2].ToLower() == "csrc".ToLower())
                         {
 
-                            var response = await testCentralSystem.SignedUpdateFirmware(ChargeBoxId:      ChargeBox_Id.Parse(commandArray[1]),
-                                                                                        Firmware:         new FirmwareImage(
-                                                                                                              RemoteLocation:      URL.Parse("https://api2.ocpp.charging.cloud:9901/security0001.log"),
-                                                                                                              RetrieveTimestamp:   DateTime.UtcNow,
-                                                                                                              SigningCertificate:  "xxx",
-                                                                                                              Signature:           "yyy"
-                                                                                                          ),
-                                                                                        UpdateRequestId:  1,
-                                                                                        Retries:          null,
-                                                                                        RetryInterval:    null);
+                            var response = await testCSMSv1_6.SignedUpdateFirmware(ChargeBoxId:      OCPPv1_6.ChargeBox_Id.Parse(commandArray[1]),
+                                                                                   Firmware:         new OCPPv1_6.FirmwareImage(
+                                                                                                         RemoteLocation:      URL.Parse("https://api2.ocpp.charging.cloud:9901/security0001.log"),
+                                                                                                         RetrieveTimestamp:   DateTime.UtcNow,
+                                                                                                         SigningCertificate:  "xxx",
+                                                                                                         Signature:           "yyy"
+                                                                                                     ),
+                                                                                   UpdateRequestId:  1,
+                                                                                   Retries:          null,
+                                                                                   RetryInterval:    null);
 
                             Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
                             Console.WriteLine(response.ToJSON());
