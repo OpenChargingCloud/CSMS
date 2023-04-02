@@ -188,7 +188,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                 }
             };
 
-            (testCSMSv1_6.CentralSystemServers.First() as WebSocketServer).OnTextMessageRequest     += async (timestamp, server, connection, eventTrackingId, requestTimestamp, requestMessage) => {
+            (testCSMSv1_6.CentralSystemServers.First() as WebSocketServer).OnTextMessageReceived     += async (timestamp, server, connection, eventTrackingId, requestTimestamp, requestMessage) => {
                 DebugX.Log(String.Concat("Received a web socket TEXT message: '", requestMessage, "'!"));
                 lock (testCSMSv1_6)
                 {
@@ -287,7 +287,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                 }
             };
 
-            (testCSMSv2_0.CSMSServers.First() as WebSocketServer).OnTextMessageRequest     += async (timestamp, server, connection, eventTrackingId, requestTimestamp, requestMessage) => {
+            (testCSMSv2_0.CSMSServers.First() as WebSocketServer).OnTextMessageReceived     += async (timestamp, server, connection, eventTrackingId, requestTimestamp, requestMessage) => {
                 DebugX.Log(String.Concat("Received a web socket TEXT message: '", requestMessage, "'!"));
                 lock (testCSMSv2_0)
                 {
