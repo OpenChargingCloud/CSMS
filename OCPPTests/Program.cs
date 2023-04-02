@@ -188,21 +188,21 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                 }
             };
 
-            (testCSMSv1_6.CentralSystemServers.First() as WebSocketServer).OnTextMessageRequest     += async (timestamp, server, connection, message, eventTrackingId) => {
-                DebugX.Log(String.Concat("Received a web socket TEXT message: '", message, "'!"));
+            (testCSMSv1_6.CentralSystemServers.First() as WebSocketServer).OnTextMessageRequest     += async (timestamp, server, connection, eventTrackingId, requestTimestamp, requestMessage) => {
+                DebugX.Log(String.Concat("Received a web socket TEXT message: '", requestMessage, "'!"));
                 lock (testCSMSv1_6)
                 {
                     File.AppendAllText(Path.Combine(AppContext.BaseDirectory, "TextMessages.log"),
-                                       String.Concat(timestamp.ToIso8601(), "\tIN\t", connection.TryGetCustomData("chargeBoxId"), "\t", connection.RemoteSocket, "\t", message, Environment.NewLine));
+                                       String.Concat(timestamp.ToIso8601(), "\tIN\t", connection.TryGetCustomData("chargeBoxId"), "\t", connection.RemoteSocket, "\t", requestMessage, Environment.NewLine));
                 }
             };
 
-            (testCSMSv1_6.CentralSystemServers.First() as WebSocketServer).OnTextMessageSent        += async (timestamp, server, connection, message, eventTrackingId) => {
-                DebugX.Log(String.Concat("Sent     a web socket TEXT message: '", message, "'!"));
+            (testCSMSv1_6.CentralSystemServers.First() as WebSocketServer).OnTextMessageSent        += async (timestamp, server, connection, eventTrackingId, requestTimestamp, requestMessage) => {
+                DebugX.Log(String.Concat("Sent     a web socket TEXT message: '", requestMessage, "'!"));
                 lock (testCSMSv1_6)
                 {
                     File.AppendAllText(Path.Combine(AppContext.BaseDirectory, "TextMessages.log"),
-                                       String.Concat(timestamp.ToIso8601(), "\tOUT\t", connection.TryGetCustomData("chargeBoxId"), "\t", connection.RemoteSocket, "\t", message, Environment.NewLine));
+                                       String.Concat(timestamp.ToIso8601(), "\tOUT\t", connection.TryGetCustomData("chargeBoxId"), "\t", connection.RemoteSocket, "\t", requestMessage, Environment.NewLine));
                 }
             };
 
@@ -287,21 +287,21 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                 }
             };
 
-            (testCSMSv2_0.CSMSServers.First() as WebSocketServer).OnTextMessageRequest     += async (timestamp, server, connection, message, eventTrackingId) => {
-                DebugX.Log(String.Concat("Received a web socket TEXT message: '", message, "'!"));
+            (testCSMSv2_0.CSMSServers.First() as WebSocketServer).OnTextMessageRequest     += async (timestamp, server, connection, eventTrackingId, requestTimestamp, requestMessage) => {
+                DebugX.Log(String.Concat("Received a web socket TEXT message: '", requestMessage, "'!"));
                 lock (testCSMSv2_0)
                 {
                     File.AppendAllText(Path.Combine(AppContext.BaseDirectory, "TextMessages.log"),
-                                       String.Concat(timestamp.ToIso8601(), "\tIN\t", connection.TryGetCustomData("chargeBoxId"), "\t", connection.RemoteSocket, "\t", message, Environment.NewLine));
+                                       String.Concat(timestamp.ToIso8601(), "\tIN\t", connection.TryGetCustomData("chargeBoxId"), "\t", connection.RemoteSocket, "\t", requestMessage, Environment.NewLine));
                 }
             };
 
-            (testCSMSv2_0.CSMSServers.First() as WebSocketServer).OnTextMessageSent        += async (timestamp, server, connection, message, eventTrackingId) => {
-                DebugX.Log(String.Concat("Sent     a web socket TEXT message: '", message, "'!"));
+            (testCSMSv2_0.CSMSServers.First() as WebSocketServer).OnTextMessageSent        += async (timestamp, server, connection, eventTrackingId, requestTimestamp, requestMessage) => {
+                DebugX.Log(String.Concat("Sent     a web socket TEXT message: '", requestMessage, "'!"));
                 lock (testCSMSv2_0)
                 {
                     File.AppendAllText(Path.Combine(AppContext.BaseDirectory, "TextMessages.log"),
-                                       String.Concat(timestamp.ToIso8601(), "\tOUT\t", connection.TryGetCustomData("chargeBoxId"), "\t", connection.RemoteSocket, "\t", message, Environment.NewLine));
+                                       String.Concat(timestamp.ToIso8601(), "\tOUT\t", connection.TryGetCustomData("chargeBoxId"), "\t", connection.RemoteSocket, "\t", requestMessage, Environment.NewLine));
                 }
             };
 
