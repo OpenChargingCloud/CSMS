@@ -17,15 +17,7 @@
 
 #region Usings
 
-using System;
-using System.Linq;
-using System.Text;
-using System.Threading;
 using System.Diagnostics;
-using System.Threading.Tasks;
-using System.Collections.Generic;
-
-using Org.BouncyCastle.Ocsp;
 
 using org.GraphDefined.Vanaheimr.Illias;
 using org.GraphDefined.Vanaheimr.Hermod;
@@ -33,8 +25,8 @@ using org.GraphDefined.Vanaheimr.Hermod.DNS;
 using org.GraphDefined.Vanaheimr.Hermod.HTTP;
 using org.GraphDefined.Vanaheimr.Hermod.WebSocket;
 
-using OCPPv1_6 = cloud.charging.open.protocols.OCPPv1_6;
-using OCPPv2_0 = cloud.charging.open.protocols.OCPPv2_0;
+using OCPPv1_6   = cloud.charging.open.protocols.OCPPv1_6;
+using OCPPv2_0_1 = cloud.charging.open.protocols.OCPPv2_0_1;
 
 #endregion
 
@@ -188,7 +180,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                 }
             };
 
-            (testCSMSv1_6.CentralSystemServers.First() as WebSocketServer).OnTextMessageReceived     += async (timestamp, server, connection, eventTrackingId, requestTimestamp, requestMessage) => {
+            (testCSMSv1_6.CentralSystemServers.First() as WebSocketServer).OnTextMessageReceived     += async (timestamp, server, connection, eventTrackingId, requestMessage) => {
                 DebugX.Log(String.Concat("Received a web socket TEXT message: '", requestMessage, "'!"));
                 lock (testCSMSv1_6)
                 {
@@ -197,7 +189,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                 }
             };
 
-            (testCSMSv1_6.CentralSystemServers.First() as WebSocketServer).OnTextMessageSent        += async (timestamp, server, connection, eventTrackingId, requestTimestamp, requestMessage) => {
+            (testCSMSv1_6.CentralSystemServers.First() as WebSocketServer).OnTextMessageSent        += async (timestamp, server, connection, eventTrackingId, requestMessage) => {
                 DebugX.Log(String.Concat("Sent     a web socket TEXT message: '", requestMessage, "'!"));
                 lock (testCSMSv1_6)
                 {
@@ -206,7 +198,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                 }
             };
 
-            (testCSMSv1_6.CentralSystemServers.First() as WebSocketServer).OnCloseMessageReceived += async (timestamp, server, connection, eventTrackingId, ct) => {
+            (testCSMSv1_6.CentralSystemServers.First() as WebSocketServer).OnCloseMessageReceived += async (timestamp, server, connection, eventTrackingId, statusCode, reason) => {
                 DebugX.Log(String.Concat("HTTP web socket server on ", server.IPSocket, " charge box ", connection.TryGetCustomData("chargeBoxId") + " (" + connection.RemoteSocket + ") closed web socket connection"));
                 lock (testCSMSv1_6)
                 {
@@ -228,7 +220,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
 
 
 
-            (testCSMSv1_6.CentralSystemServers.First() as WebSocketServer).OnPingMessageReceived += async (timestamp, server, connection, frame, eventTrackingId) => {
+            (testCSMSv1_6.CentralSystemServers.First() as WebSocketServer).OnPingMessageReceived += async (timestamp, server, connection, eventTrackingId, frame) => {
                 DebugX.Log(nameof(WebSocketServer) + ": Ping received: '" + frame.Payload.ToUTF8String() + "' (" + connection.TryGetCustomData("chargeBoxId") + ", " + connection.RemoteSocket + ")");
                 lock (testCSMSv1_6)
                 {
@@ -237,7 +229,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                 }
             };
 
-            (testCSMSv1_6.CentralSystemServers.First() as WebSocketServer).OnPingMessageSent     += async (timestamp, server, connection, frame, eventTrackingId) => {
+            (testCSMSv1_6.CentralSystemServers.First() as WebSocketServer).OnPingMessageSent     += async (timestamp, server, connection, eventTrackingId, frame) => {
                 DebugX.Log(nameof(WebSocketServer) + ": Ping sent:     '" + frame.Payload.ToUTF8String() + "' (" + connection.TryGetCustomData("chargeBoxId") + ", " + connection.RemoteSocket + ")");
                 lock (testCSMSv1_6)
                 {
@@ -246,7 +238,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                 }
             };
 
-            (testCSMSv1_6.CentralSystemServers.First() as WebSocketServer).OnPongMessageReceived += async (timestamp, server, connection, frame, eventTrackingId) => {
+            (testCSMSv1_6.CentralSystemServers.First() as WebSocketServer).OnPongMessageReceived += async (timestamp, server, connection, eventTrackingId, frame) => {
                 DebugX.Log(nameof(WebSocketServer) + ": Pong received: '" + frame.Payload.ToUTF8String() + "' (" + connection.TryGetCustomData("chargeBoxId") + ", " + connection.RemoteSocket + ")");
                 lock (testCSMSv1_6)
                 {
@@ -257,66 +249,66 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
 
             #endregion
 
-            #region Setup CSMS v2.0
+            #region Setup CSMS v2.0.1
 
-            var testCSMSv2_0           = new OCPPv2_0.TestCSMS(
-                                             CSMSId:                      OCPPv2_0.CSMS_Id.Parse("OCPPv2_0-Test01"),
+            var testCSMSv2_0_1         = new OCPPv2_0_1.TestCSMS(
+                                             CSMSId:                      OCPPv2_0_1.CSMS_Id.Parse("OCPPv2.0.1-Test01"),
                                              RequireAuthentication:       true,
                                              HTTPUploadPort:              IPPort.Parse(9911),
                                              DNSClient:                   API_DNSClient
                                          );
 
-            var testBackendWebSockets2 = testCSMSv2_0.CreateWebSocketService(
+            var testBackendWebSockets2 = testCSMSv2_0_1.CreateWebSocketService(
                                              TCPPort:                     IPPort.Parse(9910),
                                              DisableWebSocketPings:       true,
                                              //SlowNetworkSimulationDelay:  TimeSpan.FromMilliseconds(10),
                                              Autostart:                   true
                                          );
 
-            testCSMSv2_0.AddHTTPBasicAuth(OCPPv2_0.ChargeBox_Id.Parse("cp001"), "DEADBEEFDEADBEEF");
+            testCSMSv2_0_1.AddHTTPBasicAuth(OCPPv2_0_1.ChargeBox_Id.Parse("cp001"), "DEADBEEFDEADBEEF");
 
 
 
 
-            (testCSMSv2_0.CSMSServers.First() as WebSocketServer).OnNewWebSocketConnection += async (timestamp, server, connection, eventTrackingId, ct) => {
+            (testCSMSv2_0_1.CSMSServers.First() as WebSocketServer).OnNewWebSocketConnection += async (timestamp, server, connection, eventTrackingId, ct) => {
                 DebugX.Log(String.Concat("HTTP web socket server on ", server.IPSocket, " new connection with ", connection.TryGetCustomData("chargeBoxId") + " (" + connection.RemoteSocket + ")"));
-                lock (testCSMSv2_0)
+                lock (testCSMSv2_0_1)
                 {
                     File.AppendAllText(Path.Combine(AppContext.BaseDirectory, "TextMessages.log"),
                                        String.Concat(timestamp.ToIso8601(), "\tNEW\t", connection.TryGetCustomData("chargeBoxId"), "\t", connection.RemoteSocket, Environment.NewLine));
                 }
             };
 
-            (testCSMSv2_0.CSMSServers.First() as WebSocketServer).OnTextMessageReceived     += async (timestamp, server, connection, eventTrackingId, requestTimestamp, requestMessage) => {
+            (testCSMSv2_0_1.CSMSServers.First() as WebSocketServer).OnTextMessageReceived     += async (timestamp, server, connection, eventTrackingId, requestMessage) => {
                 DebugX.Log(String.Concat("Received a web socket TEXT message: '", requestMessage, "'!"));
-                lock (testCSMSv2_0)
+                lock (testCSMSv2_0_1)
                 {
                     File.AppendAllText(Path.Combine(AppContext.BaseDirectory, "TextMessages.log"),
                                        String.Concat(timestamp.ToIso8601(), "\tIN\t", connection.TryGetCustomData("chargeBoxId"), "\t", connection.RemoteSocket, "\t", requestMessage, Environment.NewLine));
                 }
             };
 
-            (testCSMSv2_0.CSMSServers.First() as WebSocketServer).OnTextMessageSent        += async (timestamp, server, connection, eventTrackingId, requestTimestamp, requestMessage) => {
+            (testCSMSv2_0_1.CSMSServers.First() as WebSocketServer).OnTextMessageSent        += async (timestamp, server, connection, eventTrackingId, requestMessage) => {
                 DebugX.Log(String.Concat("Sent     a web socket TEXT message: '", requestMessage, "'!"));
-                lock (testCSMSv2_0)
+                lock (testCSMSv2_0_1)
                 {
                     File.AppendAllText(Path.Combine(AppContext.BaseDirectory, "TextMessages.log"),
                                        String.Concat(timestamp.ToIso8601(), "\tOUT\t", connection.TryGetCustomData("chargeBoxId"), "\t", connection.RemoteSocket, "\t", requestMessage, Environment.NewLine));
                 }
             };
 
-            (testCSMSv2_0.CSMSServers.First() as WebSocketServer).OnCloseMessageReceived += async (timestamp, server, connection, eventTrackingId, ct) => {
+            (testCSMSv2_0_1.CSMSServers.First() as WebSocketServer).OnCloseMessageReceived += async (timestamp, server, connection, eventTrackingId, statusCode, reason) => {
                 DebugX.Log(String.Concat("HTTP web socket server on ", server.IPSocket, " charge box ", connection.TryGetCustomData("chargeBoxId") + " (" + connection.RemoteSocket + ") closed web socket connection"));
-                lock (testCSMSv2_0)
+                lock (testCSMSv2_0_1)
                 {
                     File.AppendAllText(Path.Combine(AppContext.BaseDirectory, "TextMessages.log"),
                                        String.Concat(timestamp.ToIso8601(), "\tCLOSE\t", connection.TryGetCustomData("chargeBoxId"), "\t", connection.RemoteSocket, Environment.NewLine));
                 }
             };
 
-            (testCSMSv2_0.CSMSServers.First() as WebSocketServer).OnTCPConnectionClosed += async (timestamp, server, connection, eventTrackingId, ct) => {
+            (testCSMSv2_0_1.CSMSServers.First() as WebSocketServer).OnTCPConnectionClosed += async (timestamp, server, connection, eventTrackingId, ct) => {
                 DebugX.Log(String.Concat("HTTP web socket server on ", server.IPSocket, " closed TCP connection with ", connection.TryGetCustomData("chargeBoxId") + " (" + connection.RemoteSocket + ")"));
-                lock (testCSMSv2_0)
+                lock (testCSMSv2_0_1)
                 {
                     File.AppendAllText(Path.Combine(AppContext.BaseDirectory, "TextMessages.log"),
                                        String.Concat(timestamp.ToIso8601(), "\tQUIT\t", connection.TryGetCustomData("chargeBoxId"), "\t", connection.RemoteSocket, Environment.NewLine));
@@ -327,27 +319,27 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
 
 
 
-            (testCSMSv2_0.CSMSServers.First() as WebSocketServer).OnPingMessageReceived += async (timestamp, server, connection, frame, eventTrackingId) => {
+            (testCSMSv2_0_1.CSMSServers.First() as WebSocketServer).OnPingMessageReceived += async (timestamp, server, connection, eventTrackingId, frame) => {
                 DebugX.Log(nameof(WebSocketServer) + ": Ping received: '" + frame.Payload.ToUTF8String() + "' (" + connection.TryGetCustomData("chargeBoxId") + ", " + connection.RemoteSocket + ")");
-                lock (testCSMSv2_0)
+                lock (testCSMSv2_0_1)
                 {
                     File.AppendAllText(Path.Combine(AppContext.BaseDirectory, "TextMessages.log"),
                                        String.Concat(timestamp.ToIso8601(), "\tPING IN\t", connection.TryGetCustomData("chargeBoxId"), "\t", connection.RemoteSocket, Environment.NewLine));
                 }
             };
 
-            (testCSMSv2_0.CSMSServers.First() as WebSocketServer).OnPingMessageSent     += async (timestamp, server, connection, frame, eventTrackingId) => {
+            (testCSMSv2_0_1.CSMSServers.First() as WebSocketServer).OnPingMessageSent     += async (timestamp, server, connection, eventTrackingId, frame) => {
                 DebugX.Log(nameof(WebSocketServer) + ": Ping sent:     '" + frame.Payload.ToUTF8String() + "' (" + connection.TryGetCustomData("chargeBoxId") + ", " + connection.RemoteSocket + ")");
-                lock (testCSMSv2_0)
+                lock (testCSMSv2_0_1)
                 {
                     File.AppendAllText(Path.Combine(AppContext.BaseDirectory, "TextMessages.log"),
                                        String.Concat(timestamp.ToIso8601(), "\tPING OUT\t", connection.TryGetCustomData("chargeBoxId"), "\t", connection.RemoteSocket, Environment.NewLine));
                 }
             };
 
-            (testCSMSv2_0.CSMSServers.First() as WebSocketServer).OnPongMessageReceived += async (timestamp, server, connection, frame, eventTrackingId) => {
+            (testCSMSv2_0_1.CSMSServers.First() as WebSocketServer).OnPongMessageReceived += async (timestamp, server, connection, eventTrackingId, frame) => {
                 DebugX.Log(nameof(WebSocketServer) + ": Pong received: '" + frame.Payload.ToUTF8String() + "' (" + connection.TryGetCustomData("chargeBoxId") + ", " + connection.RemoteSocket + ")");
-                lock (testCSMSv2_0)
+                lock (testCSMSv2_0_1)
                 {
                     File.AppendAllText(Path.Combine(AppContext.BaseDirectory, "TextMessages.log"),
                                        String.Concat(timestamp.ToIso8601(), "\tPONG IN\t", connection.TryGetCustomData("chargeBoxId"), "\t", connection.RemoteSocket, Environment.NewLine));
@@ -618,7 +610,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                         if (command == "AddHTTPBasicAuth" && commandArray.Length == 3)
                         {
                             testCSMSv1_6.AddHTTPBasicAuth(OCPPv1_6.ChargeBox_Id.Parse(commandArray[1]), commandArray[2]);
-                            testCSMSv2_0.AddHTTPBasicAuth(OCPPv2_0.ChargeBox_Id.Parse(commandArray[1]), commandArray[2]);
+                            testCSMSv2_0_1.AddHTTPBasicAuth(OCPPv2_0_1.ChargeBox_Id.Parse(commandArray[1]), commandArray[2]);
                         }
 
 
@@ -641,8 +633,8 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                             else
                             {
 
-                                var response = await testCSMSv2_0.Reset(ChargeBoxId:  OCPPv2_0.ChargeBox_Id.Parse(commandArray[1]),
-                                                                        ResetType:    OCPPv2_0.ResetTypes.Immediate);
+                                var response = await testCSMSv2_0_1.Reset(ChargeBoxId:  OCPPv2_0_1.ChargeBox_Id.Parse(commandArray[1]),
+                                                                        ResetType:    OCPPv2_0_1.ResetTypes.Immediate);
 
                                 Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
                                 Console.WriteLine(response.ToJSON());
@@ -668,8 +660,8 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                             else
                             {
 
-                                var response = await testCSMSv2_0.Reset(ChargeBoxId:  OCPPv2_0.ChargeBox_Id.Parse(commandArray[1]),
-                                                                        ResetType:    OCPPv2_0.ResetTypes.OnIdle);
+                                var response = await testCSMSv2_0_1.Reset(ChargeBoxId:  OCPPv2_0_1.ChargeBox_Id.Parse(commandArray[1]),
+                                                                        ResetType:    OCPPv2_0_1.ResetTypes.OnIdle);
 
                                 Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
                                 Console.WriteLine(response.ToJSON());
@@ -700,10 +692,10 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                             else
                             {
 
-                                var response = await testCSMSv2_0.ChangeAvailability(ChargeBoxId:        OCPPv2_0.ChargeBox_Id.Parse(commandArray[2]),
-                                                                                     OperationalStatus:  OCPPv2_0.OperationalStatus.Inoperative,
-                                                                                     EVSE:               new OCPPv2_0.EVSE(
-                                                                                                             Id:  OCPPv2_0.EVSE_Id.Parse(commandArray[3])
+                                var response = await testCSMSv2_0_1.ChangeAvailability(ChargeBoxId:        OCPPv2_0_1.ChargeBox_Id.Parse(commandArray[2]),
+                                                                                     OperationalStatus:  OCPPv2_0_1.OperationalStatus.Inoperative,
+                                                                                     EVSE:               new OCPPv2_0_1.EVSE(
+                                                                                                             Id:  OCPPv2_0_1.EVSE_Id.Parse(commandArray[3])
                                                                                                          ));
 
                                 Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
@@ -718,11 +710,11 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                             if (version == 2)
                             {
 
-                                var response = await testCSMSv2_0.ChangeAvailability(ChargeBoxId:        OCPPv2_0.ChargeBox_Id.Parse(commandArray[2]),
-                                                                                     OperationalStatus:  OCPPv2_0.OperationalStatus.Inoperative,
-                                                                                     EVSE:               new OCPPv2_0.EVSE(
-                                                                                                             Id:           OCPPv2_0.EVSE_Id.     Parse(commandArray[3]),
-                                                                                                             ConnectorId:  OCPPv2_0.Connector_Id.Parse(commandArray[4])
+                                var response = await testCSMSv2_0_1.ChangeAvailability(ChargeBoxId:        OCPPv2_0_1.ChargeBox_Id.Parse(commandArray[2]),
+                                                                                     OperationalStatus:  OCPPv2_0_1.OperationalStatus.Inoperative,
+                                                                                     EVSE:               new OCPPv2_0_1.EVSE(
+                                                                                                             Id:           OCPPv2_0_1.EVSE_Id.     Parse(commandArray[3]),
+                                                                                                             ConnectorId:  OCPPv2_0_1.Connector_Id.Parse(commandArray[4])
                                                                                                          ));
 
                                 Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
@@ -749,10 +741,10 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                             else
                             {
 
-                                var response = await testCSMSv2_0.ChangeAvailability(ChargeBoxId:        OCPPv2_0.ChargeBox_Id.Parse(commandArray[2]),
-                                                                                     OperationalStatus:  OCPPv2_0.OperationalStatus.Operative,
-                                                                                     EVSE:               new OCPPv2_0.EVSE(
-                                                                                                             Id:  OCPPv2_0.EVSE_Id.Parse(commandArray[3])
+                                var response = await testCSMSv2_0_1.ChangeAvailability(ChargeBoxId:        OCPPv2_0_1.ChargeBox_Id.Parse(commandArray[2]),
+                                                                                     OperationalStatus:  OCPPv2_0_1.OperationalStatus.Operative,
+                                                                                     EVSE:               new OCPPv2_0_1.EVSE(
+                                                                                                             Id:  OCPPv2_0_1.EVSE_Id.Parse(commandArray[3])
                                                                                                          ));
 
                                 Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
@@ -767,11 +759,11 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                             if (version == 2)
                             {
 
-                                var response = await testCSMSv2_0.ChangeAvailability(ChargeBoxId:        OCPPv2_0.ChargeBox_Id.Parse(commandArray[2]),
-                                                                                     OperationalStatus:  OCPPv2_0.OperationalStatus.Operative,
-                                                                                     EVSE:               new OCPPv2_0.EVSE(
-                                                                                                             Id:           OCPPv2_0.EVSE_Id.     Parse(commandArray[3]),
-                                                                                                             ConnectorId:  OCPPv2_0.Connector_Id.Parse(commandArray[4])
+                                var response = await testCSMSv2_0_1.ChangeAvailability(ChargeBoxId:        OCPPv2_0_1.ChargeBox_Id.Parse(commandArray[2]),
+                                                                                     OperationalStatus:  OCPPv2_0_1.OperationalStatus.Operative,
+                                                                                     EVSE:               new OCPPv2_0_1.EVSE(
+                                                                                                             Id:           OCPPv2_0_1.EVSE_Id.     Parse(commandArray[3]),
+                                                                                                             ConnectorId:  OCPPv2_0_1.Connector_Id.Parse(commandArray[4])
                                                                                                          ));
 
                                 Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
@@ -833,9 +825,9 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                         if (command == "getbasereport" && commandArray.Length == 2)
                         {
 
-                            var response = await testCSMSv2_0.GetBaseReport(ChargeBoxId:              OCPPv2_0.ChargeBox_Id.Parse(commandArray[1]),
+                            var response = await testCSMSv2_0_1.GetBaseReport(ChargeBoxId:              OCPPv2_0_1.ChargeBox_Id.Parse(commandArray[1]),
                                                                             GetBaseReportRequestId:   1,
-                                                                            ReportBase:               OCPPv2_0.ReportBases.FullInventory);
+                                                                            ReportBase:               OCPPv2_0_1.ReportBases.FullInventory);
 
                             Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
                             Console.WriteLine(response.ToJSON());
