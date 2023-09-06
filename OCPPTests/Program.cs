@@ -27,6 +27,7 @@ using org.GraphDefined.Vanaheimr.Hermod.WebSocket;
 
 using OCPPv1_6   = cloud.charging.open.protocols.OCPPv1_6;
 using OCPPv2_0_1 = cloud.charging.open.protocols.OCPPv2_0_1;
+using OCPPv2_1   = cloud.charging.open.protocols.OCPPv2_1;
 
 #endregion
 
@@ -155,7 +156,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                                              TCPPort:                     IPPort.Parse(9900),
                                              //DisableWebSocketPings:       true,
                                              //SlowNetworkSimulationDelay:  TimeSpan.FromMilliseconds(10),
-                                             Autostart:                   true
+                                             AutoStart:                   true
                                          );
 
             //var TestBackendSOAP        = testCentralSystem.CreateSOAPService(
@@ -262,7 +263,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                                              TCPPort:                     IPPort.Parse(9910),
                                              DisableWebSocketPings:       true,
                                              //SlowNetworkSimulationDelay:  TimeSpan.FromMilliseconds(10),
-                                             Autostart:                   true
+                                             AutoStart:                   true
                                          );
 
             testCSMSv2_0_1.AddHTTPBasicAuth(OCPPv2_0_1.ChargeBox_Id.Parse("cp001"), "DEADBEEFDEADBEEF");

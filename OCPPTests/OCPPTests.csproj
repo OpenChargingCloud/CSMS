@@ -8,7 +8,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="BouncyCastle.NetCore" Version="1.9.0" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
   </ItemGroup>
 
@@ -33,6 +32,10 @@
     <ProjectReference Include="..\libs\WWCP_OCPP\WWCP_OCPPv2.0.1_Adapter\WWCP_OCPPv2.0.1_Adapter.csproj" />
     <ProjectReference Include="..\libs\WWCP_OCPP\WWCP_OCPPv2.0.1_Tests\WWCP_OCPPv2.0.1_Tests.csproj" />
     <ProjectReference Include="..\libs\WWCP_OCPP\WWCP_OCPPv2.0.1_WebAPI\WWCP_OCPPv2.0.1_WebAPI.csproj" />
+    <ProjectReference Include="..\libs\WWCP_OCPP\WWCP_OCPPv2.1\WWCP_OCPPv2.1.csproj" />
+    <ProjectReference Include="..\libs\WWCP_OCPP\WWCP_OCPPv2.1_Adapter\WWCP_OCPPv2.1_Adapter.csproj" />
+    <ProjectReference Include="..\libs\WWCP_OCPP\WWCP_OCPPv2.1_Tests\WWCP_OCPPv2.1_Tests.csproj" />
+    <ProjectReference Include="..\libs\WWCP_OCPP\WWCP_OCPPv2.1_WebAPI\WWCP_OCPPv2.1_WebAPI.csproj" />
   </ItemGroup>
 
 </Project>
