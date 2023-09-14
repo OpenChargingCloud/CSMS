@@ -352,7 +352,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
             #region Setup CSMS v2.0.1
 
             var testCSMSv2_1               = new OCPPv2_1.TestCSMS(
-                                                 CSMSId: OCPPv2_1.CSMS_Id.Parse("OCPPv2.1-Test01"),
+                                                 Id:                          OCPPv2_1.CSMS_Id.Parse("OCPPv2.1-Test01"),
                                                  RequireAuthentication:       false,
                                                  HTTPUploadPort:              IPPort.Parse(9921),
                                                  DNSClient:                   API_DNSClient
@@ -406,8 +406,8 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                 }
             };
 
-            (testCSMSv2_1.CSMSServers.First() as WebSocketServer).OnTCPConnectionClosed += async (timestamp, server, connection, eventTrackingId, ct) => {
-                DebugX.Log(String.Concat("HTTP web socket server on ", server.IPSocket, " closed TCP connection with ", connection.TryGetCustomData("chargeBoxId") + " (" + connection.RemoteSocket + ")"));
+            (testCSMSv2_1.CSMSServers.First() as WebSocketServer).OnTCPConnectionClosed += async (timestamp, server, connection, reason, eventTrackingId) => {
+                DebugX.Log(String.Concat("HTTP web socket server on ", server.IPSocket, " closed TCP connection with ", connection.TryGetCustomData("chargeBoxId") + $", reason: {reason} " + " (" + connection.RemoteSocket + ")"));
                 lock (testCSMSv2_1)
                 {
                     File.AppendAllText(Path.Combine(AppContext.BaseDirectory, "TextMessages.log"),
