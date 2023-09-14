@@ -365,7 +365,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                                                  AutoStart:                   true
                                              );
 
-            testCSMSv2_1.AddHTTPBasicAuth(OCPPv2_1.ChargeBox_Id.Parse("GD001"), "test123");
+            testCSMSv2_1.AddOrUpdateHTTPBasicAuth(OCPPv2_1.ChargeBox_Id.Parse("GD001"), "test123");
 
 
 
