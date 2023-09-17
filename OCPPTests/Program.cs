@@ -349,7 +349,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
 
             #endregion
 
-            #region Setup CSMS v2.0.1
+            #region Setup CSMS v2.1
 
             var testCSMSv2_1               = new OCPPv2_1.TestCSMS(
                                                  Id:                          OCPPv2_1.CSMS_Id.Parse("OCPPv2.1-Test01"),
@@ -448,6 +448,8 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
 
             #endregion
 
+
+            // http://127.0.0.1:3502/chargeBoxes
 
             //var chargingStation1  = new TestChargePoint(
             //                            ChargeBoxId:              OCPPv1_6.ChargeBox_Id.Parse("GD001"),
