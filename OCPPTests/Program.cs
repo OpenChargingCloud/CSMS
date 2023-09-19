@@ -28,8 +28,6 @@ using org.GraphDefined.Vanaheimr.Hermod.WebSocket;
 using OCPPv1_6   = cloud.charging.open.protocols.OCPPv1_6;
 using OCPPv2_0_1 = cloud.charging.open.protocols.OCPPv2_0_1;
 using OCPPv2_1   = cloud.charging.open.protocols.OCPPv2_1;
-using Org.BouncyCastle.Asn1.Ess;
-using cloud.charging.open.protocols.OCPPv2_0_1;
 
 #endregion
 
@@ -1644,47 +1642,61 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
 
                         #region SendSignedCertificate
 
-                        //   sendsignedcertificate GD002
-                        if (command == "sendsignedcertificate" && commandArray.Length == 2)
+                        //   SendSignedCertificate $Filename
+                        if (command == "SendSignedCertificate".ToLower() && commandArray.Length == 2)
                         {
 
-                            var response = await testCSMSv1_6.CertificateSigned(OCPPv1_6.ChargeBox_Id.Parse(chargeBoxId),
-                                                                                OCPPv1_6.CertificateChain.Parse(
-                                                                                String.Concat(
-                                                                                    "-----BEGIN CERTIFICATE-----\n",
-                                                                                    "MIIFNjCCBB6gAwIBAgISBOChwuPxlU25hKJ2AT4zX+4kMA0GCSqGSIb3DQEBCwUA\n",
-                                                                                    "MDIxCzAJBgNVBAYTAlVTMRYwFAYDVQQKEw1MZXQncyBFbmNyeXB0MQswCQYDVQQD\n",
-                                                                                    "EwJSMzAeFw0yMjExMDEwNDA1NThaFw0yMzAxMzAwNDA1NTdaMCMxITAfBgNVBAMT\n",
-                                                                                    "GGFwaTEub2NwcC5jaGFyZ2luZy5jbG91ZDCCASIwDQYJKoZIhvcNAQEBBQADggEP\n",
-                                                                                    "ADCCAQoCggEBANXXEPaMYd8g3BmOuNLbJC9j5KHEOQebZ71dQcPGrD5pm8TICEmr\n",
-                                                                                    "PnAVh/TjF61dco/Bw0HjDz+mI62RHe3tBXggN7p7THKTBLcEMXNMYaEIgp+N1GDV\n",
-                                                                                    "4N1ooT9TcnAPID38mjNN/zdPZ2L9IOcE3S9e0AB1a7oJDppvAKIixej+gymuugvy\n",
-                                                                                    "DqwDfugfyFXGpuEXm+xl//D5RjN8Mgsj5nzBOm+2TqAJBhb9cp35Isaq+fbvFXlE\n",
-                                                                                    "8ICldVHnZKNPfExnTK5FY6T6yDcjBEMnkJQMEMlMCwmuhbwO7iCDicT5hzdnH6MX\n",
-                                                                                    "QreKShgB65c/+cu4mHT3StHQg8kRnpvW1N8CAwEAAaOCAlMwggJPMA4GA1UdDwEB\n",
-                                                                                    "/wQEAwIFoDAdBgNVHSUEFjAUBggrBgEFBQcDAQYIKwYBBQUHAwIwDAYDVR0TAQH/\n",
-                                                                                    "BAIwADAdBgNVHQ4EFgQUeMQw3IPBaOXfPhNaJ+wtXg3puG0wHwYDVR0jBBgwFoAU\n",
-                                                                                    "FC6zF7dYVsuuUAlA5h+vnYsUwsYwVQYIKwYBBQUHAQEESTBHMCEGCCsGAQUFBzAB\n",
-                                                                                    "hhVodHRwOi8vcjMuby5sZW5jci5vcmcwIgYIKwYBBQUHMAKGFmh0dHA6Ly9yMy5p\n",
-                                                                                    "LmxlbmNyLm9yZy8wIwYDVR0RBBwwGoIYYXBpMS5vY3BwLmNoYXJnaW5nLmNsb3Vk\n",
-                                                                                    "MEwGA1UdIARFMEMwCAYGZ4EMAQIBMDcGCysGAQQBgt8TAQEBMCgwJgYIKwYBBQUH\n",
-                                                                                    "AgEWGmh0dHA6Ly9jcHMubGV0c2VuY3J5cHQub3JnMIIBBAYKKwYBBAHWeQIEAgSB\n",
-                                                                                    "9QSB8gDwAHYAtz77JN+cTbp18jnFulj0bF38Qs96nzXEnh0JgSXttJkAAAGEMZT8\n",
-                                                                                    "+gAABAMARzBFAiEAt1Z1wpuOQxqEICwha69HzjkPRbbFQOqamN/Bn4lMvywCIDbf\n",
-                                                                                    "b+KSkG8u8QqcyhJMTBY3liwAk7Gi2LiJjGVeHpKmAHYAejKMVNi3LbYg6jjgUh7p\n",
-                                                                                    "hBZwMhOFTTvSK8E6V6NS61IAAAGEMZT9QAAABAMARzBFAiEAvk1Tl2hPxpjRnqxI\n",
-                                                                                    "evSxkIpa2QvDt4ASdOLdOVsbIqMCIGFUVMjdkTmKu9kCGcbRHp2CthkQIhMVzyXK\n",
-                                                                                    "F05iCTTaMA0GCSqGSIb3DQEBCwUAA4IBAQCRQCvNR+eVFs2eqxgWIKIKxk/7QZD1\n",
-                                                                                    "kdpIPuDYoJ/5EDLj1j4jHBiPe4PsIbrPojWnk3XmAtq8EOSVYjspimQjUZMIe3nx\n",
-                                                                                    "Q4T+i+siYwUapAfQep8f004EfJRC0xG9p6D1X6bBWmZgSYINM4VCLQ2P6dEv/ZFc\n",
-                                                                                    "IQFMw0/Iv6emxDP1mGsOjoeZs86DqPwJBOb5Qn+MNqEh49bkFVPno8SoPDcxHZur\n",
-                                                                                    "akYhAo/LuuRLPkfhkhBESsX3dTnvivjkP2nz4M58tHSkZit5y9Zx4NOahnvj4L1J\n",
-                                                                                    "cJLtsZ6AwDqdkoVg/i9nqEGOLzYuLDoQsUW9koyP5FM2/qctVi3ZkEzG\n",
-                                                                                    "-----END CERTIFICATE-----\n\n"
-                                                                                )));
+                            if (version == 1)
+                            {
 
-                            Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
-                            Console.WriteLine(response.ToJSON());
+                                var response = await testCSMSv1_6.CertificateSigned(
+                                                   ChargeBoxId:        OCPPv1_6.ChargeBox_Id.Parse(chargeBoxId),
+                                                   CertificateChain:   OCPPv1_6.CertificateChain.Parse(
+                                                                           File.ReadAllText(commandArray[1])
+                                                                       )
+                                               );
+
+                                Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
+                                Console.WriteLine(response.ToJSON());
+
+                            }
+                            else
+                            {
+                                // not allowed!
+                            }
+
+                        }
+
+
+
+                        //   SendSignedCertificate $Filename v2g|csc
+                        if (command == "SendSignedCertificate".ToLower() && commandArray.Length == 3)
+                        {
+
+                            if (version == 1)
+                            {
+                                // not allowed!
+                            }
+                            else
+                            {
+
+                                var response = await testCSMSv2_1.SendSignedCertificate(
+                                                   new OCPPv2_1.CSMS.CertificateSignedRequest(
+                                                       ChargeBoxId:        OCPPv2_1.ChargeBox_Id.Parse(chargeBoxId),
+                                                       CertificateChain:   OCPPv2_1.CertificateChain.Parse(
+                                                                               File.ReadAllText(commandArray[1])
+                                                                           ),
+                                                       CertificateType:    commandArray[2].ToLower() switch {
+                                                                               "v2g"  => OCPPv2_1.CertificateSigningUse.V2GCertificate,
+                                                                               _      => OCPPv2_1.CertificateSigningUse.ChargingStationCertificate
+                                                                           }
+                                                   )
+                                               );
+
+                                Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
+                                Console.WriteLine(response.ToJSON());
+
+                            }
 
                         }
 
@@ -1692,91 +1704,51 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
 
                         #region InstallCertificate
 
-                        //   installcertificate GD002 csrc
-                        if (command == "installcertificate"     && commandArray.Length == 3 && commandArray[2].ToLower() == "csrc".ToLower())
+                        if (command == "InstallCertificate".ToLower() && commandArray.Length == 3)
                         {
 
-                            var response = await testCSMSv1_6.InstallCertificate(ChargeBoxId:      OCPPv1_6.ChargeBox_Id.Parse(chargeBoxId),
-                                                                                 CertificateType:  OCPPv1_6.CertificateUse.CentralSystemRootCertificate,
-                                                                                 Certificate:      OCPPv1_6.Certificate.Parse(String.Concat(
-                                                                                                       "-----BEGIN CERTIFICATE-----" + "\n",
-                                                                                                       "MIIFNjCCBB6gAwIBAgISBOChwuPxlU25hKJ2AT4zX+4kMA0GCSqGSIb3DQEBCwUA" + "\n",
-                                                                                                       "MDIxCzAJBgNVBAYTAlVTMRYwFAYDVQQKEw1MZXQncyBFbmNyeXB0MQswCQYDVQQD" + "\n",
-                                                                                                       "EwJSMzAeFw0yMjExMDEwNDA1NThaFw0yMzAxMzAwNDA1NTdaMCMxITAfBgNVBAMT" + "\n",
-                                                                                                       "GGFwaTEub2NwcC5jaGFyZ2luZy5jbG91ZDCCASIwDQYJKoZIhvcNAQEBBQADggEP" + "\n",
-                                                                                                       "ADCCAQoCggEBANXXEPaMYd8g3BmOuNLbJC9j5KHEOQebZ71dQcPGrD5pm8TICEmr" + "\n",
-                                                                                                       "PnAVh/TjF61dco/Bw0HjDz+mI62RHe3tBXggN7p7THKTBLcEMXNMYaEIgp+N1GDV" + "\n",
-                                                                                                       "4N1ooT9TcnAPID38mjNN/zdPZ2L9IOcE3S9e0AB1a7oJDppvAKIixej+gymuugvy" + "\n",
-                                                                                                       "DqwDfugfyFXGpuEXm+xl//D5RjN8Mgsj5nzBOm+2TqAJBhb9cp35Isaq+fbvFXlE" + "\n",
-                                                                                                       "8ICldVHnZKNPfExnTK5FY6T6yDcjBEMnkJQMEMlMCwmuhbwO7iCDicT5hzdnH6MX" + "\n",
-                                                                                                       "QreKShgB65c/+cu4mHT3StHQg8kRnpvW1N8CAwEAAaOCAlMwggJPMA4GA1UdDwEB" + "\n",
-                                                                                                       "/wQEAwIFoDAdBgNVHSUEFjAUBggrBgEFBQcDAQYIKwYBBQUHAwIwDAYDVR0TAQH/" + "\n",
-                                                                                                       "BAIwADAdBgNVHQ4EFgQUeMQw3IPBaOXfPhNaJ+wtXg3puG0wHwYDVR0jBBgwFoAU" + "\n",
-                                                                                                       "FC6zF7dYVsuuUAlA5h+vnYsUwsYwVQYIKwYBBQUHAQEESTBHMCEGCCsGAQUFBzAB" + "\n",
-                                                                                                       "hhVodHRwOi8vcjMuby5sZW5jci5vcmcwIgYIKwYBBQUHMAKGFmh0dHA6Ly9yMy5p" + "\n",
-                                                                                                       "LmxlbmNyLm9yZy8wIwYDVR0RBBwwGoIYYXBpMS5vY3BwLmNoYXJnaW5nLmNsb3Vk" + "\n",
-                                                                                                       "MEwGA1UdIARFMEMwCAYGZ4EMAQIBMDcGCysGAQQBgt8TAQEBMCgwJgYIKwYBBQUH" + "\n",
-                                                                                                       "AgEWGmh0dHA6Ly9jcHMubGV0c2VuY3J5cHQub3JnMIIBBAYKKwYBBAHWeQIEAgSB" + "\n",
-                                                                                                       "9QSB8gDwAHYAtz77JN+cTbp18jnFulj0bF38Qs96nzXEnh0JgSXttJkAAAGEMZT8" + "\n",
-                                                                                                       "+gAABAMARzBFAiEAt1Z1wpuOQxqEICwha69HzjkPRbbFQOqamN/Bn4lMvywCIDbf" + "\n",
-                                                                                                       "b+KSkG8u8QqcyhJMTBY3liwAk7Gi2LiJjGVeHpKmAHYAejKMVNi3LbYg6jjgUh7p" + "\n",
-                                                                                                       "hBZwMhOFTTvSK8E6V6NS61IAAAGEMZT9QAAABAMARzBFAiEAvk1Tl2hPxpjRnqxI" + "\n",
-                                                                                                       "evSxkIpa2QvDt4ASdOLdOVsbIqMCIGFUVMjdkTmKu9kCGcbRHp2CthkQIhMVzyXK" + "\n",
-                                                                                                       "F05iCTTaMA0GCSqGSIb3DQEBCwUAA4IBAQCRQCvNR+eVFs2eqxgWIKIKxk/7QZD1" + "\n",
-                                                                                                       "kdpIPuDYoJ/5EDLj1j4jHBiPe4PsIbrPojWnk3XmAtq8EOSVYjspimQjUZMIe3nx" + "\n",
-                                                                                                       "Q4T+i+siYwUapAfQep8f004EfJRC0xG9p6D1X6bBWmZgSYINM4VCLQ2P6dEv/ZFc" + "\n",
-                                                                                                       "IQFMw0/Iv6emxDP1mGsOjoeZs86DqPwJBOb5Qn+MNqEh49bkFVPno8SoPDcxHZur" + "\n",
-                                                                                                       "akYhAo/LuuRLPkfhkhBESsX3dTnvivjkP2nz4M58tHSkZit5y9Zx4NOahnvj4L1J" + "\n",
-                                                                                                       "cJLtsZ6AwDqdkoVg/i9nqEGOLzYuLDoQsUW9koyP5FM2/qctVi3ZkEzG" + "\n",
-                                                                                                       "-----END CERTIFICATE-----" + "\n" + "\n"
-                                                                                                   )));
+                            if (version == 1)
+                            {
 
-                            Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
-                            Console.WriteLine(response.ToJSON());
+                                //   InstallCertificate $FileName csrc|mrc
+                                var response = await testCSMSv1_6.InstallCertificate(
+                                                   ChargeBoxId:       OCPPv1_6.ChargeBox_Id.Parse(chargeBoxId),
+                                                   CertificateType:   commandArray[2].ToLower() switch {
+                                                                          "csrc"  => OCPPv1_6.CertificateUse.CentralSystemRootCertificate,
+                                                                          _       => OCPPv1_6.CertificateUse.ManufacturerRootCertificate
+                                                                      },
+                                                   Certificate:       OCPPv1_6.Certificate.Parse(
+                                                                          File.ReadAllText(commandArray[1])
+                                                                      )
+                                               );
 
-                        }
+                                Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
+                                Console.WriteLine(response.ToJSON());
 
-                        //   installcertificate GD002 mrc
-                        if (command == "installcertificate"     && commandArray.Length == 3 && commandArray[2].ToLower() == "mrc".ToLower())
-                        {
+                            }
+                            else
+                            {
 
-                            var response = await testCSMSv1_6.InstallCertificate(ChargeBoxId:      OCPPv1_6.ChargeBox_Id.Parse(chargeBoxId),
-                                                                                 CertificateType:  OCPPv1_6.CertificateUse.ManufacturerRootCertificate,
-                                                                                 Certificate:      OCPPv1_6.Certificate.Parse(String.Concat(
-                                                                                                       "-----BEGIN CERTIFICATE-----" + "\n",
-                                                                                                       "MIIFNjCCBB6gAwIBAgISBOChwuPxlU25hKJ2AT4zX+4kMA0GCSqGSIb3DQEBCwUA" + "\n",
-                                                                                                       "MDIxCzAJBgNVBAYTAlVTMRYwFAYDVQQKEw1MZXQncyBFbmNyeXB0MQswCQYDVQQD" + "\n",
-                                                                                                       "EwJSMzAeFw0yMjExMDEwNDA1NThaFw0yMzAxMzAwNDA1NTdaMCMxITAfBgNVBAMT" + "\n",
-                                                                                                       "GGFwaTEub2NwcC5jaGFyZ2luZy5jbG91ZDCCASIwDQYJKoZIhvcNAQEBBQADggEP" + "\n",
-                                                                                                       "ADCCAQoCggEBANXXEPaMYd8g3BmOuNLbJC9j5KHEOQebZ71dQcPGrD5pm8TICEmr" + "\n",
-                                                                                                       "PnAVh/TjF61dco/Bw0HjDz+mI62RHe3tBXggN7p7THKTBLcEMXNMYaEIgp+N1GDV" + "\n",
-                                                                                                       "4N1ooT9TcnAPID38mjNN/zdPZ2L9IOcE3S9e0AB1a7oJDppvAKIixej+gymuugvy" + "\n",
-                                                                                                       "DqwDfugfyFXGpuEXm+xl//D5RjN8Mgsj5nzBOm+2TqAJBhb9cp35Isaq+fbvFXlE" + "\n",
-                                                                                                       "8ICldVHnZKNPfExnTK5FY6T6yDcjBEMnkJQMEMlMCwmuhbwO7iCDicT5hzdnH6MX" + "\n",
-                                                                                                       "QreKShgB65c/+cu4mHT3StHQg8kRnpvW1N8CAwEAAaOCAlMwggJPMA4GA1UdDwEB" + "\n",
-                                                                                                       "/wQEAwIFoDAdBgNVHSUEFjAUBggrBgEFBQcDAQYIKwYBBQUHAwIwDAYDVR0TAQH/" + "\n",
-                                                                                                       "BAIwADAdBgNVHQ4EFgQUeMQw3IPBaOXfPhNaJ+wtXg3puG0wHwYDVR0jBBgwFoAU" + "\n",
-                                                                                                       "FC6zF7dYVsuuUAlA5h+vnYsUwsYwVQYIKwYBBQUHAQEESTBHMCEGCCsGAQUFBzAB" + "\n",
-                                                                                                       "hhVodHRwOi8vcjMuby5sZW5jci5vcmcwIgYIKwYBBQUHMAKGFmh0dHA6Ly9yMy5p" + "\n",
-                                                                                                       "LmxlbmNyLm9yZy8wIwYDVR0RBBwwGoIYYXBpMS5vY3BwLmNoYXJnaW5nLmNsb3Vk" + "\n",
-                                                                                                       "MEwGA1UdIARFMEMwCAYGZ4EMAQIBMDcGCysGAQQBgt8TAQEBMCgwJgYIKwYBBQUH" + "\n",
-                                                                                                       "AgEWGmh0dHA6Ly9jcHMubGV0c2VuY3J5cHQub3JnMIIBBAYKKwYBBAHWeQIEAgSB" + "\n",
-                                                                                                       "9QSB8gDwAHYAtz77JN+cTbp18jnFulj0bF38Qs96nzXEnh0JgSXttJkAAAGEMZT8" + "\n",
-                                                                                                       "+gAABAMARzBFAiEAt1Z1wpuOQxqEICwha69HzjkPRbbFQOqamN/Bn4lMvywCIDbf" + "\n",
-                                                                                                       "b+KSkG8u8QqcyhJMTBY3liwAk7Gi2LiJjGVeHpKmAHYAejKMVNi3LbYg6jjgUh7p" + "\n",
-                                                                                                       "hBZwMhOFTTvSK8E6V6NS61IAAAGEMZT9QAAABAMARzBFAiEAvk1Tl2hPxpjRnqxI" + "\n",
-                                                                                                       "evSxkIpa2QvDt4ASdOLdOVsbIqMCIGFUVMjdkTmKu9kCGcbRHp2CthkQIhMVzyXK" + "\n",
-                                                                                                       "F05iCTTaMA0GCSqGSIb3DQEBCwUAA4IBAQCRQCvNR+eVFs2eqxgWIKIKxk/7QZD1" + "\n",
-                                                                                                       "kdpIPuDYoJ/5EDLj1j4jHBiPe4PsIbrPojWnk3XmAtq8EOSVYjspimQjUZMIe3nx" + "\n",
-                                                                                                       "Q4T+i+siYwUapAfQep8f004EfJRC0xG9p6D1X6bBWmZgSYINM4VCLQ2P6dEv/ZFc" + "\n",
-                                                                                                       "IQFMw0/Iv6emxDP1mGsOjoeZs86DqPwJBOb5Qn+MNqEh49bkFVPno8SoPDcxHZur" + "\n",
-                                                                                                       "akYhAo/LuuRLPkfhkhBESsX3dTnvivjkP2nz4M58tHSkZit5y9Zx4NOahnvj4L1J" + "\n",
-                                                                                                       "cJLtsZ6AwDqdkoVg/i9nqEGOLzYuLDoQsUW9koyP5FM2/qctVi3ZkEzG" + "\n",
-                                                                                                       "-----END CERTIFICATE-----" + "\n" + "\n"
-                                                                                                   )));
+                                //   InstallCertificate $FileName v2grc|morc|csrc|v2gcc
+                                var response = await testCSMSv2_1.InstallCertificate(
+                                                   new OCPPv2_1.CSMS.InstallCertificateRequest(
+                                                       ChargeBoxId:       OCPPv2_1.ChargeBox_Id.Parse(chargeBoxId),
+                                                       CertificateType:   commandArray[2].ToLower() switch {
+                                                                              "v2grc"  => OCPPv2_1.CertificateUse.V2GRootCertificate,
+                                                                              "morc"   => OCPPv2_1.CertificateUse.MORootCertificate,
+                                                                              "csrc"   => OCPPv2_1.CertificateUse.CSMSRootCertificate,
+                                                                              _        => OCPPv2_1.CertificateUse.V2GCertificateChain
+                                                                          },
+                                                       Certificate:       OCPPv2_1.Certificate.Parse(
+                                                                              File.ReadAllText(commandArray[1])
+                                                                          )
+                                                   )
+                                               );
 
-                            Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
-                            Console.WriteLine(response.ToJSON());
+                                Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
+                                Console.WriteLine(response.ToJSON());
+
+                            }
 
                         }
 
@@ -1784,27 +1756,51 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
 
                         #region GetInstalledCertificateIds
 
-                        //   getcerts GD002 csrc
-                        if (command == "getcerts"               && commandArray.Length == 3 && commandArray[2].ToLower() == "csrc".ToLower())
+                        if (command == "GetInstalledCertificateIds".ToLower() && commandArray.Length == 2)
                         {
 
-                            var response = await testCSMSv1_6.GetInstalledCertificateIds(OCPPv1_6.ChargeBox_Id.Parse(chargeBoxId),
-                                                                                         OCPPv1_6.CertificateUse.CentralSystemRootCertificate);
+                            //   GetInstalledCertificateIds csrc
+                            //   GetInstalledCertificateIds mrc
+                            if (version == 1)
+                            {
 
-                            Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
-                            Console.WriteLine(response.ToJSON());
+                                var response = await testCSMSv1_6.GetInstalledCertificateIds(
+                                                   ChargeBoxId:       OCPPv1_6.ChargeBox_Id.Parse(chargeBoxId),
+                                                   CertificateType:   commandArray[1].ToLower() switch {
+                                                                          "csrc"  => OCPPv1_6.CertificateUse.CentralSystemRootCertificate,
+                                                                          _       => OCPPv1_6.CertificateUse.ManufacturerRootCertificate
+                                                                      }
+                                               );
 
-                        }
+                                Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
+                                Console.WriteLine(response.ToJSON());
 
-                        //   getcerts GD002 mrc
-                        if (command == "getcerts"               && commandArray.Length == 3 && commandArray[2].ToLower() == "mrc".ToLower())
-                        {
+                            }
+                            else
+                            {
 
-                            var response = await testCSMSv1_6.GetInstalledCertificateIds(OCPPv1_6.ChargeBox_Id.Parse(chargeBoxId),
-                                                                                         OCPPv1_6.CertificateUse.ManufacturerRootCertificate);
+                                //   GetInstalledCertificateIds v2grc
+                                //   GetInstalledCertificateIds morc
+                                //   GetInstalledCertificateIds csrc
+                                //   GetInstalledCertificateIds v2gcc
+                                var response = await testCSMSv2_1.GetInstalledCertificateIds(
+                                                   new OCPPv2_1.CSMS.GetInstalledCertificateIdsRequest(
+                                                       ChargeBoxId:        OCPPv2_1.ChargeBox_Id.Parse(chargeBoxId),
+                                                       CertificateTypes:   new[] {
+                                                                               commandArray[1].ToLower() switch {
+                                                                                   "v2grc"  => OCPPv2_1.CertificateUse.V2GRootCertificate,
+                                                                                   "morc"   => OCPPv2_1.CertificateUse.MORootCertificate,
+                                                                                   "csrc"   => OCPPv2_1.CertificateUse.CSMSRootCertificate,
+                                                                                   _        => OCPPv2_1.CertificateUse.V2GCertificateChain
+                                                                               }
+                                                                           }
+                                                   )
+                                               );
 
-                            Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
-                            Console.WriteLine(response.ToJSON());
+                                Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
+                                Console.WriteLine(response.ToJSON());
+
+                            }
 
                         }
 
@@ -1812,20 +1808,54 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
 
                         #region DeleteCertificate
 
-                        //   deletecertificate GD002
-                        if (command == "deletecertificate"      && commandArray.Length == 2)
+                        //   DeleteCertificate $HashAlgorithm $IssuerNameHash $IssuerPublicKeyHash $SerialNumber
+                        if (command == "DeleteCertificate".ToLower() && commandArray.Length == 5)
                         {
 
-                            var response = await testCSMSv1_6.DeleteCertificate(OCPPv1_6.ChargeBox_Id.Parse(chargeBoxId),
-                                                                                new OCPPv1_6.CertificateHashData(
-                                                                                    OCPPv1_6.HashAlgorithms.SHA256,
-                                                                                    "bde18ac64b30e7e33c6407fcc625b80a8be4e59000aefe703506d2bf7645f810",
-                                                                                    "b44b3ed74a4ce77d54469463bf1042cbd8d0c1981a71febac58b23342fda07b9",
-                                                                                    "4E0A1C2E3F1954DB984A276013E335FEE24"
-                                                                                ));
+                            if (version == 1)
+                            {
 
-                            Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
-                            Console.WriteLine(response.ToJSON());
+                                var response = await testCSMSv1_6.DeleteCertificate(
+                                                   ChargeBoxId:           OCPPv1_6.ChargeBox_Id.Parse(chargeBoxId),
+                                                   CertificateHashData:   new OCPPv1_6.CertificateHashData(
+                                                                              commandArray[1].ToLower() switch {
+                                                                                  "sha512"  => OCPPv1_6.HashAlgorithms.SHA512,
+                                                                                  "sha384"  => OCPPv1_6.HashAlgorithms.SHA384,
+                                                                                  _         => OCPPv1_6.HashAlgorithms.SHA256
+                                                                              },
+                                                                              commandArray[2],
+                                                                              commandArray[3],
+                                                                              commandArray[4]
+                                                                          )
+                                               );
+
+                                Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
+                                Console.WriteLine(response.ToJSON());
+
+                            }
+                            else
+                            {
+
+                                var response = await testCSMSv2_1.DeleteCertificate(
+                                                   new OCPPv2_1.CSMS.DeleteCertificateRequest(
+                                                       ChargeBoxId:           OCPPv2_1.ChargeBox_Id.Parse(chargeBoxId),
+                                                       CertificateHashData:   new OCPPv2_1.CertificateHashData(
+                                                                                  commandArray[1].ToLower() switch {
+                                                                                      "sha512"  => OCPPv2_1.HashAlgorithms.SHA512,
+                                                                                      "sha384"  => OCPPv2_1.HashAlgorithms.SHA384,
+                                                                                      _         => OCPPv2_1.HashAlgorithms.SHA256
+                                                                                  },
+                                                                                  commandArray[2],
+                                                                                  commandArray[3],
+                                                                                  commandArray[4]
+                                                                              )
+                                                   )
+                                               );
+
+                                Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
+                                Console.WriteLine(response.ToJSON());
+
+                            }
 
                         }
 
