@@ -360,12 +360,12 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
 
             var testBackendWebSocketsv2_1  = testCSMSv2_1.CreateWebSocketService(
                                                  TCPPort:                     IPPort.Parse(9920),
-                                                 DisableWebSocketPings:       true,
+                                                 DisableWebSocketPings:       false,
                                                  //SlowNetworkSimulationDelay:  TimeSpan.FromMilliseconds(10),
                                                  AutoStart:                   true
                                              );
 
-            testCSMSv2_1.AddOrUpdateHTTPBasicAuth(OCPPv2_1.ChargeBox_Id.Parse("GD001"), "test123");
+            testCSMSv2_1.AddOrUpdateHTTPBasicAuth(OCPPv2_1.ChargeBox_Id.Parse("CS_001"), "dummy-dev-password");
 
 
 
@@ -807,6 +807,60 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
 
                         }
 
+
+
+                        //   HardReset 1
+                        if (command == "HardReset".ToLower() && commandArray.Length == 2)
+                        {
+
+                            if (version == 1)
+                            {
+                                // invalid
+                            }
+                            else
+                            {
+
+                                var response = await testCSMSv2_1.Reset(
+                                                   new OCPPv2_1.CSMS.ResetRequest(
+                                                       ChargeBoxId:   OCPPv2_1.ChargeBox_Id.Parse(chargeBoxId),
+                                                       ResetType:     OCPPv2_1.ResetTypes.Immediate,
+                                                       EVSEId:        OCPPv2_1.EVSE_Id.Parse(commandArray[1])
+                                                   )
+                                               );
+
+                                Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
+                                Console.WriteLine(response.ToJSON());
+
+                            }
+
+                        }
+
+                        //   SoftReset 1
+                        if (command == "SoftReset".ToLower() && commandArray.Length == 2)
+                        {
+
+                            if (version == 1)
+                            {
+                                // invalid
+                            }
+                            else
+                            {
+
+                                var response = await testCSMSv2_1.Reset(
+                                                   new OCPPv2_1.CSMS.ResetRequest(
+                                                       ChargeBoxId:   OCPPv2_1.ChargeBox_Id.Parse(chargeBoxId),
+                                                       ResetType:     OCPPv2_1.ResetTypes.OnIdle,
+                                                       EVSEId:        OCPPv2_1.EVSE_Id.Parse(commandArray[1])
+                                                   )
+                                               );
+
+                                Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
+                                Console.WriteLine(response.ToJSON());
+
+                            }
+
+                        }
+
                         #endregion
 
                         #region UpdateFirmware
@@ -897,7 +951,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                         #region GetReport
 
                         //   GetReport
-                        if (command == "GetReport".ToLower() && (commandArray.Length == 1 || commandArray.Length == 2))
+                        if (command == "GetReport".ToLower() && (commandArray.Length == 2 || commandArray.Length == 3))
                         {
 
                             var response = await testCSMSv2_1.GetReport(
@@ -964,6 +1018,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                             else
                             {
 
+                                //   getlog http://172.20.101.28:9921 security
                                 //   getlog https://api2.ocpp.charging.cloud:9901 diagnostics
                                 //   getlog https://api2.ocpp.charging.cloud:9901 security
                                 //   getlog https://api2.ocpp.charging.cloud:9901 datacollector
@@ -1015,8 +1070,8 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                                                                            new OCPPv2_1.Variable(
                                                                                Name:       commandArray[2],
                                                                                Instance:   null
-                                                                           ),
-                                                                           OCPPv2_1.AttributeTypes.Target
+                                                                           )
+                                                                           //OCPPv2_1.AttributeTypes.Actual
                                                                        )
                                                                    }
                                                )
@@ -1287,6 +1342,62 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
 
                         #region Trigger Message
 
+                        ////   TriggerMessage StatusNotification $EVSEId
+                        //if (command == "TriggerMessage".ToLower() && commandArray.Length == 3)
+                        //{
+
+                        //    if (version == 1)
+                        //    {
+
+                        //        var response = await testCSMSv1_6.TriggerMessage(
+                        //                           ChargeBoxId:        OCPPv1_6.ChargeBox_Id.Parse(chargeBoxId),
+                        //                           RequestedMessage:   commandArray[1].ToLower() switch {
+                        //                                                   "bootnotification"               => OCPPv1_6.MessageTriggers.BootNotification,
+                        //                                                   "logstatusnotification"          => OCPPv1_6.MessageTriggers.LogStatusNotification,
+                        //                                                   "diagnosticsstatusnotification"  => OCPPv1_6.MessageTriggers.DiagnosticsStatusNotification,
+                        //                                                   "firmwarestatusnotification"     => OCPPv1_6.MessageTriggers.FirmwareStatusNotification,
+                        //                                                   "metervalues"                    => OCPPv1_6.MessageTriggers.MeterValues,
+                        //                                                   "signchargepointcertificate"     => OCPPv1_6.MessageTriggers.SignChargePointCertificate,
+                        //                                                   "statusnotification"             => OCPPv1_6.MessageTriggers.StatusNotification,
+                        //                                                   _                                => OCPPv1_6.MessageTriggers.Heartbeat
+                        //                                               },
+                        //                           ConnectorId:        Connector_Id.Parse(commandArray[2])
+                        //                       );
+
+                        //        Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
+                        //        Console.WriteLine(response.ToJSON());
+
+                        //    }
+                        //    else
+                        //    {
+
+                        //        var response = await testCSMSv2_1.TriggerMessage(
+                        //                           new OCPPv2_1.CSMS.TriggerMessageRequest(
+                        //                               ChargeBoxId:        OCPPv2_1.ChargeBox_Id.Parse(chargeBoxId),
+                        //                               RequestedMessage:   commandArray[1].ToLower() switch {
+                        //                                                       "bootnotification"               => OCPPv2_1.MessageTriggers.BootNotification,
+                        //                                                       "logstatusnotification"          => OCPPv2_1.MessageTriggers.LogStatusNotification,
+                        //                                                       "diagnosticsstatusnotification"  => OCPPv2_1.MessageTriggers.DiagnosticsStatusNotification,
+                        //                                                       "firmwarestatusnotification"     => OCPPv2_1.MessageTriggers.FirmwareStatusNotification,
+                        //                                                       "metervalues"                    => OCPPv2_1.MessageTriggers.MeterValues,
+                        //                                                       "signchargepointcertificate"     => OCPPv2_1.MessageTriggers.SignChargePointCertificate,
+                        //                                                       "statusnotification"             => OCPPv2_1.MessageTriggers.StatusNotification,
+                        //                                                       _                                => OCPPv2_1.MessageTriggers.Heartbeat
+                        //                                                   },
+                        //                               EVSE:               new OCPPv2_1.EVSE(
+                        //                                                       OCPPv2_1.EVSE_Id.Parse(commandArray[2])
+                        //                                                   )
+                        //                           )
+                        //                       );
+
+                        //        Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
+                        //        Console.WriteLine(response.ToJSON());
+
+                        //    }
+
+                        //}
+
+
                         //   TriggerMessage BootNotification
                         //   TriggerMessage LogStatusNotification
                         //   TriggerMessage DiagnosticsStatusNotification
@@ -1294,7 +1405,6 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                         //   TriggerMessage Heartbeat
                         //   TriggerMessage MeterValues
                         //   TriggerMessage SignChargePointCertificate
-                        //   TriggerMessage StatusNotification
                         if (command == "TriggerMessage".ToLower() && commandArray.Length == 2)
                         {
 
@@ -1326,14 +1436,14 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                                                    new OCPPv2_1.CSMS.TriggerMessageRequest(
                                                        ChargeBoxId:        OCPPv2_1.ChargeBox_Id.Parse(chargeBoxId),
                                                        RequestedMessage:   commandArray[1].ToLower() switch {
-                                                                               "bootnotification"               => OCPPv2_1.MessageTriggers.BootNotification,
-                                                                               "logstatusnotification"          => OCPPv2_1.MessageTriggers.LogStatusNotification,
-                                                                               "diagnosticsstatusnotification"  => OCPPv2_1.MessageTriggers.DiagnosticsStatusNotification,
-                                                                               "firmwarestatusnotification"     => OCPPv2_1.MessageTriggers.FirmwareStatusNotification,
-                                                                               "metervalues"                    => OCPPv2_1.MessageTriggers.MeterValues,
-                                                                               "signchargepointcertificate"     => OCPPv2_1.MessageTriggers.SignChargePointCertificate,
-                                                                               "statusnotification"             => OCPPv2_1.MessageTriggers.StatusNotification,
-                                                                               _                                => OCPPv2_1.MessageTriggers.Heartbeat
+                                                                               "bootnotification"                => OCPPv2_1.MessageTriggers.BootNotification,
+                                                                               "logstatusnotification"           => OCPPv2_1.MessageTriggers.LogStatusNotification,
+                                                                               "diagnosticsstatusnotification"   => OCPPv2_1.MessageTriggers.DiagnosticsStatusNotification,
+                                                                               "firmwarestatusnotification"      => OCPPv2_1.MessageTriggers.FirmwareStatusNotification,
+                                                                               "metervalues"                     => OCPPv2_1.MessageTriggers.MeterValues,
+                                                                               "SignChargingStationCertificate"  => OCPPv2_1.MessageTriggers.SignChargingStationCertificate,
+                                                                               "statusnotification"              => OCPPv2_1.MessageTriggers.StatusNotification,
+                                                                               _                                 => OCPPv2_1.MessageTriggers.Heartbeat
                                                                            }
                                                    )
                                                );
@@ -1387,16 +1497,57 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                                                    new OCPPv2_1.CSMS.TriggerMessageRequest(
                                                        ChargeBoxId:        OCPPv2_1.ChargeBox_Id.Parse(chargeBoxId),
                                                        RequestedMessage:   commandArray[2].ToLower() switch {
-                                                                               "bootnotification"               => OCPPv2_1.MessageTriggers.BootNotification,
-                                                                               "logstatusnotification"          => OCPPv2_1.MessageTriggers.LogStatusNotification,
-                                                                               "diagnosticsstatusnotification"  => OCPPv2_1.MessageTriggers.DiagnosticsStatusNotification,
-                                                                               "firmwarestatusnotification"     => OCPPv2_1.MessageTriggers.FirmwareStatusNotification,
-                                                                               "metervalues"                    => OCPPv2_1.MessageTriggers.MeterValues,
-                                                                               "signchargepointcertificate"     => OCPPv2_1.MessageTriggers.SignChargePointCertificate,
-                                                                               "statusnotification"             => OCPPv2_1.MessageTriggers.StatusNotification,
-                                                                               _                                => OCPPv2_1.MessageTriggers.Heartbeat
+                                                                               "bootnotification"                => OCPPv2_1.MessageTriggers.BootNotification,
+                                                                               "logstatusnotification"           => OCPPv2_1.MessageTriggers.LogStatusNotification,
+                                                                               "diagnosticsstatusnotification"   => OCPPv2_1.MessageTriggers.DiagnosticsStatusNotification,
+                                                                               "firmwarestatusnotification"      => OCPPv2_1.MessageTriggers.FirmwareStatusNotification,
+                                                                               "metervalues"                     => OCPPv2_1.MessageTriggers.MeterValues,
+                                                                               "SignChargingStationCertificate"  => OCPPv2_1.MessageTriggers.SignChargingStationCertificate,
+                                                                               "statusnotification"              => OCPPv2_1.MessageTriggers.StatusNotification,
+                                                                               _                                 => OCPPv2_1.MessageTriggers.Heartbeat
                                                                            },
-                                                       EVSEId:             OCPPv2_1.EVSE_Id.Parse(commandArray[1])
+                                                       EVSE:               new OCPPv2_1.EVSE(
+                                                                               OCPPv2_1.EVSE_Id.Parse(commandArray[1])
+                                                                           )
+                                                   )
+                                               );
+
+                                Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
+                                Console.WriteLine(response.ToJSON());
+
+                            }
+
+                        }
+
+
+                        //   TriggerMessage 1 1 StatusNotification
+                        if (command == "TriggerMessage".ToLower() && commandArray.Length == 4)
+                        {
+
+                            if (version == 1)
+                            {
+                                // not allowed
+                            }
+                            else
+                            {
+
+                                var response = await testCSMSv2_1.TriggerMessage(
+                                                   new OCPPv2_1.CSMS.TriggerMessageRequest(
+                                                       ChargeBoxId:        OCPPv2_1.ChargeBox_Id.Parse(chargeBoxId),
+                                                       RequestedMessage:   commandArray[3].ToLower() switch {
+                                                                               "bootnotification"                => OCPPv2_1.MessageTriggers.BootNotification,
+                                                                               "logstatusnotification"           => OCPPv2_1.MessageTriggers.LogStatusNotification,
+                                                                               "diagnosticsstatusnotification"   => OCPPv2_1.MessageTriggers.DiagnosticsStatusNotification,
+                                                                               "firmwarestatusnotification"      => OCPPv2_1.MessageTriggers.FirmwareStatusNotification,
+                                                                               "metervalues"                     => OCPPv2_1.MessageTriggers.MeterValues,
+                                                                               "SignChargingStationCertificate"  => OCPPv2_1.MessageTriggers.SignChargingStationCertificate,
+                                                                               "statusnotification"              => OCPPv2_1.MessageTriggers.StatusNotification,
+                                                                               _                                 => OCPPv2_1.MessageTriggers.Heartbeat
+                                                                           },
+                                                       EVSE:               new OCPPv2_1.EVSE(
+                                                                               OCPPv2_1.EVSE_Id.     Parse(commandArray[1]),
+                                                                               OCPPv2_1.Connector_Id.Parse(commandArray[2])
+                                                                           )
                                                    )
                                                );
 
@@ -1435,17 +1586,30 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                                                    new OCPPv2_1.CSMS.UpdateFirmwareRequest(
                                                        ChargeBoxId:               OCPPv2_1.ChargeBox_Id.Parse(chargeBoxId),
                                                        Firmware:                  new OCPPv2_1.Firmware(
-                                                                                      FirmwareURL:          URL.Parse(commandArray[2]),
+                                                                                      FirmwareURL:          URL.Parse(commandArray[1]),
                                                                                       RetrieveTimestamp:    Timestamp.Now,
                                                                                       InstallTimestamp:     Timestamp.Now + TimeSpan.FromMinutes(1),
-                                                                                      SigningCertificate:   null,
-                                                                                      Signature:            null
+                                                                                      SigningCertificate:   "-----BEGIN CERTIFICATE-----\n" +
+                                                                                                            "MIICFzCCAZwCFCqVyLDfPQJywMwU7pwXbiUREPH/MAoGCCqGSM49BAMDMGoxCzAJ\n" +
+                                                                                                            "BgNVBAYTAk5MMRIwEAYDVQQIDAlGbGV2b2xhbmQxDzANBgNVBAcMBkFsbWVyZTET\n" +
+                                                                                                            "MBEGA1UECgwKQWxmZW4gTi5WLjEMMAoGA1UECwwDQUNFMRMwEQYDVQQDDApBSFdQ\n" +
+                                                                                                            "MDEtREVWMCAXDTIyMDIwODEzMTEzNFoYDzIwNjQwMjA4MTMxMTM0WjByMQswCQYD\n" +
+                                                                                                            "VQQGEwJOTDESMBAGA1UECAwJRmxldm9sYW5kMQ8wDQYDVQQHDAZBbG1lcmUxEzAR\n" +
+                                                                                                            "BgNVBAoMCkFsZmVuIE4uVi4xDDAKBgNVBAsMA0FDRTEbMBkGA1UEAwwSQUhXUC1E\n" +
+                                                                                                            "RVYtRGV2ZWxvcGVyMHYwEAYHKoZIzj0CAQYFK4EEACIDYgAEdjJ42sfXY7af4BaT\n" +
+                                                                                                            "2SU69RUtl5Wudb/wj/X8t19HYkQdqMg7R93AN6+K8x1ZGb+YWRLsPWt/EtYhmvAc\n" +
+                                                                                                            "77Hjbu/ufori4IBs5qgQGa9na/alvexSG0qShRs79FUZIKcFMAoGCCqGSM49BAMD\n" +
+                                                                                                            "A2kAMGYCMQDWOw4qFA1NFfVspD3NkL7D8fSppDmQAWAn+KFdqhs/1rhP1ldt822C\n" +
+                                                                                                            "eEzEBzdUfp0CMQCzFmVQbAuxwn9sMoiB7GSpaMa2ayT0WJcgoLSaFFet2sf2ZlJy\n" +
+                                                                                                            "9nHH2QCphACm184=\n" +
+                                                                                                            "-----END CERTIFICATE-----\n",
+                                                                                      Signature:            "3066023100f3e4beaa47d963d90051233603f59ade779aacd7d8939bcf41b5dc7a9cf139b433d859dfb6d4fbb885d32b225da6fa42023100cc10f35ba4440a69b1789bed7a3031eb30f5cdf2ce8ea2e9070968eaa862ad9e6fb334652184e46925a0df79355b74e8"
                                                                                   ),
                                                        UpdateFirmwareRequestId:   RandomExtensions.RandomInt32(),
                                                        Retries:                   3,
                                                        RetryInterval:             TimeSpan.FromSeconds(10)
                                                    )
-                                               );
+                                               );;
 
                                 Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
                                 Console.WriteLine(response.ToJSON());
@@ -1866,14 +2030,32 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
 
                         #region GetLocalListVersion
 
-                        //   getlocallistversion GD002
-                        if (command == "getlocallistversion"    && commandArray.Length == 2)
+                        //   GetLocalListVersion
+                        if (command == "GetLocalListVersion".ToLower() && commandArray.Length == 1)
                         {
 
-                            var response = await testCSMSv1_6.GetLocalListVersion(OCPPv1_6.ChargeBox_Id.Parse(chargeBoxId));
+                            if (version == 1)
+                            {
 
-                            Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
-                            Console.WriteLine(response.ToJSON());
+                                var response = await testCSMSv1_6.GetLocalListVersion(OCPPv1_6.ChargeBox_Id.Parse(chargeBoxId));
+
+                                Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
+                                Console.WriteLine(response.ToJSON());
+
+                            }
+                            else
+                            {
+
+                                var response = await testCSMSv2_1.GetLocalListVersion(
+                                                    new OCPPv2_1.CSMS.GetLocalListVersionRequest(
+                                                        OCPPv2_1.ChargeBox_Id.Parse(chargeBoxId)
+                                                    )
+                                               );
+
+                                Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
+                                Console.WriteLine(response.ToJSON());
+
+                            }
 
                         }
 
@@ -1881,23 +2063,58 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
 
                         #region SendLocalList
 
-                        //   sendlocallist GD002
-                        if (command == "sendlocallist"          && commandArray.Length == 2)
+                        //   SendLocalList
+                        if (command == "SendLocalList".ToLower() && commandArray.Length == 1)
                         {
 
-                            var response = await testCSMSv1_6.SendLocalList(OCPPv1_6.ChargeBox_Id.Parse(chargeBoxId),
-                                                                                 2, // 0 is not allowed!
-                                                                                 OCPPv1_6.UpdateTypes.Full,
-                                                                                 new OCPPv1_6.AuthorizationData[] {
-                                                                                     new OCPPv1_6.AuthorizationData(OCPPv1_6.IdToken.Parse("046938f2fc6880"), new OCPPv1_6.IdTagInfo(OCPPv1_6.AuthorizationStatus.Blocked)),
-                                                                                     new OCPPv1_6.AuthorizationData(OCPPv1_6.IdToken.Parse("aabbcc11"),       new OCPPv1_6.IdTagInfo(OCPPv1_6.AuthorizationStatus.Accepted)),
-                                                                                     new OCPPv1_6.AuthorizationData(OCPPv1_6.IdToken.Parse("aabbcc22"),       new OCPPv1_6.IdTagInfo(OCPPv1_6.AuthorizationStatus.Accepted)),
-                                                                                     new OCPPv1_6.AuthorizationData(OCPPv1_6.IdToken.Parse("aabbcc33"),       new OCPPv1_6.IdTagInfo(OCPPv1_6.AuthorizationStatus.Accepted)),
-                                                                                     new OCPPv1_6.AuthorizationData(OCPPv1_6.IdToken.Parse("aabbcc44"),       new OCPPv1_6.IdTagInfo(OCPPv1_6.AuthorizationStatus.Blocked))
-                                                                                 });
+                            if (version == 1)
+                            {
 
-                            Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
-                            Console.WriteLine(response.ToJSON());
+                                var response = await testCSMSv1_6.SendLocalList(OCPPv1_6.ChargeBox_Id.Parse(chargeBoxId),
+                                                                                     2, // 0 is not allowed!
+                                                                                     OCPPv1_6.UpdateTypes.Full,
+                                                                                     new OCPPv1_6.AuthorizationData[] {
+                                                                                         new OCPPv1_6.AuthorizationData(OCPPv1_6.IdToken.Parse("046938f2fc6880"), new OCPPv1_6.IdTagInfo(OCPPv1_6.AuthorizationStatus.Blocked)),
+                                                                                         new OCPPv1_6.AuthorizationData(OCPPv1_6.IdToken.Parse("aabbcc11"),       new OCPPv1_6.IdTagInfo(OCPPv1_6.AuthorizationStatus.Accepted)),
+                                                                                         new OCPPv1_6.AuthorizationData(OCPPv1_6.IdToken.Parse("aabbcc22"),       new OCPPv1_6.IdTagInfo(OCPPv1_6.AuthorizationStatus.Accepted)),
+                                                                                         new OCPPv1_6.AuthorizationData(OCPPv1_6.IdToken.Parse("aabbcc33"),       new OCPPv1_6.IdTagInfo(OCPPv1_6.AuthorizationStatus.Accepted)),
+                                                                                         new OCPPv1_6.AuthorizationData(OCPPv1_6.IdToken.Parse("aabbcc44"),       new OCPPv1_6.IdTagInfo(OCPPv1_6.AuthorizationStatus.Blocked))
+                                                                                     });
+
+                                Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
+                                Console.WriteLine(response.ToJSON());
+
+                            }
+                            else
+                            {
+
+                                var response = await testCSMSv2_1.SendLocalList(
+                                                   new OCPPv2_1.CSMS.SendLocalListRequest(
+                                                       OCPPv2_1.ChargeBox_Id.Parse(chargeBoxId),
+                                                       2, // 0 is not allowed!
+                                                       OCPPv2_1.UpdateTypes.Full,
+                                                       new[] {
+                                                           //new OCPPv2_1.AuthorizationData(OCPPv2_1.IdToken.Parse("046938f2fc6880"), new OCPPv2_1.IdTagInfo(OCPPv2_1.AuthorizationStatus.Blocked)),
+                                                           //new OCPPv2_1.AuthorizationData(OCPPv2_1.IdToken.Parse("aabbcc11"),       new OCPPv2_1.IdTagInfo(OCPPv2_1.AuthorizationStatus.Accepted)),
+                                                           //new OCPPv2_1.AuthorizationData(OCPPv2_1.IdToken.Parse("aabbcc22"),       new OCPPv2_1.IdTagInfo(OCPPv2_1.AuthorizationStatus.Accepted)),
+                                                           //new OCPPv2_1.AuthorizationData(OCPPv2_1.IdToken.Parse("aabbcc33"),       new OCPPv2_1.IdTagInfo(OCPPv2_1.AuthorizationStatus.Accepted)),
+                                                           new OCPPv2_1.AuthorizationData(
+                                                               new OCPPv2_1.IdToken(
+                                                                   Value:   "cabot",
+                                                                   Type:    OCPPv2_1.IdTokenTypes.ISO14443
+                                                               ),
+                                                               new OCPPv2_1.IdTokenInfo(
+                                                                   OCPPv2_1.AuthorizationStatus.Accepted
+                                                               )
+                                                           )
+                                                       }
+                                                   )
+                                               );
+
+                                Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
+                                Console.WriteLine(response.ToJSON());
+
+                            }
 
                         }
 
@@ -2508,7 +2725,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                                                                       Priority:         OCPPv2_1.MessagePriorities.NormalCycle,
                                                                       Message:          new OCPPv2_1.MessageContent(
                                                                                             commandArray[1],
-                                                                                            OCPPv2_1.MessageFormats.UTF8,
+                                                                                            OCPPv2_1.MessageFormats.ASCII,
                                                                                             OCPPv2_1.Language_Id.DE
                                                                                         ),
                                                                       State:            OCPPv2_1.MessageStates.Idle,

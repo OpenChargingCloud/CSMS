@@ -1,0 +1,504 @@
+2023-03-29T07:42:01.950Z	QUIT		172.20.100.50:50394
+2023-03-29T07:42:01.950Z	QUIT		172.20.100.50:50358
+2023-03-29T07:42:07.044Z	QUIT		172.20.100.50:50448
+2023-03-29T07:42:20.387Z	QUIT		172.20.100.50:50490
+2023-03-29T07:45:33.678Z	NEW	eNextElite	172.20.100.50:50708
+2023-03-29T07:46:10.797Z	IN	eNextElite	172.20.100.50:50708	[2,"B9C0DEF2-CE05-11ED-CE05-11ED89034581","BootNotification",{"chargePointModel":"eNext TS","chargePointSerialNumber":"12311010760001","chargePointVendor":"Circontrol","firmwareVersion":"2.0.0-rc7"}]
+2023-03-29T07:46:11.126Z	OUT	eNextElite	172.20.100.50:50708	[3,"B9C0DEF2-CE05-11ED-CE05-11ED89034581",{"status":"Accepted","currentTime":"2023-03-29T07:46:11.117Z","interval":300}]
+2023-03-29T07:46:11.133Z	CLOSE	eNextElite	172.20.100.50:50708
+2023-03-29T07:46:11.139Z	QUIT	eNextElite	172.20.100.50:50708
+2023-03-29T07:46:12.119Z	NEW	eNextElite	172.20.100.50:50870
+2023-03-29T07:46:42.126Z	PING OUT	eNextElite	172.20.100.50:50870
+2023-03-29T07:46:42.201Z	PING IN	eNextElite	172.20.100.50:50870
+2023-03-29T07:46:42.219Z	PONG IN	eNextElite	172.20.100.50:50870
+2023-03-29T07:46:54.498Z	IN	eNextElite	172.20.100.50:50870	[2,"DCFE75B4-CE05-11ED-CE05-11ED89034581","BootNotification",{"chargePointModel":"eNext TS","chargePointSerialNumber":"12311010760001","chargePointVendor":"Circontrol","firmwareVersion":"2.0.0-rc7"}]
+2023-03-29T07:46:54.619Z	OUT	eNextElite	172.20.100.50:50870	[3,"DCFE75B4-CE05-11ED-CE05-11ED89034581",{"status":"Accepted","currentTime":"2023-03-29T07:46:54.614Z","interval":300}]
+2023-03-29T07:46:58.414Z	IN	eNextElite	172.20.100.50:50870	[2,"DFAA51FC-CE05-11ED-CE05-11ED89034581","StatusNotification",{"connectorId":0,"errorCode":"NoError","info":"CP Available: one or more connectors available","status":"Available","timestamp":"2023-03-29T07:41:50Z","vendorId":"Circontrol"}]
+2023-03-29T07:46:58.546Z	OUT	eNextElite	172.20.100.50:50870	[3,"DFAA51FC-CE05-11ED-CE05-11ED89034581",{}]
+2023-03-29T07:46:58.815Z	IN	eNextElite	172.20.100.50:50870	[2,"DFEA33F8-CE05-11ED-CE05-11ED89034581","StatusNotification",{"connectorId":0,"errorCode":"NoError","info":"CP Available: one or more connectors available","status":"Available","timestamp":"2023-03-29T07:45:31Z","vendorId":"Circontrol"}]
+2023-03-29T07:46:58.933Z	OUT	eNextElite	172.20.100.50:50870	[3,"DFEA33F8-CE05-11ED-CE05-11ED89034581",{}]
+2023-03-29T07:46:59.111Z	IN	eNextElite	172.20.100.50:50870	[2,"E25A6374-CE05-11ED-CE05-11ED89034581","StatusNotification",{"connectorId":1,"errorCode":"NoError","info":"Available for new transaction","status":"Available","timestamp":"2023-03-29T07:45:32Z","vendorId":"Circontrol"}]
+2023-03-29T07:46:59.227Z	OUT	eNextElite	172.20.100.50:50870	[3,"E25A6374-CE05-11ED-CE05-11ED89034581",{}]
+2023-03-29T07:47:12.131Z	PING OUT	eNextElite	172.20.100.50:50870
+2023-03-29T07:47:12.161Z	PONG IN	eNextElite	172.20.100.50:50870
+2023-03-29T07:47:12.260Z	PING IN	eNextElite	172.20.100.50:50870
+2023-03-29T07:47:42.145Z	PING OUT	eNextElite	172.20.100.50:50870
+2023-03-29T07:47:42.175Z	PONG IN	eNextElite	172.20.100.50:50870
+2023-03-29T07:47:42.225Z	PING IN	eNextElite	172.20.100.50:50870
+2023-03-29T07:48:12.157Z	PING OUT	eNextElite	172.20.100.50:50870
+2023-03-29T07:48:12.173Z	PING IN	eNextElite	172.20.100.50:50870
+2023-03-29T07:48:12.205Z	PONG IN	eNextElite	172.20.100.50:50870
+2023-03-29T07:48:42.166Z	PING OUT	eNextElite	172.20.100.50:50870
+2023-03-29T07:48:42.269Z	PING IN	eNextElite	172.20.100.50:50870
+2023-03-29T07:48:42.487Z	PONG IN	eNextElite	172.20.100.50:50870
+2023-03-29T07:49:12.179Z	PING OUT	eNextElite	172.20.100.50:50870
+2023-03-29T07:49:12.195Z	PING IN	eNextElite	172.20.100.50:50870
+2023-03-29T07:49:12.227Z	PONG IN	eNextElite	172.20.100.50:50870
+2023-03-29T07:49:42.185Z	PING IN	eNextElite	172.20.100.50:50870
+2023-03-29T07:49:42.189Z	PING OUT	eNextElite	172.20.100.50:50870
+2023-03-29T07:49:42.247Z	PONG IN	eNextElite	172.20.100.50:50870
+2023-03-29T07:50:12.192Z	PING OUT	eNextElite	172.20.100.50:50870
+2023-03-29T07:50:12.224Z	PING IN	eNextElite	172.20.100.50:50870
+2023-03-29T07:50:12.312Z	PONG IN	eNextElite	172.20.100.50:50870
+2023-03-29T07:50:16.022Z	OUT	eNextElite	172.20.100.50:50870	[2,"900001","Reset",{"type":"Hard"}]
+2023-03-29T07:50:16.090Z	IN	eNextElite	172.20.100.50:50870	[3,"900001",{"status":"Accepted"}]
+2023-03-29T07:50:42.208Z	PING OUT	eNextElite	172.20.100.50:50870
+2023-03-29T07:50:59.913Z	NEW	eNextElite	172.20.100.50:46382
+2023-03-29T07:50:59.953Z	QUIT	eNextElite	172.20.100.50:50870
+2023-03-29T07:51:23.837Z	IN	eNextElite	172.20.100.50:46382	[2,"8016EFA6-CE06-11ED-CE06-11ED973B592F","BootNotification",{"chargePointModel":"eNext TS","chargePointSerialNumber":"12311010760001","chargePointVendor":"Circontrol","firmwareVersion":"2.0.0-rc7"}]
+2023-03-29T07:51:23.958Z	OUT	eNextElite	172.20.100.50:46382	[3,"8016EFA6-CE06-11ED-CE06-11ED973B592F",{"status":"Accepted","currentTime":"2023-03-29T07:51:23.957Z","interval":300}]
+2023-03-29T07:51:27.819Z	IN	eNextElite	172.20.100.50:46382	[2,"80048E4C-CE06-11ED-CE06-11ED973C592F","StatusNotification",{"connectorId":0,"errorCode":"NoError","info":"CP Available: one or more connectors available","status":"Available","timestamp":"2023-03-29T07:51:05Z","vendorId":"Circontrol"}]
+2023-03-29T07:51:27.934Z	OUT	eNextElite	172.20.100.50:46382	[3,"80048E4C-CE06-11ED-CE06-11ED973C592F",{}]
+2023-03-29T07:51:28.134Z	IN	eNextElite	172.20.100.50:46382	[2,"80332392-CE06-11ED-CE06-11ED973C592F","StatusNotification",{"connectorId":1,"errorCode":"NoError","info":"Available for new transaction","status":"Available","timestamp":"2023-03-29T07:51:05Z","vendorId":"Circontrol"}]
+2023-03-29T07:51:28.242Z	OUT	eNextElite	172.20.100.50:46382	[3,"80332392-CE06-11ED-CE06-11ED973C592F",{}]
+2023-03-29T07:51:29.921Z	PING OUT	eNextElite	172.20.100.50:46382
+2023-03-29T07:51:29.986Z	PONG IN	eNextElite	172.20.100.50:46382
+2023-03-29T07:51:35.986Z	PING IN	eNextElite	172.20.100.50:46382
+2023-03-29T07:51:59.936Z	PING OUT	eNextElite	172.20.100.50:46382
+2023-03-29T07:51:59.952Z	PONG IN	eNextElite	172.20.100.50:46382
+2023-03-29T07:52:05.967Z	PING IN	eNextElite	172.20.100.50:46382
+2023-03-29T07:52:29.948Z	PING OUT	eNextElite	172.20.100.50:46382
+2023-03-29T07:52:30.122Z	PONG IN	eNextElite	172.20.100.50:46382
+2023-03-29T07:52:35.957Z	PING IN	eNextElite	172.20.100.50:46382
+2023-03-29T07:52:59.961Z	PING OUT	eNextElite	172.20.100.50:46382
+2023-03-29T07:53:00.042Z	PONG IN	eNextElite	172.20.100.50:46382
+2023-03-29T07:53:05.993Z	PING IN	eNextElite	172.20.100.50:46382
+2023-03-29T07:53:29.974Z	PING OUT	eNextElite	172.20.100.50:46382
+2023-03-29T07:53:30.125Z	PONG IN	eNextElite	172.20.100.50:46382
+2023-03-29T07:53:35.975Z	PING IN	eNextElite	172.20.100.50:46382
+2023-03-29T07:53:59.983Z	PING OUT	eNextElite	172.20.100.50:46382
+2023-03-29T07:54:00.040Z	PONG IN	eNextElite	172.20.100.50:46382
+2023-03-29T07:54:05.988Z	PING IN	eNextElite	172.20.100.50:46382
+2023-03-29T07:54:29.989Z	PING OUT	eNextElite	172.20.100.50:46382
+2023-03-29T07:54:30.085Z	PONG IN	eNextElite	172.20.100.50:46382
+2023-03-29T07:54:35.994Z	PING IN	eNextElite	172.20.100.50:46382
+2023-03-29T07:54:59.999Z	PING OUT	eNextElite	172.20.100.50:46382
+2023-03-29T07:55:00.108Z	PONG IN	eNextElite	172.20.100.50:46382
+2023-03-29T07:55:06.015Z	PING IN	eNextElite	172.20.100.50:46382
+2023-03-29T07:55:30.014Z	PING OUT	eNextElite	172.20.100.50:46382
+2023-03-29T07:55:30.093Z	PONG IN	eNextElite	172.20.100.50:46382
+2023-03-29T07:55:35.986Z	PING IN	eNextElite	172.20.100.50:46382
+2023-03-29T07:56:00.027Z	PING OUT	eNextElite	172.20.100.50:46382
+2023-03-29T07:56:00.061Z	PONG IN	eNextElite	172.20.100.50:46382
+2023-03-29T07:56:06.013Z	PING IN	eNextElite	172.20.100.50:46382
+2023-03-29T07:56:26.826Z	IN	eNextElite	172.20.100.50:46382	[2,"323D6B9C-CE07-11ED-CE07-11ED973C592F","Heartbeat",{}]
+2023-03-29T07:56:26.960Z	OUT	eNextElite	172.20.100.50:46382	[3,"323D6B9C-CE07-11ED-CE07-11ED973C592F",{"currentTime":"2023-03-29T07:56:26.952Z"}]
+2023-03-29T07:56:30.041Z	PING OUT	eNextElite	172.20.100.50:46382
+2023-03-29T07:56:30.074Z	PONG IN	eNextElite	172.20.100.50:46382
+2023-03-29T07:56:35.986Z	PING IN	eNextElite	172.20.100.50:46382
+2023-03-29T07:57:00.045Z	PING OUT	eNextElite	172.20.100.50:46382
+2023-03-29T07:57:00.061Z	PONG IN	eNextElite	172.20.100.50:46382
+2023-03-29T07:57:06.065Z	PING IN	eNextElite	172.20.100.50:46382
+2023-03-29T07:57:30.052Z	PING OUT	eNextElite	172.20.100.50:46382
+2023-03-29T07:57:30.101Z	PONG IN	eNextElite	172.20.100.50:46382
+2023-03-29T07:57:36.017Z	PING IN	eNextElite	172.20.100.50:46382
+2023-03-29T07:58:00.062Z	PING OUT	eNextElite	172.20.100.50:46382
+2023-03-29T07:58:00.432Z	PONG IN	eNextElite	172.20.100.50:46382
+2023-03-29T07:58:06.013Z	PING IN	eNextElite	172.20.100.50:46382
+2023-03-29T07:58:30.078Z	PING OUT	eNextElite	172.20.100.50:46382
+2023-03-29T07:58:30.124Z	PONG IN	eNextElite	172.20.100.50:46382
+2023-03-29T07:58:36.006Z	PING IN	eNextElite	172.20.100.50:46382
+2023-03-29T07:59:00.089Z	PING OUT	eNextElite	172.20.100.50:46382
+2023-03-29T07:59:00.137Z	PONG IN	eNextElite	172.20.100.50:46382
+2023-03-29T07:59:06.074Z	PING IN	eNextElite	172.20.100.50:46382
+2023-03-29T07:59:30.102Z	PING OUT	eNextElite	172.20.100.50:46382
+2023-03-29T07:59:30.158Z	PONG IN	eNextElite	172.20.100.50:46382
+2023-03-29T07:59:36.038Z	PING IN	eNextElite	172.20.100.50:46382
+2023-03-29T08:00:00.114Z	PING OUT	eNextElite	172.20.100.50:46382
+2023-03-29T08:00:00.203Z	PONG IN	eNextElite	172.20.100.50:46382
+2023-03-29T08:00:06.037Z	PING IN	eNextElite	172.20.100.50:46382
+2023-03-29T08:00:30.129Z	PING OUT	eNextElite	172.20.100.50:46382
+2023-03-29T08:00:30.161Z	PONG IN	eNextElite	172.20.100.50:46382
+2023-03-29T08:00:35.999Z	PING IN	eNextElite	172.20.100.50:46382
+2023-03-29T08:01:00.137Z	PING OUT	eNextElite	172.20.100.50:46382
+2023-03-29T08:01:00.152Z	PONG IN	eNextElite	172.20.100.50:46382
+2023-03-29T08:01:06.048Z	PING IN	eNextElite	172.20.100.50:46382
+2023-03-29T08:01:27.078Z	IN	eNextElite	172.20.100.50:46382	[2,"E6CA42C4-CE07-11ED-CE07-11ED973C592F","Heartbeat",{}]
+2023-03-29T08:01:27.201Z	OUT	eNextElite	172.20.100.50:46382	[3,"E6CA42C4-CE07-11ED-CE07-11ED973C592F",{"currentTime":"2023-03-29T08:01:27.195Z"}]
+2023-03-29T08:01:30.145Z	PING OUT	eNextElite	172.20.100.50:46382
+2023-03-29T08:01:30.210Z	PONG IN	eNextElite	172.20.100.50:46382
+2023-03-29T08:01:36.058Z	PING IN	eNextElite	172.20.100.50:46382
+2023-03-29T08:02:00.157Z	PING OUT	eNextElite	172.20.100.50:46382
+2023-03-29T08:02:00.221Z	PONG IN	eNextElite	172.20.100.50:46382
+2023-03-29T08:02:06.053Z	PING IN	eNextElite	172.20.100.50:46382
+2023-03-29T08:02:30.167Z	PING OUT	eNextElite	172.20.100.50:46382
+2023-03-29T08:02:30.199Z	PONG IN	eNextElite	172.20.100.50:46382
+2023-03-29T08:02:36.045Z	PING IN	eNextElite	172.20.100.50:46382
+2023-03-29T08:03:00.175Z	PING OUT	eNextElite	172.20.100.50:46382
+2023-03-29T08:03:00.202Z	PONG IN	eNextElite	172.20.100.50:46382
+2023-03-29T08:03:06.020Z	PING IN	eNextElite	172.20.100.50:46382
+2023-03-29T08:03:30.185Z	PING OUT	eNextElite	172.20.100.50:46382
+2023-03-29T08:03:30.371Z	PONG IN	eNextElite	172.20.100.50:46382
+2023-03-29T08:03:36.015Z	PING IN	eNextElite	172.20.100.50:46382
+2023-03-29T08:04:00.194Z	PING OUT	eNextElite	172.20.100.50:46382
+2023-03-29T08:04:00.226Z	PONG IN	eNextElite	172.20.100.50:46382
+2023-03-29T08:04:06.046Z	PING IN	eNextElite	172.20.100.50:46382
+2023-03-29T08:04:30.211Z	PING OUT	eNextElite	172.20.100.50:46382
+2023-03-29T08:04:30.258Z	PONG IN	eNextElite	172.20.100.50:46382
+2023-03-29T08:04:36.018Z	PING IN	eNextElite	172.20.100.50:46382
+2023-03-29T08:05:00.222Z	PING OUT	eNextElite	172.20.100.50:46382
+2023-03-29T08:05:00.270Z	PONG IN	eNextElite	172.20.100.50:46382
+2023-03-29T08:05:06.039Z	PING IN	eNextElite	172.20.100.50:46382
+2023-03-29T08:05:08.899Z	OUT	eNextElite	172.20.100.50:46382	[2,"900002","ChangeAvailability",{"connectorId":1,"type":"Inoperative"}]
+2023-03-29T08:05:09.981Z	IN	eNextElite	172.20.100.50:46382	[3,"900002",{"status":"Accepted"}]
+2023-03-29T08:05:10.567Z	IN	eNextElite	172.20.100.50:46382	[2,"6CD058F4-CE08-11ED-CE08-11ED973C592F","StatusNotification",{"connectorId":1,"errorCode":"NoError","info":"Disabled. Charge is not possible","status":"Unavailable","timestamp":"2023-03-29T08:05:09Z","vendorId":"Circontrol"}]
+2023-03-29T08:05:10.689Z	OUT	eNextElite	172.20.100.50:46382	[3,"6CD058F4-CE08-11ED-CE08-11ED973C592F",{}]
+2023-03-29T08:05:10.889Z	IN	eNextElite	172.20.100.50:46382	[2,"6CFF8476-CE08-11ED-CE08-11ED973C592F","StatusNotification",{"connectorId":0,"errorCode":"NoError","info":"CP Unavailable: all connectors unavailable","status":"Unavailable","timestamp":"2023-03-29T08:05:09Z","vendorId":"Circontrol"}]
+2023-03-29T08:05:11.007Z	OUT	eNextElite	172.20.100.50:46382	[3,"6CFF8476-CE08-11ED-CE08-11ED973C592F",{}]
+2023-03-29T08:05:25.710Z	OUT	eNextElite	172.20.100.50:46382	[2,"900003","ChangeAvailability",{"connectorId":2,"type":"Inoperative"}]
+2023-03-29T08:05:25.802Z	IN	eNextElite	172.20.100.50:46382	[3,"900003",{"status":"Rejected"}]
+2023-03-29T08:05:30.226Z	PING OUT	eNextElite	172.20.100.50:46382
+2023-03-29T08:05:30.243Z	PONG IN	eNextElite	172.20.100.50:46382
+2023-03-29T08:05:36.047Z	PING IN	eNextElite	172.20.100.50:46382
+2023-03-29T08:05:36.071Z	OUT	eNextElite	172.20.100.50:46382	[2,"900004","ChangeAvailability",{"connectorId":1,"type":"Operative"}]
+2023-03-29T08:05:37.170Z	IN	eNextElite	172.20.100.50:46382	[3,"900004",{"status":"Accepted"}]
+2023-03-29T08:05:37.371Z	IN	eNextElite	172.20.100.50:46382	[2,"7CC979FC-CE08-11ED-CE08-11ED973C592F","StatusNotification",{"connectorId":1,"errorCode":"NoError","info":"Available for new transaction","status":"Available","timestamp":"2023-03-29T08:05:37Z","vendorId":"Circontrol"}]
+2023-03-29T08:05:37.502Z	OUT	eNextElite	172.20.100.50:46382	[3,"7CC979FC-CE08-11ED-CE08-11ED973C592F",{}]
+2023-03-29T08:05:37.653Z	IN	eNextElite	172.20.100.50:46382	[2,"7CFA497E-CE08-11ED-CE08-11ED973C592F","StatusNotification",{"connectorId":0,"errorCode":"NoError","info":"CP Available: one or more connectors available","status":"Available","timestamp":"2023-03-29T08:05:36Z","vendorId":"Circontrol"}]
+2023-03-29T08:05:37.776Z	OUT	eNextElite	172.20.100.50:46382	[3,"7CFA497E-CE08-11ED-CE08-11ED973C592F",{}]
+2023-03-29T08:05:59.812Z	OUT	eNextElite	172.20.100.50:46382	[2,"900005","GetConfiguration",{}]
+2023-03-29T08:06:00.063Z	IN	eNextElite	172.20.100.50:46382	[3,"900005",{"configurationKey":[{"key":"csEndPoint","readonly":false,"value":"ws://172.20.100.60:9900"},{"key":"isLittleEndian","readonly":false,"value":"true"},{"key":"csVerifyCert","readonly":false,"value":"false"},{"key":"csAcceptUnknownSelfSigned","readonly":false,"value":"false"},{"key":"csBasicAuthEnabled","readonly":false,"value":"true"},{"key":"AuthorizationKeySetted","readonly":true,"value":"true"},{"key":"csWsHandshakeTimeout","readonly":false,"value":"20"},{"key":"cbId","readonly":false,"value":"eNextElite"},{"key":"cbUseOcppTSync","readonly":false,"value":"true"},{"key":"cbUsePartialEnergy","readonly":false,"value":"true"},{"key":"cbUsePartialEnergyMeterVal","readonly":false,"value":"true"},{"key":"cbUseJson","readonly":false,"value":"true"},{"key":"cbStopIfConcurrentTx","readonly":false,"value":"true"},{"key":"cbConnTimeOut","readonly":false,"value":"10"},{"key":"cbCacheListMaxLength","readonly":false,"value":"10000"},{"key":"cbRequireUserConfirmation","readonly":false,"value":"false"},{"key":"PlugAndChargeEnabled","readonly":false,"value":"false"},{"key":"PlugAndChargeUID","readonly":false,"value":"00FFFFFFFF"},{"key":"MeterValuesOnlyOnChargingStatus","readonly":false,"value":"true"},{"key":"AllowOfflineTxForUnknownId","readonly":false,"value":"false"},{"key":"AuthorizationCacheEnabled","readonly":false,"value":"true"},{"key":"AuthorizeRemoteTxRequests","readonly":false,"value":"false"},{"key":"ConnectionTimeOut","readonly":false,"value":"90"},{"key":"GetConfigurationMaxKeys","readonly":true,"value":"20"},{"key":"HeartbeatInterval","readonly":false,"value":"300"},{"key":"LocalAuthorizeOffline","readonly":false,"value":"false"},{"key":"LocalPreAuthorize","readonly":false,"value":"false"},{"key":"MeterValuesSampledData","readonly":false,"value":"Energy.Active.Import.Register"},{"key":"MeterValueSampleInterval","readonly":false,"value":"0"},{"key":"StopTxnSampledData","readonly":false,"value":""},{"key":"StopTxnAlignedData","readonly":false,"value":""},{"key":"StopTxnAlignedDataMaxLength","readonly":true,"value":"6"},{"key":"StopTxnSampledDataMaxLength","readonly":true,"value":"6"},{"key":"NumberOfConnectors","readonly":true,"value":"1"},{"key":"ConnectorPhaseRotation","readonly":false,"value":"0.Unknown,1.Unknown"},{"key":"StopTransactionOnEVSideDisconnect","readonly":false,"value":"true"},{"key":"StopTransactionOnInvalidId","readonly":false,"value":"true"},{"key":"SupportedFeatureProfiles","readonly":true,"value":"Core,FirmwareManagement,LocalAuthListManagement,RemoteTrigger,Reservation,SmartCharging"},{"key":"TransactionMessageAttempts","readonly":false,"value":"2"},{"key":"TransactionMessageRetryInterval","readonly":false,"value":"60"},{"key":"UnlockConnectorOnEVSideDisconnect","readonly":false,"value":"true"},{"key":"WebSocketPingInterval","readonly":false,"value":"30"},{"key":"LocalAuthListEnabled","readonly":false,"value":"true"},{"key":"LocalAuthListMaxLength","readonly":true,"value":"100000"},{"key":"SendLocalListMaxLength","readonly":true,"value":"5000"},{"key":"ReserveConnectorZeroSupported","readonly":true,"value":"false"},{"key":"SupportedFileTransferProtocols","readonly":true,"value":"FTP, FTPS, SFTP"},{"key":"ChargeProfileMaxStackLevel","readonly":true,"value":"10"},{"key":"ChargingScheduleAllowedChargingRateUnit","readonly":true,"value":"Current"},{"key":"ChargingScheduleMaxPeriods","readonly":true,"value":"25"},{"key":"ConnectorSwitch3to1PhaseSupported","readonly":true,"value":"0"},{"key":"MaxChargingProfilesInstalled","readonly":true,"value":"60"},{"key":"CompositeScheduleMaxSize","readonly":false,"value":"86400"},{"key":"InternalPlanMinimumSize","readonly":false,"value":"172800"},{"key":"InternalPlanPurgeTimeOfDay","readonly":false,"value":"03:00:00"},{"key":"SupportedProfilePurposeTypes","readonly":false,"value":"ChargePointMaxProfile, TxDefaultProfile, TxProfile"},{"key":"SupportedProfileKindTypes","readonly":false,"value":"Absolute, Recurring, Relative"},{"key":"SupportsDynamicMinChargingRate","readonly":false,"value":"1"},{"key":"CPSmartChargingEnabled","readonly":false,"value":"false"},{"key":"CPLoadBalancingEnabled","readonly":false,"value":"true"},{"key":"RetryBackOffWaitMinimum","readonly":false,"value":"1"},{"key":"RetryBackOffRandomRange","readonly":false,"value":"3"},{"key":"RetryBackOffRepeatTimes","readonly":false,"value":"5"},{"key":"psiLoglevel","readonly":false,"value":"debug"},{"key":"ClockAlignedDataInterval","readonly":false,"value":"0"},{"key":"MeterValuesAlignedData","readonly":false,"value":"Energy.Active.Import.Register"},{"key":"ResetRetries","readonly":false,"value":"3"},{"key":"IdTagTypePrefixEnabled","readonly":false,"value":"false"},{"key":"StopTransactionMaxMeterValues","readonly":true,"value":"20"},{"key":"cbTransactionDataDropMidMeterValues","readonly":false,"value":"false"}]}]
+2023-03-29T08:06:00.233Z	PING OUT	eNextElite	172.20.100.50:46382
+2023-03-29T08:06:00.312Z	PONG IN	eNextElite	172.20.100.50:46382
+2023-03-29T08:06:06.031Z	PING IN	eNextElite	172.20.100.50:46382
+2023-03-29T08:06:30.244Z	PING OUT	eNextElite	172.20.100.50:46382
+2023-03-29T08:06:30.332Z	PONG IN	eNextElite	172.20.100.50:46382
+2023-03-29T08:06:36.043Z	PING IN	eNextElite	172.20.100.50:46382
+2023-03-29T08:07:00.256Z	PING OUT	eNextElite	172.20.100.50:46382
+2023-03-29T08:07:00.313Z	PONG IN	eNextElite	172.20.100.50:46382
+2023-03-29T08:07:06.088Z	PING IN	eNextElite	172.20.100.50:46382
+2023-03-29T08:07:30.272Z	PING OUT	eNextElite	172.20.100.50:46382
+2023-03-29T08:07:30.373Z	PONG IN	eNextElite	172.20.100.50:46382
+2023-03-29T08:07:36.083Z	PING IN	eNextElite	172.20.100.50:46382
+2023-03-29T08:08:00.282Z	PING OUT	eNextElite	172.20.100.50:46382
+2023-03-29T08:08:00.309Z	PONG IN	eNextElite	172.20.100.50:46382
+2023-03-29T08:08:06.050Z	PING IN	eNextElite	172.20.100.50:46382
+2023-03-29T08:08:30.302Z	PING OUT	eNextElite	172.20.100.50:46382
+2023-03-29T08:08:30.334Z	PONG IN	eNextElite	172.20.100.50:46382
+2023-03-29T08:08:36.099Z	PING IN	eNextElite	172.20.100.50:46382
+2023-03-29T08:09:00.316Z	PING OUT	eNextElite	172.20.100.50:46382
+2023-03-29T08:09:00.379Z	PONG IN	eNextElite	172.20.100.50:46382
+2023-03-29T08:09:06.048Z	PING IN	eNextElite	172.20.100.50:46382
+2023-03-29T08:09:30.326Z	PING OUT	eNextElite	172.20.100.50:46382
+2023-03-29T08:09:30.509Z	PONG IN	eNextElite	172.20.100.50:46382
+2023-03-29T08:09:32.398Z	OUT	eNextElite	172.20.100.50:46382	[2,"900006","ChangeConfiguration",{"key":"HeartbeatInterval","value":"30"}]
+2023-03-29T08:09:35.057Z	IN	eNextElite	172.20.100.50:46382	[2,"08E8EAA8-CE09-11ED-CE09-11ED973C592F","Heartbeat",{}]
+2023-03-29T08:09:35.166Z	OUT	eNextElite	172.20.100.50:46382	[3,"08E8EAA8-CE09-11ED-CE09-11ED973C592F",{"currentTime":"2023-03-29T08:09:35.163Z"}]
+2023-03-29T08:09:35.173Z	IN	eNextElite	172.20.100.50:46382	[3,"900006",{"status":"Accepted"}]
+2023-03-29T08:09:36.061Z	PING IN	eNextElite	172.20.100.50:46382
+2023-03-29T08:09:42.728Z	OUT	eNextElite	172.20.100.50:46382	[2,"900007","ChangeConfiguration",{"key":"HeartbeatInterval","value":"5"}]
+2023-03-29T08:09:45.408Z	IN	eNextElite	172.20.100.50:46382	[2,"0EB1608C-CE09-11ED-CE09-11ED973C592F","Heartbeat",{}]
+2023-03-29T08:09:45.531Z	OUT	eNextElite	172.20.100.50:46382	[3,"0EB1608C-CE09-11ED-CE09-11ED973C592F",{"currentTime":"2023-03-29T08:09:45.530Z"}]
+2023-03-29T08:09:45.534Z	IN	eNextElite	172.20.100.50:46382	[3,"900007",{"status":"Accepted"}]
+2023-03-29T08:09:50.672Z	IN	eNextElite	172.20.100.50:46382	[2,"1331653A-CE09-11ED-CE09-11ED973C592F","Heartbeat",{}]
+2023-03-29T08:09:50.795Z	OUT	eNextElite	172.20.100.50:46382	[3,"1331653A-CE09-11ED-CE09-11ED973C592F",{"currentTime":"2023-03-29T08:09:50.793Z"}]
+2023-03-29T08:09:55.911Z	IN	eNextElite	172.20.100.50:46382	[2,"162D044C-CE09-11ED-CE09-11ED973C592F","Heartbeat",{}]
+2023-03-29T08:09:56.026Z	OUT	eNextElite	172.20.100.50:46382	[3,"162D044C-CE09-11ED-CE09-11ED973C592F",{"currentTime":"2023-03-29T08:09:56.025Z"}]
+2023-03-29T08:10:00.342Z	PING OUT	eNextElite	172.20.100.50:46382
+2023-03-29T08:10:00.400Z	PONG IN	eNextElite	172.20.100.50:46382
+2023-03-29T08:10:01.127Z	IN	eNextElite	172.20.100.50:46382	[2,"19C0460A-CE09-11ED-CE09-11ED973C592F","Heartbeat",{}]
+2023-03-29T08:10:01.239Z	OUT	eNextElite	172.20.100.50:46382	[3,"19C0460A-CE09-11ED-CE09-11ED973C592F",{"currentTime":"2023-03-29T08:10:01.238Z"}]
+2023-03-29T08:10:06.077Z	PING IN	eNextElite	172.20.100.50:46382
+2023-03-29T08:10:06.342Z	IN	eNextElite	172.20.100.50:46382	[2,"1CB89E66-CE09-11ED-CE09-11ED973C592F","Heartbeat",{}]
+2023-03-29T08:10:06.465Z	OUT	eNextElite	172.20.100.50:46382	[3,"1CB89E66-CE09-11ED-CE09-11ED973C592F",{"currentTime":"2023-03-29T08:10:06.464Z"}]
+2023-03-29T08:10:11.555Z	IN	eNextElite	172.20.100.50:46382	[2,"1FB60518-CE09-11ED-CE09-11ED973C592F","Heartbeat",{}]
+2023-03-29T08:10:11.662Z	OUT	eNextElite	172.20.100.50:46382	[3,"1FB60518-CE09-11ED-CE09-11ED973C592F",{"currentTime":"2023-03-29T08:10:11.661Z"}]
+2023-03-29T08:10:16.803Z	IN	eNextElite	172.20.100.50:46382	[2,"22B26D9C-CE09-11ED-CE09-11ED973C592F","Heartbeat",{}]
+2023-03-29T08:10:16.926Z	OUT	eNextElite	172.20.100.50:46382	[3,"22B26D9C-CE09-11ED-CE09-11ED973C592F",{"currentTime":"2023-03-29T08:10:16.925Z"}]
+2023-03-29T08:10:16.996Z	OUT	eNextElite	172.20.100.50:46382	[2,"900008","ChangeConfiguration",{"key":"HeartbeatInterval","value":"300"}]
+2023-03-29T08:10:20.870Z	IN	eNextElite	172.20.100.50:46382	[3,"900008",{"status":"Accepted"}]
+2023-03-29T08:10:30.346Z	PING OUT	eNextElite	172.20.100.50:46382
+2023-03-29T08:10:30.407Z	PONG IN	eNextElite	172.20.100.50:46382
+2023-03-29T08:10:36.062Z	PING IN	eNextElite	172.20.100.50:46382
+2023-03-29T08:11:00.355Z	PING OUT	eNextElite	172.20.100.50:46382
+2023-03-29T08:11:00.405Z	PONG IN	eNextElite	172.20.100.50:46382
+2023-03-29T08:11:05.268Z	OUT	eNextElite	172.20.100.50:46382	[2,"900009","TriggerMessage",{"requestedMessage":"BootNotification"}]
+2023-03-29T08:11:05.351Z	IN	eNextElite	172.20.100.50:46382	[3,"900009",{"status":"Accepted"}]
+2023-03-29T08:11:06.047Z	PING IN	eNextElite	172.20.100.50:46382
+2023-03-29T08:11:20.916Z	IN	eNextElite	172.20.100.50:46382	[2,"48C49D98-CE09-11ED-CE09-11ED973C592F","BootNotification",{"chargePointModel":"eNext TS","chargePointSerialNumber":"12311010760001","chargePointVendor":"Circontrol","firmwareVersion":"2.0.0-rc7"}]
+2023-03-29T08:11:21.022Z	OUT	eNextElite	172.20.100.50:46382	[3,"48C49D98-CE09-11ED-CE09-11ED973C592F",{"status":"Accepted","currentTime":"2023-03-29T08:11:21.021Z","interval":300}]
+2023-03-29T08:11:30.368Z	PING OUT	eNextElite	172.20.100.50:46382
+2023-03-29T08:11:30.433Z	PONG IN	eNextElite	172.20.100.50:46382
+2023-03-29T08:11:36.061Z	PING IN	eNextElite	172.20.100.50:46382
+2023-03-29T08:12:00.372Z	PING OUT	eNextElite	172.20.100.50:46382
+2023-03-29T08:12:00.432Z	PONG IN	eNextElite	172.20.100.50:46382
+2023-03-29T08:12:06.417Z	PING IN	eNextElite	172.20.100.50:46382
+2023-03-29T08:12:30.381Z	PING OUT	eNextElite	172.20.100.50:46382
+2023-03-29T08:12:30.411Z	PONG IN	eNextElite	172.20.100.50:46382
+2023-03-29T08:12:36.212Z	PING IN	eNextElite	172.20.100.50:46382
+2023-03-29T08:13:00.393Z	PING OUT	eNextElite	172.20.100.50:46382
+2023-03-29T08:13:00.442Z	PONG IN	eNextElite	172.20.100.50:46382
+2023-03-29T08:13:06.090Z	PING IN	eNextElite	172.20.100.50:46382
+2023-03-29T08:13:30.408Z	PING OUT	eNextElite	172.20.100.50:46382
+2023-03-29T08:13:30.455Z	PONG IN	eNextElite	172.20.100.50:46382
+2023-03-29T08:13:36.070Z	PING IN	eNextElite	172.20.100.50:46382
+2023-03-29T08:14:00.422Z	PING OUT	eNextElite	172.20.100.50:46382
+2023-03-29T08:14:00.503Z	PONG IN	eNextElite	172.20.100.50:46382
+2023-03-29T08:14:06.069Z	PING IN	eNextElite	172.20.100.50:46382
+2023-03-29T08:14:30.434Z	PING OUT	eNextElite	172.20.100.50:46382
+2023-03-29T08:14:30.515Z	PONG IN	eNextElite	172.20.100.50:46382
+2023-03-29T08:14:36.097Z	PING IN	eNextElite	172.20.100.50:46382
+2023-03-29T08:15:00.445Z	PING OUT	eNextElite	172.20.100.50:46382
+2023-03-29T08:15:00.630Z	PONG IN	eNextElite	172.20.100.50:46382
+2023-03-29T08:15:06.063Z	PING IN	eNextElite	172.20.100.50:46382
+2023-03-29T08:15:24.212Z	IN	eNextElite	172.20.100.50:46382	[2,"D8BFB9D2-CE09-11ED-CE09-11ED973C592F","StatusNotification",{"connectorId":1,"errorCode":"NoError","info":"Electric vehicle connected","status":"Preparing","timestamp":"2023-03-29T08:15:20Z","vendorId":"Circontrol"}]
+2023-03-29T08:15:24.326Z	OUT	eNextElite	172.20.100.50:46382	[3,"D8BFB9D2-CE09-11ED-CE09-11ED973C592F",{}]
+2023-03-29T08:15:30.461Z	PING OUT	eNextElite	172.20.100.50:46382
+2023-03-29T08:15:30.652Z	PONG IN	eNextElite	172.20.100.50:46382
+2023-03-29T08:15:36.079Z	PING IN	eNextElite	172.20.100.50:46382
+2023-03-29T08:15:59.004Z	IN	eNextElite	172.20.100.50:46382	[2,"ED7C0AC4-CE09-11ED-CE09-11ED973C592F","Authorize",{"idTag":"1AE74072"}]
+2023-03-29T08:15:59.126Z	OUT	eNextElite	172.20.100.50:46382	[3,"ED7C0AC4-CE09-11ED-CE09-11ED973C592F",{"idTagInfo":{"status":"Accepted","expiryDate":"2023-04-01T08:15:59.123Z"}}]
+2023-03-29T08:16:00.476Z	PING OUT	eNextElite	172.20.100.50:46382
+2023-03-29T08:16:00.492Z	PONG IN	eNextElite	172.20.100.50:46382
+2023-03-29T08:16:02.584Z	IN	eNextElite	172.20.100.50:46382	[2,"EF9B630E-CE09-11ED-CE09-11ED973C592F","StatusNotification",{"connectorId":1,"errorCode":"NoError","info":"Vehicle can charge or discharge","status":"Charging","timestamp":"2023-03-29T08:15:58Z","vendorId":"Circontrol"}]
+2023-03-29T08:16:02.692Z	OUT	eNextElite	172.20.100.50:46382	[3,"EF9B630E-CE09-11ED-CE09-11ED973C592F",{}]
+2023-03-29T08:16:02.769Z	IN	eNextElite	172.20.100.50:46382	[2,"EFA32E22-CE09-11ED-CE09-11ED973C592F","StartTransaction",{"connectorId":1,"idTag":"1AE74072","meterStart":0,"timestamp":"2023-03-29T08:15:57Z"}]
+2023-03-29T08:16:02.896Z	OUT	eNextElite	172.20.100.50:46382	[3,"EFA32E22-CE09-11ED-CE09-11ED973C592F",{"transactionId":600510148,"idTagInfo":{"status":"Accepted","expiryDate":"2023-04-01T08:16:02.892Z"}}]
+2023-03-29T08:16:06.123Z	PING IN	eNextElite	172.20.100.50:46382
+2023-03-29T08:16:30.489Z	PING OUT	eNextElite	172.20.100.50:46382
+2023-03-29T08:16:30.688Z	PONG IN	eNextElite	172.20.100.50:46382
+2023-03-29T08:16:36.184Z	PING IN	eNextElite	172.20.100.50:46382
+2023-03-29T08:17:00.514Z	PING OUT	eNextElite	172.20.100.50:46382
+2023-03-29T08:17:00.668Z	PONG IN	eNextElite	172.20.100.50:46382
+2023-03-29T08:17:06.087Z	PING IN	eNextElite	172.20.100.50:46382
+2023-03-29T08:17:30.533Z	PING OUT	eNextElite	172.20.100.50:46382
+2023-03-29T08:17:30.580Z	PONG IN	eNextElite	172.20.100.50:46382
+2023-03-29T08:17:36.099Z	PING IN	eNextElite	172.20.100.50:46382
+2023-03-29T08:18:00.547Z	PING OUT	eNextElite	172.20.100.50:46382
+2023-03-29T08:18:00.580Z	PONG IN	eNextElite	172.20.100.50:46382
+2023-03-29T08:18:06.082Z	PING IN	eNextElite	172.20.100.50:46382
+2023-03-29T08:18:23.226Z	CLOSE	eNextElite	172.20.100.50:46382
+2023-03-29T08:18:23.231Z	QUIT	eNextElite	172.20.100.50:46382
+2023-03-29T08:18:54.417Z	NEW	eNextElite	172.20.100.50:48048
+2023-03-29T08:19:15.150Z	IN	eNextElite	172.20.100.50:48048	[2,"64262CA4-CE0A-11ED-CE0A-11ED95F19111","BootNotification",{"chargePointModel":"eNext TS","chargePointSerialNumber":"12311010760001","chargePointVendor":"Circontrol","firmwareVersion":"2.0.0-rc7"}]
+2023-03-29T08:19:15.272Z	OUT	eNextElite	172.20.100.50:48048	[3,"64262CA4-CE0A-11ED-CE0A-11ED95F19111",{"status":"Accepted","currentTime":"2023-03-29T08:19:15.270Z","interval":300}]
+2023-03-29T08:19:20.038Z	IN	eNextElite	172.20.100.50:48048	[2,"6528E128-CE0A-11ED-CE0A-11ED95F19111","StatusNotification",{"connectorId":0,"errorCode":"NoError","info":"CP Available: one or more connectors available","status":"Available","timestamp":"2023-03-29T08:18:55Z","vendorId":"Circontrol"}]
+2023-03-29T08:19:20.146Z	OUT	eNextElite	172.20.100.50:48048	[3,"6528E128-CE0A-11ED-CE0A-11ED95F19111",{}]
+2023-03-29T08:19:20.284Z	IN	eNextElite	172.20.100.50:48048	[2,"6529DDE4-CE0A-11ED-CE0A-11ED95F19111","MeterValues",{"connectorId":1,"meterValue":[{"sampledValue":[{"context":"Sample.Periodic","measurand":"Energy.Active.Import.Register","unit":"Wh","value":"463.000000"}],"timestamp":"2023-03-29T08:18:53Z"}],"transactionId":600510148}]
+2023-03-29T08:19:20.421Z	OUT	eNextElite	172.20.100.50:48048	[3,"6529DDE4-CE0A-11ED-CE0A-11ED95F19111",{}]
+2023-03-29T08:19:20.672Z	IN	eNextElite	172.20.100.50:48048	[2,"65600162-CE0A-11ED-CE0A-11ED95F19111","StatusNotification",{"connectorId":1,"errorCode":"NoError","info":"Vehicle can charge or discharge","status":"Charging","timestamp":"2023-03-29T08:18:56Z","vendorId":"Circontrol"}]
+2023-03-29T08:19:20.787Z	OUT	eNextElite	172.20.100.50:48048	[3,"65600162-CE0A-11ED-CE0A-11ED95F19111",{}]
+2023-03-29T08:19:21.007Z	IN	eNextElite	172.20.100.50:48048	[2,"6582938A-CE0A-11ED-CE0A-11ED95F19111","StopTransaction",{"idTag":"1AE74072","meterStop":527,"reason":"Local","timestamp":"2023-03-29T08:19:14Z","transactionId":600510148}]
+2023-03-29T08:19:21.128Z	OUT	eNextElite	172.20.100.50:48048	[3,"6582938A-CE0A-11ED-CE0A-11ED95F19111",{"idTagInfo":{"status":"Accepted","expiryDate":"2023-04-01T08:19:21.119Z"}}]
+2023-03-29T08:19:21.271Z	IN	eNextElite	172.20.100.50:48048	[2,"65BEE74A-CE0A-11ED-CE0A-11ED95F19111","StatusNotification",{"connectorId":1,"errorCode":"NoError","info":"Waiting for electric vehicle disconnection","status":"Finishing","timestamp":"2023-03-29T08:19:14Z","vendorId":"Circontrol"}]
+2023-03-29T08:19:21.384Z	OUT	eNextElite	172.20.100.50:48048	[3,"65BEE74A-CE0A-11ED-CE0A-11ED95F19111",{}]
+2023-03-29T08:19:24.416Z	PING OUT	eNextElite	172.20.100.50:48048
+2023-03-29T08:19:24.687Z	PONG IN	eNextElite	172.20.100.50:48048
+2023-03-29T08:19:27.571Z	PING IN	eNextElite	172.20.100.50:48048
+2023-03-29T08:19:35.232Z	IN	eNextElite	172.20.100.50:48048	[2,"6E3F0A4E-CE0A-11ED-CE0A-11ED95F19111","Authorize",{"idTag":"1AE74072"}]
+2023-03-29T08:19:35.354Z	OUT	eNextElite	172.20.100.50:48048	[3,"6E3F0A4E-CE0A-11ED-CE0A-11ED95F19111",{"idTagInfo":{"status":"Accepted","expiryDate":"2023-04-01T08:19:35.353Z"}}]
+2023-03-29T08:19:39.580Z	IN	eNextElite	172.20.100.50:48048	[2,"70D93748-CE0A-11ED-CE0A-11ED95F19111","StatusNotification",{"connectorId":1,"errorCode":"NoError","info":"Available for new transaction","status":"Available","timestamp":"2023-03-29T08:19:35Z","vendorId":"Circontrol"}]
+2023-03-29T08:19:39.704Z	OUT	eNextElite	172.20.100.50:48048	[3,"70D93748-CE0A-11ED-CE0A-11ED95F19111",{}]
+2023-03-29T08:19:44.883Z	IN	eNextElite	172.20.100.50:48048	[2,"74024428-CE0A-11ED-CE0A-11ED95F19111","StatusNotification",{"connectorId":1,"errorCode":"NoError","info":"Electric vehicle connected","status":"Preparing","timestamp":"2023-03-29T08:19:40Z","vendorId":"Circontrol"}]
+2023-03-29T08:19:44.995Z	OUT	eNextElite	172.20.100.50:48048	[3,"74024428-CE0A-11ED-CE0A-11ED95F19111",{}]
+2023-03-29T08:19:48.467Z	IN	eNextElite	172.20.100.50:48048	[2,"7614D30C-CE0A-11ED-CE0A-11ED95F19111","Authorize",{"idTag":"1AE74072"}]
+2023-03-29T08:19:48.585Z	OUT	eNextElite	172.20.100.50:48048	[3,"7614D30C-CE0A-11ED-CE0A-11ED95F19111",{"idTagInfo":{"status":"Accepted","expiryDate":"2023-04-01T08:19:48.583Z"}}]
+2023-03-29T08:19:54.430Z	PING OUT	eNextElite	172.20.100.50:48048
+2023-03-29T08:19:54.477Z	PONG IN	eNextElite	172.20.100.50:48048
+2023-03-29T08:19:57.464Z	PING IN	eNextElite	172.20.100.50:48048
+2023-03-29T08:20:04.267Z	IN	eNextElite	172.20.100.50:48048	[2,"7F876F8A-CE0A-11ED-CE0A-11ED95F19111","StatusNotification",{"connectorId":1,"errorCode":"ConnectorLockFailure","info":"Connector lock failure","status":"Faulted","timestamp":"2023-03-29T08:20:00Z","vendorErrorCode":"UE.22.101","vendorId":"Circontrol"}]
+2023-03-29T08:20:04.379Z	OUT	eNextElite	172.20.100.50:48048	[3,"7F876F8A-CE0A-11ED-CE0A-11ED95F19111",{}]
+2023-03-29T08:20:04.731Z	IN	eNextElite	172.20.100.50:48048	[2,"7FBD28A0-CE0A-11ED-CE0A-11ED95F19111","StatusNotification",{"connectorId":0,"errorCode":"OtherError","info":"Error in slave entity","status":"Faulted","timestamp":"2023-03-29T08:19:59Z","vendorErrorCode":"CO.01.112","vendorId":"Circontrol"}]
+2023-03-29T08:20:04.854Z	OUT	eNextElite	172.20.100.50:48048	[3,"7FBD28A0-CE0A-11ED-CE0A-11ED95F19111",{}]
+2023-03-29T08:20:24.445Z	PING OUT	eNextElite	172.20.100.50:48048
+2023-03-29T08:20:24.691Z	PONG IN	eNextElite	172.20.100.50:48048
+2023-03-29T08:20:27.615Z	PING IN	eNextElite	172.20.100.50:48048
+2023-03-29T08:20:38.353Z	IN	eNextElite	172.20.100.50:48048	[2,"93B84844-CE0A-11ED-CE0A-11ED95F19111","StatusNotification",{"connectorId":1,"errorCode":"NoError","info":"Available for new transaction","status":"Available","timestamp":"2023-03-29T08:20:34Z","vendorId":"Circontrol"}]
+2023-03-29T08:20:38.467Z	OUT	eNextElite	172.20.100.50:48048	[3,"93B84844-CE0A-11ED-CE0A-11ED95F19111",{}]
+2023-03-29T08:20:38.693Z	IN	eNextElite	172.20.100.50:48048	[2,"940ED02E-CE0A-11ED-CE0A-11ED95F19111","StatusNotification",{"connectorId":0,"errorCode":"NoError","info":"CP Available: one or more connectors available","status":"Available","timestamp":"2023-03-29T08:20:33Z","vendorId":"Circontrol"}]
+2023-03-29T08:20:38.815Z	OUT	eNextElite	172.20.100.50:48048	[3,"940ED02E-CE0A-11ED-CE0A-11ED95F19111",{}]
+2023-03-29T08:20:54.460Z	PING OUT	eNextElite	172.20.100.50:48048
+2023-03-29T08:20:54.491Z	PONG IN	eNextElite	172.20.100.50:48048
+2023-03-29T08:20:57.044Z	IN	eNextElite	172.20.100.50:48048	[2,"9F004454-CE0A-11ED-CE0A-11ED95F19111","StatusNotification",{"connectorId":1,"errorCode":"NoError","info":"Electric vehicle connected","status":"Preparing","timestamp":"2023-03-29T08:20:53Z","vendorId":"Circontrol"}]
+2023-03-29T08:20:57.166Z	OUT	eNextElite	172.20.100.50:48048	[3,"9F004454-CE0A-11ED-CE0A-11ED95F19111",{}]
+2023-03-29T08:20:57.475Z	PING IN	eNextElite	172.20.100.50:48048
+2023-03-29T08:21:01.661Z	IN	eNextElite	172.20.100.50:48048	[2,"A1C5950E-CE0A-11ED-CE0A-11ED95F19111","Authorize",{"idTag":"1AE74072"}]
+2023-03-29T08:21:01.778Z	OUT	eNextElite	172.20.100.50:48048	[3,"A1C5950E-CE0A-11ED-CE0A-11ED95F19111",{"idTagInfo":{"status":"Accepted","expiryDate":"2023-04-01T08:21:01.777Z"}}]
+2023-03-29T08:21:21.857Z	IN	eNextElite	172.20.100.50:48048	[2,"ADC1EFD8-CE0A-11ED-CE0A-11ED95F19111","Authorize",{"idTag":"1AE74072"}]
+2023-03-29T08:21:21.976Z	OUT	eNextElite	172.20.100.50:48048	[3,"ADC1EFD8-CE0A-11ED-CE0A-11ED95F19111",{"idTagInfo":{"status":"Accepted","expiryDate":"2023-04-01T08:21:21.974Z"}}]
+2023-03-29T08:21:24.472Z	PING OUT	eNextElite	172.20.100.50:48048
+2023-03-29T08:21:24.504Z	PONG IN	eNextElite	172.20.100.50:48048
+2023-03-29T08:21:27.426Z	IN	eNextElite	172.20.100.50:48048	[2,"B11B8EC8-CE0A-11ED-CE0A-11ED95F19111","StatusNotification",{"connectorId":1,"errorCode":"NoError","info":"Electric vehicle disconnected","status":"Available","timestamp":"2023-03-29T08:21:23Z","vendorId":"Circontrol"}]
+2023-03-29T08:21:27.539Z	OUT	eNextElite	172.20.100.50:48048	[3,"B11B8EC8-CE0A-11ED-CE0A-11ED95F19111",{}]
+2023-03-29T08:21:27.543Z	PING IN	eNextElite	172.20.100.50:48048
+2023-03-29T08:21:30.755Z	IN	eNextElite	172.20.100.50:48048	[2,"B3177444-CE0A-11ED-CE0A-11ED95F19111","StatusNotification",{"connectorId":1,"errorCode":"NoError","info":"Electric vehicle connected","status":"Preparing","timestamp":"2023-03-29T08:21:26Z","vendorId":"Circontrol"}]
+2023-03-29T08:21:30.878Z	OUT	eNextElite	172.20.100.50:48048	[3,"B3177444-CE0A-11ED-CE0A-11ED95F19111",{}]
+2023-03-29T08:21:33.214Z	IN	eNextElite	172.20.100.50:48048	[2,"B4950232-CE0A-11ED-CE0A-11ED95F19111","Authorize",{"idTag":"1AE74072"}]
+2023-03-29T08:21:33.325Z	OUT	eNextElite	172.20.100.50:48048	[3,"B4950232-CE0A-11ED-CE0A-11ED95F19111",{"idTagInfo":{"status":"Accepted","expiryDate":"2023-04-01T08:21:33.323Z"}}]
+2023-03-29T08:21:36.184Z	IN	eNextElite	172.20.100.50:48048	[2,"B64DC64A-CE0A-11ED-CE0A-11ED95F19111","StatusNotification",{"connectorId":1,"errorCode":"NoError","info":"Vehicle can charge or discharge","status":"Charging","timestamp":"2023-03-29T08:21:32Z","vendorId":"Circontrol"}]
+2023-03-29T08:21:36.293Z	OUT	eNextElite	172.20.100.50:48048	[3,"B64DC64A-CE0A-11ED-CE0A-11ED95F19111",{}]
+2023-03-29T08:21:36.587Z	IN	eNextElite	172.20.100.50:48048	[2,"B694A6BE-CE0A-11ED-CE0A-11ED95F19111","StartTransaction",{"connectorId":1,"idTag":"1AE74072","meterStart":0,"timestamp":"2023-03-29T08:21:31Z"}]
+2023-03-29T08:21:36.709Z	OUT	eNextElite	172.20.100.50:48048	[3,"B694A6BE-CE0A-11ED-CE0A-11ED95F19111",{"transactionId":1667492717,"idTagInfo":{"status":"Accepted","expiryDate":"2023-04-01T08:21:36.707Z"}}]
+2023-03-29T08:21:36.862Z	IN	eNextElite	172.20.100.50:48048	[2,"B6BB58D6-CE0A-11ED-CE0A-11ED95F19111","MeterValues",{"connectorId":1,"meterValue":[{"sampledValue":[{"context":"Sample.Periodic","measurand":"Energy.Active.Import.Register","unit":"Wh","value":"0.000000"}],"timestamp":"2023-03-29T08:21:32Z"}],"transactionId":1667492717}]
+2023-03-29T08:21:36.975Z	OUT	eNextElite	172.20.100.50:48048	[3,"B6BB58D6-CE0A-11ED-CE0A-11ED95F19111",{}]
+2023-03-29T08:21:54.490Z	PING OUT	eNextElite	172.20.100.50:48048
+2023-03-29T08:21:54.553Z	PONG IN	eNextElite	172.20.100.50:48048
+2023-03-29T08:21:57.472Z	PING IN	eNextElite	172.20.100.50:48048
+2023-03-29T08:22:24.500Z	PING OUT	eNextElite	172.20.100.50:48048
+2023-03-29T08:22:24.587Z	PONG IN	eNextElite	172.20.100.50:48048
+2023-03-29T08:22:27.471Z	PING IN	eNextElite	172.20.100.50:48048
+2023-03-29T08:22:30.999Z	CLOSE	eNextElite	172.20.100.50:48048
+2023-03-29T08:22:31.004Z	QUIT	eNextElite	172.20.100.50:48048
+2023-03-29T08:23:07.251Z	NEW	eNextElite	172.20.100.50:49244
+2023-03-29T08:23:28.580Z	IN	eNextElite	172.20.100.50:49244	[2,"F92449B2-CE0A-11ED-CE0A-11ED9036BF30","BootNotification",{"chargePointModel":"eNext TS","chargePointSerialNumber":"12311010760001","chargePointVendor":"Circontrol","firmwareVersion":"2.0.0-rc7"}]
+2023-03-29T08:23:28.698Z	OUT	eNextElite	172.20.100.50:49244	[3,"F92449B2-CE0A-11ED-CE0A-11ED9036BF30",{"status":"Accepted","currentTime":"2023-03-29T08:23:28.692Z","interval":300}]
+2023-03-29T08:23:33.363Z	IN	eNextElite	172.20.100.50:49244	[2,"FC1AC650-CE0A-11ED-CE0A-11ED9036BF30","StatusNotification",{"connectorId":0,"errorCode":"NoError","info":"CP Available: one or more connectors available","status":"Available","timestamp":"2023-03-29T08:23:06Z","vendorId":"Circontrol"}]
+2023-03-29T08:23:33.472Z	OUT	eNextElite	172.20.100.50:49244	[3,"FC1AC650-CE0A-11ED-CE0A-11ED9036BF30",{}]
+2023-03-29T08:23:33.779Z	IN	eNextElite	172.20.100.50:49244	[2,"FC200930-CE0A-11ED-CE0A-11ED9036BF30","MeterValues",{"connectorId":1,"meterValue":[{"sampledValue":[{"context":"Sample.Periodic","measurand":"Current.Offered","unit":"A","value":"32.000000"},{"context":"Sample.Periodic","measurand":"Current.Import","phase":"L1","unit":"A","value":"11.000000"},{"context":"Sample.Periodic","measurand":"Current.Import","phase":"L2","unit":"A","value":"10.900000"},{"context":"Sample.Periodic","measurand":"Current.Import","phase":"L3","unit":"A","value":"3.400000"},{"context":"Sample.Periodic","measurand":"Current.Import","unit":"A","value":"11.000000"},{"context":"Sample.Periodic","measurand":"Energy.Active.Import.Register","unit":"Wh","value":"158.000000"},{"context":"Sample.Periodic","measurand":"Power.Active.Import","unit":"W","value":"4985.000000"},{"context":"Sample.Periodic","measurand":"Voltage","phase":"L1-N","unit":"V","value":"227.200000"},{"context":"Sample.Periodic","measurand":"Voltage","phase":"L2-N","unit":"V","value":"228.100000"},{"context":"Sample.Periodic","measurand":"Voltage","phase":"L3-N","unit":"V","value":"232.400000"},{"context":"Sample.Periodic","measurand":"Voltage","unit":"V","value":"227.200000"}],"timestamp":"2023-03-29T08:23:03Z"}],"transactionId":1667492717}]
+2023-03-29T08:23:33.900Z	OUT	eNextElite	172.20.100.50:49244	[3,"FC200930-CE0A-11ED-CE0A-11ED9036BF30",{}]
+2023-03-29T08:23:33.963Z	IN	eNextElite	172.20.100.50:49244	[2,"FC65B3CC-CE0A-11ED-CE0A-11ED9036BF30","StatusNotification",{"connectorId":1,"errorCode":"NoError","info":"Vehicle can charge or discharge","status":"Charging","timestamp":"2023-03-29T08:23:06Z","vendorId":"Circontrol"}]
+2023-03-29T08:23:34.072Z	OUT	eNextElite	172.20.100.50:49244	[3,"FC65B3CC-CE0A-11ED-CE0A-11ED9036BF30",{}]
+2023-03-29T08:23:37.260Z	PING OUT	eNextElite	172.20.100.50:49244
+2023-03-29T08:23:37.395Z	PONG IN	eNextElite	172.20.100.50:49244
+2023-03-29T08:23:40.290Z	PING IN	eNextElite	172.20.100.50:49244
+2023-03-29T08:24:07.273Z	PING OUT	eNextElite	172.20.100.50:49244
+2023-03-29T08:24:07.305Z	PONG IN	eNextElite	172.20.100.50:49244
+2023-03-29T08:24:08.209Z	IN	eNextElite	172.20.100.50:49244	[2,"10E8B204-CE0B-11ED-CE0B-11ED9036BF30","MeterValues",{"connectorId":1,"meterValue":[{"sampledValue":[{"context":"Sample.Periodic","measurand":"Current.Offered","unit":"A","value":"32.000000"},{"context":"Sample.Periodic","measurand":"Current.Import","phase":"L1","unit":"A","value":"10.900000"},{"context":"Sample.Periodic","measurand":"Current.Import","phase":"L2","unit":"A","value":"10.800000"},{"context":"Sample.Periodic","measurand":"Current.Import","phase":"L3","unit":"A","value":"0.300000"},{"context":"Sample.Periodic","measurand":"Current.Import","unit":"A","value":"10.900000"},{"context":"Sample.Periodic","measurand":"Energy.Active.Import.Register","unit":"Wh","value":"333.000000"},{"context":"Sample.Periodic","measurand":"Power.Active.Import","unit":"W","value":"4972.000000"},{"context":"Sample.Periodic","measurand":"Voltage","phase":"L1-N","unit":"V","value":"227.600000"},{"context":"Sample.Periodic","measurand":"Voltage","phase":"L2-N","unit":"V","value":"228.400000"},{"context":"Sample.Periodic","measurand":"Voltage","phase":"L3-N","unit":"V","value":"232.900000"},{"context":"Sample.Periodic","measurand":"Voltage","unit":"V","value":"227.600000"}],"timestamp":"2023-03-29T08:24:03Z"}],"transactionId":1667492717}]
+2023-03-29T08:24:08.326Z	OUT	eNextElite	172.20.100.50:49244	[3,"10E8B204-CE0B-11ED-CE0B-11ED9036BF30",{}]
+2023-03-29T08:24:10.346Z	PING IN	eNextElite	172.20.100.50:49244
+2023-03-29T08:24:29.987Z	OUT	eNextElite	172.20.100.50:49244	[2,"900010","SetChargingProfile",{"connectorId":1,"csChargingProfiles":{"chargingProfileId":100,"stackLevel":0,"chargingProfilePurpose":"TxDefaultProfile","chargingProfileKind":"Recurring","validFrom":"2022-11-01T00:00:00.000Z","validTo":"2022-12-01T00:00:00.000Z","recurrencyKind":"Daily","chargingSchedule":{"duration":86400,"startSchedule":"2022-11-01T00:00:00.000Z","chargingRateUnit":"W","chargingSchedulePeriod":[{"startPeriod":0,"limit":11000.0,"numberPhases":3},{"startPeriod":28800,"limit":6000.0,"numberPhases":3},{"startPeriod":72000,"limit":11000.0,"numberPhases":3}]}}}]
+2023-03-29T08:24:31.261Z	IN	eNextElite	172.20.100.50:49244	[3,"900010",{"status":"NotSupported"}]
+2023-03-29T08:24:37.283Z	PING OUT	eNextElite	172.20.100.50:49244
+2023-03-29T08:24:37.310Z	PONG IN	eNextElite	172.20.100.50:49244
+2023-03-29T08:24:40.302Z	PING IN	eNextElite	172.20.100.50:49244
+2023-03-29T08:25:07.299Z	PING OUT	eNextElite	172.20.100.50:49244
+2023-03-29T08:25:07.314Z	PONG IN	eNextElite	172.20.100.50:49244
+2023-03-29T08:25:08.615Z	IN	eNextElite	172.20.100.50:49244	[2,"34F1FADE-CE0B-11ED-CE0B-11ED9036BF30","MeterValues",{"connectorId":1,"meterValue":[{"sampledValue":[{"context":"Sample.Periodic","measurand":"Current.Offered","unit":"A","value":"32.000000"},{"context":"Sample.Periodic","measurand":"Current.Import","phase":"L1","unit":"A","value":"16.300000"},{"context":"Sample.Periodic","measurand":"Current.Import","phase":"L2","unit":"A","value":"16.300000"},{"context":"Sample.Periodic","measurand":"Current.Import","phase":"L3","unit":"A","value":"16.200000"},{"context":"Sample.Periodic","measurand":"Current.Import","unit":"A","value":"16.300000"},{"context":"Sample.Periodic","measurand":"Energy.Active.Import.Register","unit":"Wh","value":"507.000000"},{"context":"Sample.Periodic","measurand":"Power.Active.Import","unit":"W","value":"11008.000000"},{"context":"Sample.Periodic","measurand":"Voltage","phase":"L1-N","unit":"V","value":"224.800000"},{"context":"Sample.Periodic","measurand":"Voltage","phase":"L2-N","unit":"V","value":"225.700000"},{"context":"Sample.Periodic","measurand":"Voltage","phase":"L3-N","unit":"V","value":"224.900000"},{"context":"Sample.Periodic","measurand":"Voltage","unit":"V","value":"224.800000"}],"timestamp":"2023-03-29T08:25:03Z"}],"transactionId":1667492717}]
+2023-03-29T08:25:08.738Z	OUT	eNextElite	172.20.100.50:49244	[3,"34F1FADE-CE0B-11ED-CE0B-11ED9036BF30",{}]
+2023-03-29T08:25:10.301Z	PING IN	eNextElite	172.20.100.50:49244
+2023-03-29T08:25:37.316Z	PING OUT	eNextElite	172.20.100.50:49244
+2023-03-29T08:25:44.991Z	NEW	eNextElite	172.20.100.50:53296
+2023-03-29T08:25:45.022Z	QUIT	eNextElite	172.20.100.50:49244
+2023-03-29T08:26:11.581Z	IN	eNextElite	172.20.100.50:53296	[2,"5A906CBC-CE0B-11ED-CE0B-11ED89D3EDE6","BootNotification",{"chargePointModel":"eNext TS","chargePointSerialNumber":"12311010760001","chargePointVendor":"Circontrol","firmwareVersion":"2.0.0-rc7"}]
+2023-03-29T08:26:11.696Z	OUT	eNextElite	172.20.100.50:53296	[3,"5A906CBC-CE0B-11ED-CE0B-11ED89D3EDE6",{"status":"Accepted","currentTime":"2023-03-29T08:26:11.695Z","interval":300}]
+2023-03-29T08:26:14.974Z	PING OUT	eNextElite	172.20.100.50:53296
+2023-03-29T08:26:15.114Z	PONG IN	eNextElite	172.20.100.50:53296
+2023-03-29T08:26:15.982Z	IN	eNextElite	172.20.100.50:53296	[2,"5D37CD2A-CE0B-11ED-CE0B-11ED89D3EDE6","StatusNotification",{"connectorId":0,"errorCode":"NoError","info":"CP Available: one or more connectors available","status":"Available","timestamp":"2023-03-29T08:25:48Z","vendorId":"Circontrol"}]
+2023-03-29T08:26:16.101Z	OUT	eNextElite	172.20.100.50:53296	[3,"5D37CD2A-CE0B-11ED-CE0B-11ED89D3EDE6",{}]
+2023-03-29T08:26:16.149Z	IN	eNextElite	172.20.100.50:53296	[2,"5D3CEE36-CE0B-11ED-CE0B-11ED89D3EDE6","MeterValues",{"connectorId":1,"meterValue":[{"sampledValue":[{"context":"Sample.Periodic","measurand":"Current.Offered","unit":"A","value":"10.000000"},{"context":"Sample.Periodic","measurand":"Current.Import","phase":"L1","unit":"A","value":"10.200000"},{"context":"Sample.Periodic","measurand":"Current.Import","phase":"L2","unit":"A","value":"9.300000"},{"context":"Sample.Periodic","measurand":"Current.Import","phase":"L3","unit":"A","value":"9.300000"},{"context":"Sample.Periodic","measurand":"Current.Import","unit":"A","value":"10.200000"},{"context":"Sample.Periodic","measurand":"Energy.Active.Import.Register","unit":"Wh","value":"614.000000"},{"context":"Sample.Periodic","measurand":"Power.Active.Import","unit":"W","value":"6313.000000"},{"context":"Sample.Periodic","measurand":"Voltage","phase":"L1-N","unit":"V","value":"225.500000"},{"context":"Sample.Periodic","measurand":"Voltage","phase":"L2-N","unit":"V","value":"226.200000"},{"context":"Sample.Periodic","measurand":"Voltage","phase":"L3-N","unit":"V","value":"225.600000"},{"context":"Sample.Periodic","measurand":"Voltage","unit":"V","value":"225.500000"}],"timestamp":"2023-03-29T08:25:45Z"}],"transactionId":1667492717}]
+2023-03-29T08:26:16.279Z	OUT	eNextElite	172.20.100.50:53296	[3,"5D3CEE36-CE0B-11ED-CE0B-11ED89D3EDE6",{}]
+2023-03-29T08:26:16.347Z	IN	eNextElite	172.20.100.50:53296	[2,"5D6AC8BA-CE0B-11ED-CE0B-11ED89D3EDE6","StatusNotification",{"connectorId":1,"errorCode":"NoError","info":"Vehicle can charge or discharge","status":"Charging","timestamp":"2023-03-29T08:25:49Z","vendorId":"Circontrol"}]
+2023-03-29T08:26:16.460Z	OUT	eNextElite	172.20.100.50:53296	[3,"5D6AC8BA-CE0B-11ED-CE0B-11ED89D3EDE6",{}]
+2023-03-29T08:26:20.991Z	OUT	eNextElite	172.20.100.50:53296	[2,"900011","SetChargingProfile",{"connectorId":1,"csChargingProfiles":{"chargingProfileId":100,"stackLevel":0,"chargingProfilePurpose":"TxDefaultProfile","chargingProfileKind":"Recurring","validFrom":"2022-11-01T00:00:00.000Z","validTo":"2022-12-01T00:00:00.000Z","recurrencyKind":"Daily","chargingSchedule":{"duration":86400,"startSchedule":"2022-11-01T00:00:00.000Z","chargingRateUnit":"W","chargingSchedulePeriod":[{"startPeriod":0,"limit":11000.0,"numberPhases":3},{"startPeriod":28800,"limit":6000.0,"numberPhases":3},{"startPeriod":72000,"limit":11000.0,"numberPhases":3}]}}}]
+2023-03-29T08:26:21.070Z	IN	eNextElite	172.20.100.50:53296	[3,"900011",{"status":"Rejected"}]
+2023-03-29T08:26:23.046Z	PING IN	eNextElite	172.20.100.50:53296
+2023-03-29T08:26:44.990Z	PING OUT	eNextElite	172.20.100.50:53296
+2023-03-29T08:26:45.076Z	PONG IN	eNextElite	172.20.100.50:53296
+2023-03-29T08:26:49.477Z	IN	eNextElite	172.20.100.50:53296	[2,"712F8C6E-CE0B-11ED-CE0B-11ED89D3EDE6","MeterValues",{"connectorId":1,"meterValue":[{"sampledValue":[{"context":"Sample.Periodic","measurand":"Current.Offered","unit":"A","value":"10.000000"},{"context":"Sample.Periodic","measurand":"Current.Import","phase":"L1","unit":"A","value":"10.300000"},{"context":"Sample.Periodic","measurand":"Current.Import","phase":"L2","unit":"A","value":"10.200000"},{"context":"Sample.Periodic","measurand":"Current.Import","phase":"L3","unit":"A","value":"10.200000"},{"context":"Sample.Periodic","measurand":"Current.Import","unit":"A","value":"10.300000"},{"context":"Sample.Periodic","measurand":"Energy.Active.Import.Register","unit":"Wh","value":"733.000000"},{"context":"Sample.Periodic","measurand":"Power.Active.Import","unit":"W","value":"6995.000000"},{"context":"Sample.Periodic","measurand":"Voltage","phase":"L1-N","unit":"V","value":"228.100000"},{"context":"Sample.Periodic","measurand":"Voltage","phase":"L2-N","unit":"V","value":"228.700000"},{"context":"Sample.Periodic","measurand":"Voltage","phase":"L3-N","unit":"V","value":"228.100000"},{"context":"Sample.Periodic","measurand":"Voltage","unit":"V","value":"228.100000"}],"timestamp":"2023-03-29T08:26:45Z"}],"transactionId":1667492717}]
+2023-03-29T08:26:49.601Z	OUT	eNextElite	172.20.100.50:53296	[3,"712F8C6E-CE0B-11ED-CE0B-11ED89D3EDE6",{}]
+2023-03-29T08:26:53.154Z	PING IN	eNextElite	172.20.100.50:53296
+2023-03-29T08:27:31.438Z	NEW	eNextElite	172.20.100.50:53952
+2023-03-29T08:27:49.890Z	IN	eNextElite	172.20.100.50:53952	[2,"9529F10E-CE0B-11ED-CE0B-11ED89D3EDE6","MeterValues",{"connectorId":1,"meterValue":[{"sampledValue":[{"context":"Sample.Periodic","measurand":"Current.Offered","unit":"A","value":"10.000000"},{"context":"Sample.Periodic","measurand":"Current.Import","phase":"L1","unit":"A","value":"10.200000"},{"context":"Sample.Periodic","measurand":"Current.Import","phase":"L2","unit":"A","value":"10.200000"},{"context":"Sample.Periodic","measurand":"Current.Import","phase":"L3","unit":"A","value":"10.200000"},{"context":"Sample.Periodic","measurand":"Current.Import","unit":"A","value":"10.200000"},{"context":"Sample.Periodic","measurand":"Energy.Active.Import.Register","unit":"Wh","value":"850.000000"},{"context":"Sample.Periodic","measurand":"Power.Active.Import","unit":"W","value":"6981.000000"},{"context":"Sample.Periodic","measurand":"Voltage","phase":"L1-N","unit":"V","value":"227.400000"},{"context":"Sample.Periodic","measurand":"Voltage","phase":"L2-N","unit":"V","value":"228.300000"},{"context":"Sample.Periodic","measurand":"Voltage","phase":"L3-N","unit":"V","value":"227.700000"},{"context":"Sample.Periodic","measurand":"Voltage","unit":"V","value":"227.400000"}],"timestamp":"2023-03-29T08:27:45Z"}],"transactionId":1667492717}]
+2023-03-29T08:27:50.088Z	OUT	eNextElite	172.20.100.50:53952	[3,"9529F10E-CE0B-11ED-CE0B-11ED89D3EDE6",{}]
+2023-03-29T08:28:01.405Z	PING OUT	eNextElite	172.20.100.50:53952
+2023-03-29T08:28:01.452Z	PONG IN	eNextElite	172.20.100.50:53952
+2023-03-29T08:28:01.562Z	PING IN	eNextElite	172.20.100.50:53952
+2023-03-29T08:28:25.839Z	OUT	eNextElite	172.20.100.50:53952	[2,"900001","SetChargingProfile",{"connectorId":1,"csChargingProfiles":{"chargingProfileId":100,"stackLevel":0,"chargingProfilePurpose":"TxDefaultProfile","chargingProfileKind":"Recurring","validFrom":"2022-11-01T00:00:00.000Z","validTo":"2022-12-01T00:00:00.000Z","recurrencyKind":"Daily","chargingSchedule":{"duration":86400,"startSchedule":"2022-11-01T00:00:00.000Z","chargingRateUnit":"A","chargingSchedulePeriod":[{"startPeriod":0,"limit":11000.0,"numberPhases":3},{"startPeriod":28800,"limit":6000.0,"numberPhases":3},{"startPeriod":72000,"limit":11000.0,"numberPhases":3}]}}}]
+2023-03-29T08:28:26.373Z	IN	eNextElite	172.20.100.50:53952	[3,"900001",{"status":"Accepted"}]
+2023-03-29T08:28:31.417Z	PING OUT	eNextElite	172.20.100.50:53952
+2023-03-29T08:28:31.481Z	PONG IN	eNextElite	172.20.100.50:53952
+2023-03-29T08:28:31.592Z	PING IN	eNextElite	172.20.100.50:53952
+2023-03-29T08:28:49.474Z	IN	eNextElite	172.20.100.50:53952	[2,"B8A7A55E-CE0B-11ED-CE0B-11ED89D3EDE6","MeterValues",{"connectorId":1,"meterValue":[{"sampledValue":[{"context":"Sample.Periodic","measurand":"Current.Offered","unit":"A","value":"10.000000"},{"context":"Sample.Periodic","measurand":"Current.Import","phase":"L1","unit":"A","value":"10.200000"},{"context":"Sample.Periodic","measurand":"Current.Import","phase":"L2","unit":"A","value":"10.200000"},{"context":"Sample.Periodic","measurand":"Current.Import","phase":"L3","unit":"A","value":"10.100000"},{"context":"Sample.Periodic","measurand":"Current.Import","unit":"A","value":"10.200000"},{"context":"Sample.Periodic","measurand":"Energy.Active.Import.Register","unit":"Wh","value":"966.000000"},{"context":"Sample.Periodic","measurand":"Power.Active.Import","unit":"W","value":"6960.000000"},{"context":"Sample.Periodic","measurand":"Voltage","phase":"L1-N","unit":"V","value":"227.600000"},{"context":"Sample.Periodic","measurand":"Voltage","phase":"L2-N","unit":"V","value":"228.500000"},{"context":"Sample.Periodic","measurand":"Voltage","phase":"L3-N","unit":"V","value":"227.700000"},{"context":"Sample.Periodic","measurand":"Voltage","unit":"V","value":"227.600000"}],"timestamp":"2023-03-29T08:28:45Z"}],"transactionId":1667492717}]
+2023-03-29T08:28:49.586Z	OUT	eNextElite	172.20.100.50:53952	[3,"B8A7A55E-CE0B-11ED-CE0B-11ED89D3EDE6",{}]
+2023-03-29T08:29:01.425Z	PING OUT	eNextElite	172.20.100.50:53952
+2023-03-29T08:29:01.487Z	PING IN	eNextElite	172.20.100.50:53952
+2023-03-29T08:29:01.597Z	PONG IN	eNextElite	172.20.100.50:53952
+2023-03-29T08:29:31.428Z	PING OUT	eNextElite	172.20.100.50:53952
+2023-03-29T08:29:31.534Z	PONG IN	eNextElite	172.20.100.50:53952
+2023-03-29T08:29:31.659Z	PING IN	eNextElite	172.20.100.50:53952
+2023-03-29T08:29:46.923Z	IN	eNextElite	172.20.100.50:53952	[2,"DCC6454E-CE0B-11ED-CE0B-11ED89D3EDE6","MeterValues",{"connectorId":1,"meterValue":[{"sampledValue":[{"context":"Sample.Periodic","measurand":"Current.Offered","unit":"A","value":"10.000000"},{"context":"Sample.Periodic","measurand":"Current.Import","phase":"L1","unit":"A","value":"10.200000"},{"context":"Sample.Periodic","measurand":"Current.Import","phase":"L2","unit":"A","value":"10.100000"},{"context":"Sample.Periodic","measurand":"Current.Import","phase":"L3","unit":"A","value":"10.100000"},{"context":"Sample.Periodic","measurand":"Current.Import","unit":"A","value":"10.200000"},{"context":"Sample.Periodic","measurand":"Energy.Active.Import.Register","unit":"Wh","value":"1076.000000"},{"context":"Sample.Periodic","measurand":"Power.Active.Import","unit":"W","value":"6944.000000"},{"context":"Sample.Periodic","measurand":"Voltage","phase":"L1-N","unit":"V","value":"227.600000"},{"context":"Sample.Periodic","measurand":"Voltage","phase":"L2-N","unit":"V","value":"228.500000"},{"context":"Sample.Periodic","measurand":"Voltage","phase":"L3-N","unit":"V","value":"227.800000"},{"context":"Sample.Periodic","measurand":"Voltage","unit":"V","value":"227.600000"}],"timestamp":"2023-03-29T08:29:45Z"}],"transactionId":1667492717}]
+2023-03-29T08:29:47.060Z	OUT	eNextElite	172.20.100.50:53952	[3,"DCC6454E-CE0B-11ED-CE0B-11ED89D3EDE6",{}]
+2023-03-29T08:30:01.438Z	PING OUT	eNextElite	172.20.100.50:53952
+2023-03-29T08:30:01.502Z	PING IN	eNextElite	172.20.100.50:53952
+2023-03-29T08:30:01.611Z	PONG IN	eNextElite	172.20.100.50:53952
+2023-03-29T08:30:31.449Z	PING OUT	eNextElite	172.20.100.50:53952
+2023-03-29T08:30:31.481Z	PONG IN	eNextElite	172.20.100.50:53952
+2023-03-29T08:30:31.575Z	PING IN	eNextElite	172.20.100.50:53952
+2023-03-29T08:30:46.601Z	IN	eNextElite	172.20.100.50:53952	[2,"003BB8BA-CE0C-11ED-CE0C-11ED89D3EDE6","MeterValues",{"connectorId":1,"meterValue":[{"sampledValue":[{"context":"Sample.Periodic","measurand":"Current.Offered","unit":"A","value":"10.000000"},{"context":"Sample.Periodic","measurand":"Current.Import","phase":"L1","unit":"A","value":"10.200000"},{"context":"Sample.Periodic","measurand":"Current.Import","phase":"L2","unit":"A","value":"10.200000"},{"context":"Sample.Periodic","measurand":"Current.Import","phase":"L3","unit":"A","value":"10.100000"},{"context":"Sample.Periodic","measurand":"Current.Import","unit":"A","value":"10.200000"},{"context":"Sample.Periodic","measurand":"Energy.Active.Import.Register","unit":"Wh","value":"1192.000000"},{"context":"Sample.Periodic","measurand":"Power.Active.Import","unit":"W","value":"6956.000000"},{"context":"Sample.Periodic","measurand":"Voltage","phase":"L1-N","unit":"V","value":"227.600000"},{"context":"Sample.Periodic","measurand":"Voltage","phase":"L2-N","unit":"V","value":"228.400000"},{"context":"Sample.Periodic","measurand":"Voltage","phase":"L3-N","unit":"V","value":"227.600000"},{"context":"Sample.Periodic","measurand":"Voltage","unit":"V","value":"227.600000"}],"timestamp":"2023-03-29T08:30:45Z"}],"transactionId":1667492717}]
+2023-03-29T08:30:46.722Z	OUT	eNextElite	172.20.100.50:53952	[3,"003BB8BA-CE0C-11ED-CE0C-11ED89D3EDE6",{}]
+2023-03-29T08:31:01.466Z	PING OUT	eNextElite	172.20.100.50:53952
+2023-03-29T08:31:01.501Z	PING IN	eNextElite	172.20.100.50:53952
+2023-03-29T08:31:01.533Z	PONG IN	eNextElite	172.20.100.50:53952
+2023-03-29T08:31:31.481Z	PING OUT	eNextElite	172.20.100.50:53952
+2023-03-29T08:31:31.512Z	PING IN	eNextElite	172.20.100.50:53952
+2023-03-29T08:31:31.591Z	PONG IN	eNextElite	172.20.100.50:53952
+2023-03-29T08:31:46.998Z	IN	eNextElite	172.20.100.50:53952	[2,"24569904-CE0C-11ED-CE0C-11ED89D3EDE6","MeterValues",{"connectorId":1,"meterValue":[{"sampledValue":[{"context":"Sample.Periodic","measurand":"Current.Offered","unit":"A","value":"10.000000"},{"context":"Sample.Periodic","measurand":"Current.Import","phase":"L1","unit":"A","value":"10.200000"},{"context":"Sample.Periodic","measurand":"Current.Import","phase":"L2","unit":"A","value":"10.200000"},{"context":"Sample.Periodic","measurand":"Current.Import","phase":"L3","unit":"A","value":"10.100000"},{"context":"Sample.Periodic","measurand":"Current.Import","unit":"A","value":"10.200000"},{"context":"Sample.Periodic","measurand":"Energy.Active.Import.Register","unit":"Wh","value":"1308.000000"},{"context":"Sample.Periodic","measurand":"Power.Active.Import","unit":"W","value":"6947.000000"},{"context":"Sample.Periodic","measurand":"Voltage","phase":"L1-N","unit":"V","value":"227.500000"},{"context":"Sample.Periodic","measurand":"Voltage","phase":"L2-N","unit":"V","value":"228.400000"},{"context":"Sample.Periodic","measurand":"Voltage","phase":"L3-N","unit":"V","value":"227.600000"},{"context":"Sample.Periodic","measurand":"Voltage","unit":"V","value":"227.500000"}],"timestamp":"2023-03-29T08:31:45Z"}],"transactionId":1667492717}]
+2023-03-29T08:31:47.126Z	OUT	eNextElite	172.20.100.50:53952	[3,"24569904-CE0C-11ED-CE0C-11ED89D3EDE6",{}]
+2023-03-29T08:32:01.487Z	PING OUT	eNextElite	172.20.100.50:53952
+2023-03-29T08:32:01.535Z	PING IN	eNextElite	172.20.100.50:53952
+2023-03-29T08:32:01.582Z	PONG IN	eNextElite	172.20.100.50:53952
+2023-03-29T08:32:41.144Z	PING IN	eNextElite	172.20.100.50:53952
+2023-03-29T08:32:41.148Z	PING OUT	eNextElite	172.20.100.50:53952
+2023-03-29T08:32:41.351Z	PONG IN	eNextElite	172.20.100.50:53952
+2023-03-29T08:32:46.375Z	IN	eNextElite	172.20.100.50:53952	[2,"47BD3844-CE0C-11ED-CE0C-11ED89D3EDE6","MeterValues",{"connectorId":1,"meterValue":[{"sampledValue":[{"context":"Sample.Periodic","measurand":"Current.Offered","unit":"A","value":"10.000000"},{"context":"Sample.Periodic","measurand":"Current.Import","phase":"L1","unit":"A","value":"10.200000"},{"context":"Sample.Periodic","measurand":"Current.Import","phase":"L2","unit":"A","value":"10.200000"},{"context":"Sample.Periodic","measurand":"Current.Import","phase":"L3","unit":"A","value":"10.200000"},{"context":"Sample.Periodic","measurand":"Current.Import","unit":"A","value":"10.200000"},{"context":"Sample.Periodic","measurand":"Energy.Active.Import.Register","unit":"Wh","value":"1424.000000"},{"context":"Sample.Periodic","measurand":"Power.Active.Import","unit":"W","value":"6957.000000"},{"context":"Sample.Periodic","measurand":"Voltage","phase":"L1-N","unit":"V","value":"227.300000"},{"context":"Sample.Periodic","measurand":"Voltage","phase":"L2-N","unit":"V","value":"228.100000"},{"context":"Sample.Periodic","measurand":"Voltage","phase":"L3-N","unit":"V","value":"227.200000"},{"context":"Sample.Periodic","measurand":"Voltage","unit":"V","value":"227.300000"}],"timestamp":"2023-03-29T08:32:45Z"}],"transactionId":1667492717}]
+2023-03-29T08:32:46.489Z	OUT	eNextElite	172.20.100.50:53952	[3,"47BD3844-CE0C-11ED-CE0C-11ED89D3EDE6",{}]
+2023-03-29T08:32:54.631Z	OUT	eNextElite	172.20.100.50:53952	[2,"900002","RemoteStopTransaction",{"transactionId":1667492717}]
+2023-03-29T08:32:55.942Z	IN	eNextElite	172.20.100.50:53952	[3,"900002",{"status":"Accepted"}]
+2023-03-29T08:32:57.657Z	IN	eNextElite	172.20.100.50:53952	[2,"4E6D98D2-CE0C-11ED-CE0C-11ED89D3EDE6","StopTransaction",{"idTag":"1AE74072","meterStop":1445,"reason":"Remote","timestamp":"2023-03-29T08:32:56Z","transactionId":1667492717}]
+2023-03-29T08:32:57.777Z	OUT	eNextElite	172.20.100.50:53952	[3,"4E6D98D2-CE0C-11ED-CE0C-11ED89D3EDE6",{"idTagInfo":{"status":"Accepted","expiryDate":"2023-04-01T08:32:57.770Z"}}]
+2023-03-29T08:32:58.030Z	IN	eNextElite	172.20.100.50:53952	[2,"4EB27E02-CE0C-11ED-CE0C-11ED89D3EDE6","StatusNotification",{"connectorId":1,"errorCode":"NoError","info":"Waiting for electric vehicle disconnection","status":"Finishing","timestamp":"2023-03-29T08:32:56Z","vendorId":"Circontrol"}]
+2023-03-29T08:32:58.157Z	OUT	eNextElite	172.20.100.50:53952	[3,"4EB27E02-CE0C-11ED-CE0C-11ED89D3EDE6",{}]
+2023-03-29T08:33:01.492Z	PING IN	eNextElite	172.20.100.50:53952
+2023-03-29T08:33:11.172Z	PING OUT	eNextElite	172.20.100.50:53952
+2023-03-29T08:33:11.207Z	PONG IN	eNextElite	172.20.100.50:53952
+2023-03-29T08:33:31.487Z	PING IN	eNextElite	172.20.100.50:53952
+2023-03-29T08:33:41.188Z	PING OUT	eNextElite	172.20.100.50:53952
+2023-03-29T08:33:41.269Z	PONG IN	eNextElite	172.20.100.50:53952
+2023-03-29T08:34:01.530Z	PING IN	eNextElite	172.20.100.50:53952
+2023-03-29T08:34:11.196Z	PING OUT	eNextElite	172.20.100.50:53952
+2023-03-29T08:34:11.240Z	PONG IN	eNextElite	172.20.100.50:53952
+2023-03-29T08:34:31.513Z	PING IN	eNextElite	172.20.100.50:53952
+2023-03-29T08:34:41.217Z	PING OUT	eNextElite	172.20.100.50:53952
+2023-03-29T08:34:41.281Z	PONG IN	eNextElite	172.20.100.50:53952
+2023-03-29T08:35:01.512Z	PING IN	eNextElite	172.20.100.50:53952
+2023-03-29T08:35:11.229Z	PING OUT	eNextElite	172.20.100.50:53952
+2023-03-29T08:35:11.311Z	PONG IN	eNextElite	172.20.100.50:53952
+2023-03-29T08:35:31.494Z	PING IN	eNextElite	172.20.100.50:53952
+2023-03-29T08:35:41.241Z	PING OUT	eNextElite	172.20.100.50:53952
+2023-03-29T08:35:41.273Z	PONG IN	eNextElite	172.20.100.50:53952
+2023-03-29T08:36:01.520Z	PING IN	eNextElite	172.20.100.50:53952
+2023-03-29T08:36:11.251Z	PING OUT	eNextElite	172.20.100.50:53952
+2023-03-29T08:36:11.315Z	PONG IN	eNextElite	172.20.100.50:53952
+2023-03-29T08:36:31.535Z	PING IN	eNextElite	172.20.100.50:53952
+2023-03-29T08:36:41.265Z	PING OUT	eNextElite	172.20.100.50:53952
+2023-03-29T08:36:41.340Z	PONG IN	eNextElite	172.20.100.50:53952
+2023-03-29T08:37:01.500Z	PING IN	eNextElite	172.20.100.50:53952
+2023-03-29T08:37:11.280Z	PING OUT	eNextElite	172.20.100.50:53952
+2023-03-29T08:37:11.296Z	PONG IN	eNextElite	172.20.100.50:53952
+2023-03-29T08:37:31.510Z	PING IN	eNextElite	172.20.100.50:53952
+2023-03-29T08:37:41.283Z	PING OUT	eNextElite	172.20.100.50:53952
+2023-03-29T08:37:41.410Z	PONG IN	eNextElite	172.20.100.50:53952
+2023-03-29T08:37:56.895Z	IN	eNextElite	172.20.100.50:53952	[2,"00D5574E-CE0D-11ED-CE0D-11ED89D3EDE6","Heartbeat",{}]
+2023-03-29T08:37:57.016Z	OUT	eNextElite	172.20.100.50:53952	[3,"00D5574E-CE0D-11ED-CE0D-11ED89D3EDE6",{"currentTime":"2023-03-29T08:37:57.007Z"}]
+2023-03-29T08:38:01.490Z	PING IN	eNextElite	172.20.100.50:53952
+2023-03-29T08:38:11.293Z	PING OUT	eNextElite	172.20.100.50:53952
+2023-03-29T08:38:11.326Z	PONG IN	eNextElite	172.20.100.50:53952
+2023-03-29T08:38:14.111Z	IN	eNextElite	172.20.100.50:53952	[2,"0ADC6066-CE0D-11ED-CE0D-11ED89D3EDE6","StatusNotification",{"connectorId":1,"errorCode":"NoError","info":"Available for new transaction","status":"Available","timestamp":"2023-03-29T08:38:12Z","vendorId":"Circontrol"}]
+2023-03-29T08:38:14.223Z	OUT	eNextElite	172.20.100.50:53952	[3,"0ADC6066-CE0D-11ED-CE0D-11ED89D3EDE6",{}]
+2023-03-29T08:38:31.508Z	PING IN	eNextElite	172.20.100.50:53952
+2023-03-29T08:38:41.306Z	PING OUT	eNextElite	172.20.100.50:53952
+2023-03-29T08:38:41.353Z	PONG IN	eNextElite	172.20.100.50:53952
+2023-03-29T08:39:01.570Z	PING IN	eNextElite	172.20.100.50:53952
+2023-03-29T08:39:11.321Z	PING OUT	eNextElite	172.20.100.50:53952
+2023-03-29T08:39:11.417Z	PONG IN	eNextElite	172.20.100.50:53952
+2023-03-29T08:39:31.498Z	PING IN	eNextElite	172.20.100.50:53952
+2023-03-29T08:39:41.327Z	PING OUT	eNextElite	172.20.100.50:53952
+2023-03-29T08:39:41.384Z	PONG IN	eNextElite	172.20.100.50:53952
+2023-03-29T08:40:01.498Z	PING IN	eNextElite	172.20.100.50:53952
+2023-03-29T08:40:11.335Z	PING OUT	eNextElite	172.20.100.50:53952
+2023-03-29T08:40:11.416Z	PONG IN	eNextElite	172.20.100.50:53952
+2023-03-29T08:40:31.512Z	PING IN	eNextElite	172.20.100.50:53952
+2023-03-29T08:40:41.343Z	PING OUT	eNextElite	172.20.100.50:53952
+2023-03-29T08:40:41.442Z	PONG IN	eNextElite	172.20.100.50:53952
+2023-03-29T08:41:01.555Z	PING IN	eNextElite	172.20.100.50:53952
+2023-03-29T08:41:11.352Z	PING OUT	eNextElite	172.20.100.50:53952
+2023-03-29T08:41:11.506Z	PONG IN	eNextElite	172.20.100.50:53952
+2023-03-29T08:41:31.755Z	PING IN	eNextElite	172.20.100.50:53952
+2023-03-29T08:41:41.355Z	PING OUT	eNextElite	172.20.100.50:53952
+2023-03-29T08:41:41.387Z	PONG IN	eNextElite	172.20.100.50:53952
+2023-03-29T08:42:01.518Z	PING IN	eNextElite	172.20.100.50:53952
+2023-03-29T08:42:11.365Z	PING OUT	eNextElite	172.20.100.50:53952
+2023-03-29T08:42:11.422Z	PONG IN	eNextElite	172.20.100.50:53952
+2023-03-29T08:42:31.708Z	PING IN	eNextElite	172.20.100.50:53952
+2023-03-29T08:42:41.380Z	PING OUT	eNextElite	172.20.100.50:53952
+2023-03-29T08:42:41.517Z	PONG IN	eNextElite	172.20.100.50:53952
