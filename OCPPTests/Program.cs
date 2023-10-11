@@ -365,7 +365,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                                                  AutoStart:                   true
                                              );
 
-            testCSMSv2_1.AddOrUpdateHTTPBasicAuth(OCPPv2_1.ChargeBox_Id.Parse("EVB-500-005-203"), "dummy-dev-password");
+            testCSMSv2_1.AddOrUpdateHTTPBasicAuth(OCPPv2_1.ChargingStation_Id.Parse("EVB-500-005-203"), "dummy-dev-password");
 
 
 
@@ -452,7 +452,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
             // http://127.0.0.1:3502/chargeBoxes
 
             //var chargingStation1  = new TestChargePoint(
-            //                            ChargeBoxId:              OCPPv1_6.ChargeBox_Id.Parse("GD001"),
+            //                            ChargingStationId:              OCPPv1_6.ChargeBox_Id.Parse("GD001"),
             //                            ChargePointVendor:        "GraphDefined",
             //                            ChargePointModel:         "VCP.1",
             //                            NumberOfConnectors:       2,
@@ -475,7 +475,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
             //                        );
 
             //var chargingStation2  = new TestChargePoint(
-            //                            ChargeBoxId:              OCPPv1_6.ChargeBox_Id.Parse("CP002"),
+            //                            ChargingStationId:              OCPPv1_6.ChargeBox_Id.Parse("CP002"),
             //                            ChargePointVendor:        "GraphDefined",
             //                            ChargePointModel:         "VCP.2",
             //                            NumberOfConnectors:       2,
@@ -497,16 +497,16 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
             //var response1  =  await chargingStation1.ConnectWebSocket("From:GD001",
             //                                                          "To:OCPPTest01",
             //                                                          //URL.Parse("ws://janus1.graphdefined.com:80/"));
-            //                                                          URL.Parse("http://127.0.0.1:9900/" + chargingStation1.ChargeBoxId),
+            //                                                          URL.Parse("http://127.0.0.1:9900/" + chargingStation1.ChargingStationId),
             //                                                          DisableWebSocketPings:       true
             //                                                          //SlowNetworkSimulationDelay:  TimeSpan.FromMilliseconds(10)
             //                                                          );
-            //                                                          //URL.Parse("http://oca.charging.cloud:9900/" + chargingStation1.ChargeBoxId));
-            //                                                          //URL.Parse("ws://oca.charging.cloud/io/OCPPv1.6j/" + chargingStation1.ChargeBoxId));
-            //                                                          //URL.Parse("wss://oca.charging.cloud/io/OCPPv1.6j/" + chargingStation1.ChargeBoxId));
+            //                                                          //URL.Parse("http://oca.charging.cloud:9900/" + chargingStation1.ChargingStationId));
+            //                                                          //URL.Parse("ws://oca.charging.cloud/io/OCPPv1.6j/" + chargingStation1.ChargingStationId));
+            //                                                          //URL.Parse("wss://oca.charging.cloud/io/OCPPv1.6j/" + chargingStation1.ChargingStationId));
             //                                                          //URL.Parse("ws://35.190.199.146:8080/stationServer/websocket/OLI_001"));
             //
-            //                                                          //URL.Parse("wss://encharge-broker-ppe1.envisioniot.com/ocpp-broker/ocpp/" + chargingStation1.ChargeBoxId));      // Envisison
+            //                                                          //URL.Parse("wss://encharge-broker-ppe1.envisioniot.com/ocpp-broker/ocpp/" + chargingStation1.ChargingStationId));      // Envisison
             //                                                          //URL.Parse("wss://testop.amplified.cloud/ocpp16/GDEF"));                                                         // Stackbox GmbH
             //                                                          //URL.Parse("wss://ocpp.eu.ngrok.io/GD001"));                                                                     // Monta
             //                                                          //URL.Parse("wss://cpc.demo.dev.charge.ampeco.tech:443/test/GD001"));                                             // AMPECO
@@ -525,8 +525,8 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
             //var response07a  = await chargingStation1.SendFirmwareStatusNotification(FirmwareStatus.Installed);
 
 
-            //var response21a  = await testCentralSystem.Reset(chargingStation1.ChargeBoxId, ResetTypes.Soft);
-            //var response22a  = await testCentralSystem.Reset(chargingStation1.ChargeBoxId, ResetTypes.Hard);
+            //var response21a  = await testCentralSystem.Reset(chargingStation1.ChargingStationId, ResetTypes.Soft);
+            //var response22a  = await testCentralSystem.Reset(chargingStation1.ChargingStationId, ResetTypes.Hard);
 
             var xx = "y";
 
@@ -542,58 +542,58 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
             //var response2b = await chargingStation2.SendHeartbeat();
 
 
-            //var response3a = await testCentralSystem.Reset                 (chargingStation1.ChargeBoxId, ResetTypes.Hard);
+            //var response3a = await testCentralSystem.Reset                 (chargingStation1.ChargingStationId, ResetTypes.Hard);
             //DebugX.Log("Reset: "              + response3a.Status.ToString());
 
-            //var response3d = await testCentralSystem.ChangeAvailability    (chargingStation1.ChargeBoxId, Connector_Id.Parse(1), Availabilities.Operative);
+            //var response3d = await testCentralSystem.ChangeAvailability    (chargingStation1.ChargingStationId, Connector_Id.Parse(1), Availabilities.Operative);
             //DebugX.Log("ChangeAvailability: " + response3d.Status.ToString());
 
-            //var response3e1 = await testCentralSystem.GetConfiguration      (chargingStation1.ChargeBoxId);
+            //var response3e1 = await testCentralSystem.GetConfiguration      (chargingStation1.ChargingStationId);
             //DebugX.Log("GetConfiguration: "   + response3e1.ConfigurationKeys.Select(ckey => ckey.ToJSON().ToString()).AggregateWith(Environment.NewLine));
 
-            //var response3e2 = await testCentralSystem.GetConfiguration      (chargingStation1.ChargeBoxId, new String[] { "name" });
+            //var response3e2 = await testCentralSystem.GetConfiguration      (chargingStation1.ChargingStationId, new String[] { "name" });
             //DebugX.Log("GetConfiguration: "   + response3e2.ConfigurationKeys.Select(ckey => ckey.ToJSON().ToString()).AggregateWith(Environment.NewLine));
 
-            //var response3f1 = await testCentralSystem.ChangeConfiguration   (chargingStation1.ChargeBoxId, "doNotChangeMe", "1234");
+            //var response3f1 = await testCentralSystem.ChangeConfiguration   (chargingStation1.ChargingStationId, "doNotChangeMe", "1234");
             //DebugX.Log("ChangeConfiguration: " + response3f1.Status.ToString());
 
-            //var response3f2 = await testCentralSystem.ChangeConfiguration   (chargingStation1.ChargeBoxId, "name", "1234");
+            //var response3f2 = await testCentralSystem.ChangeConfiguration   (chargingStation1.ChargingStationId, "name", "1234");
             //DebugX.Log("ChangeConfiguration: " + response3f2.Status.ToString());
 
-            //var response3e2 = await testCentralSystem.GetConfiguration(chargingStation1.ChargeBoxId);
+            //var response3e2 = await testCentralSystem.GetConfiguration(chargingStation1.ChargingStationId);
             //DebugX.Log("GetConfiguration: " + response3e2.ConfigurationKeys.Select(ckey => ckey.ToJSON().ToString()).AggregateWith(Environment.NewLine));
 
-            //var response3g1 = await testCentralSystem.DataTransfer          (chargingStation1.ChargeBoxId, "vendor", "MessageId", "Data");
+            //var response3g1 = await testCentralSystem.DataTransfer          (chargingStation1.ChargingStationId, "vendor", "MessageId", "Data");
             //DebugX.Log("DataTransfer: " + response3g1.Status.ToString() + ": " + response3g1.Data);
 
-            //var response3g2 = await testCentralSystem.DataTransfer(chargingStation1.ChargeBoxId, "GraphDefined", "Hello", "World!");
+            //var response3g2 = await testCentralSystem.DataTransfer(chargingStation1.ChargingStationId, "GraphDefined", "Hello", "World!");
             //DebugX.Log("DataTransfer: " + response3g2.Status.ToString() + ": " + response3g2.Data);
 
-            //var response3h = await testCentralSystem.GetDiagnostics        (chargingStation1.ChargeBoxId, "Location", Timestamp.Now - TimeSpan.FromMinutes(30), Timestamp.Now - TimeSpan.FromMinutes(15), 3, TimeSpan.FromSeconds(30));
-            //var response3i = await testCentralSystem.TriggerMessage        (chargingStation1.ChargeBoxId, MessageTriggers.MeterValues, Connector_Id.Parse(1));
-            //var response3j = await testCentralSystem.UpdateFirmware        (chargingStation1.ChargeBoxId, "Location", Timestamp.Now, 3, TimeSpan.FromSeconds(30));
+            //var response3h = await testCentralSystem.GetDiagnostics        (chargingStation1.ChargingStationId, "Location", Timestamp.Now - TimeSpan.FromMinutes(30), Timestamp.Now - TimeSpan.FromMinutes(15), 3, TimeSpan.FromSeconds(30));
+            //var response3i = await testCentralSystem.TriggerMessage        (chargingStation1.ChargingStationId, MessageTriggers.MeterValues, Connector_Id.Parse(1));
+            //var response3j = await testCentralSystem.UpdateFirmware        (chargingStation1.ChargingStationId, "Location", Timestamp.Now, 3, TimeSpan.FromSeconds(30));
 
-            //var response3k = await testCentralSystem.ReserveNow            (chargingStation1.ChargeBoxId, Connector_Id.Parse(1), Reservation_Id.Parse("1234"), Timestamp.Now + TimeSpan.FromMinutes(15), IdToken.Parse("1234"));
-            //var response3l = await testCentralSystem.CancelReservation     (chargingStation1.ChargeBoxId, Reservation_Id.Parse("1234"));
+            //var response3k = await testCentralSystem.ReserveNow            (chargingStation1.ChargingStationId, Connector_Id.Parse(1), Reservation_Id.Parse("1234"), Timestamp.Now + TimeSpan.FromMinutes(15), IdToken.Parse("1234"));
+            //var response3l = await testCentralSystem.CancelReservation     (chargingStation1.ChargingStationId, Reservation_Id.Parse("1234"));
 
-            //var response3m = await testCentralSystem.RemoteStartTransaction(chargingStation1.ChargeBoxId, IdToken.Parse("1234"), Connector_Id.Parse(1), null);
+            //var response3m = await testCentralSystem.RemoteStartTransaction(chargingStation1.ChargingStationId, IdToken.Parse("1234"), Connector_Id.Parse(1), null);
             //DebugX.Log("RemoteStartTransaction: " + response3m.Status.ToString());
 
             //await Task.Delay(5000);
 
-            //var transactionId = testCentralSystem.TransactionIds[response3m.Request.ChargeBoxId + "*" + response3m.Request.ConnectorId.ToString()];
+            //var transactionId = testCentralSystem.TransactionIds[response3m.Request.ChargingStationId + "*" + response3m.Request.ConnectorId.ToString()];
 
-            //var response3n = await testCentralSystem.RemoteStopTransaction (chargingStation1.ChargeBoxId, transactionId);
+            //var response3n = await testCentralSystem.RemoteStopTransaction (chargingStation1.ChargingStationId, transactionId);
             //DebugX.Log("RemoteStopTransaction: " + response3n.Status.ToString());
 
-            //var response3o = await testCentralSystem.SetChargingProfile    (chargingStation1.ChargeBoxId, Connector_Id.Parse(1), null);
-            //var response3p = await testCentralSystem.ClearChargingProfile  (chargingStation1.ChargeBoxId, null, Connector_Id.Parse(1), null, null);
-            //var response3q = await testCentralSystem.GetCompositeSchedule  (chargingStation1.ChargeBoxId, Connector_Id.Parse(1), TimeSpan.FromMinutes(15), null);
-            //var response3r = await testCentralSystem.UnlockConnector       (chargingStation1.ChargeBoxId, Connector_Id.Parse(1));
+            //var response3o = await testCentralSystem.SetChargingProfile    (chargingStation1.ChargingStationId, Connector_Id.Parse(1), null);
+            //var response3p = await testCentralSystem.ClearChargingProfile  (chargingStation1.ChargingStationId, null, Connector_Id.Parse(1), null, null);
+            //var response3q = await testCentralSystem.GetCompositeSchedule  (chargingStation1.ChargingStationId, Connector_Id.Parse(1), TimeSpan.FromMinutes(15), null);
+            //var response3r = await testCentralSystem.UnlockConnector       (chargingStation1.ChargingStationId, Connector_Id.Parse(1));
 
-            //var response3s = await testCentralSystem.GetLocalListVersion   (chargingStation1.ChargeBoxId);
-            //var response3t = await testCentralSystem.SendLocalList         (chargingStation1.ChargeBoxId, 1, UpdateTypes.Full, null);
-            //var response3u = await testCentralSystem.ClearCache            (chargingStation1.ChargeBoxId);
+            //var response3s = await testCentralSystem.GetLocalListVersion   (chargingStation1.ChargingStationId);
+            //var response3t = await testCentralSystem.SendLocalList         (chargingStation1.ChargingStationId, 1, UpdateTypes.Full, null);
+            //var response3u = await testCentralSystem.ClearCache            (chargingStation1.ChargingStationId);
 
 
             //var ChargingStation1  = new ChargePointSOAPServer(TCPPort:    IPPort.Parse(8801),
@@ -609,7 +609,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
             //                                                  AutoStart:  true);
 
 
-            //var OCPPClient1 = new CentralSystemSOAPClient(ChargeBoxIdentity:           ChargeBox_Id.Parse("1"),
+            //var OCPPClient1 = new CentralSystemSOAPClient(ChargingStationIdentity:           ChargeBox_Id.Parse("1"),
             //                                              From:                        "https://1.1.1.1:" + SOAPServer.      IPPorts.First() + SOAPServer.URLPrefix,
             //                                              To:                          "https://2.2.2.2:" + ChargingStation1.IPPorts.First() + ChargingStation1.URLPrefix,
 
@@ -631,7 +631,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
             //                                              HTTPLogger:                  null,
             //                                              DNSClient:                   API_DNSClient);
 
-            //var rs_response = await OCPPClient1.RemoteStartTransaction(//ChargeBoxIdentity:  ChargeBox_Id.Parse("1"),
+            //var rs_response = await OCPPClient1.RemoteStartTransaction(//ChargingStationIdentity:  ChargeBox_Id.Parse("1"),
             //                                                           IdTag:              IdToken.Parse("11223344"),
             //                                                           ConnectorId:        Connector_Id.Parse("1"),
             //                                                           ChargingProfile:    new ChargingProfile(
@@ -672,10 +672,10 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
 
             #region Wait for key 'Q' pressed... and quit.
 
-            var       chargeBoxId   = "";
-            var       version       = 2;
-            var       quit          = false;
-            String[]? commandArray  = null;
+            var       chargingStationId   = "";
+            var       version             = 2;
+            var       quit                = false;
+            String[]? commandArray        = null;
 
             do
             {
@@ -718,9 +718,9 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                         if (command == "use".ToLower() && commandArray.Length == 2)
                         {
 
-                            chargeBoxId = commandArray[1];
+                            chargingStationId = commandArray[1];
 
-                            Console.WriteLine($"Now using charging station '{chargeBoxId}'!");
+                            Console.WriteLine($"Now using charging station '{chargingStationId}'!");
 
                         }
 
@@ -731,15 +731,15 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                         //   AddHTTPBasicAuth abcd1234
                         if (command == "AddHTTPBasicAuth".ToLower() && commandArray.Length == 2)
                         {
-                            testCSMSv1_6.  AddHTTPBasicAuth        (OCPPv1_6.  ChargeBox_Id.Parse(chargeBoxId), commandArray[2]);
-                            testCSMSv2_0_1.AddHTTPBasicAuth        (OCPPv2_0_1.ChargeBox_Id.Parse(chargeBoxId), commandArray[2]);
-                            testCSMSv2_1.  AddOrUpdateHTTPBasicAuth(OCPPv2_1.  ChargeBox_Id.Parse(chargeBoxId), commandArray[2]);
+                            testCSMSv1_6.  AddHTTPBasicAuth        (OCPPv1_6.  ChargeBox_Id.Parse(chargingStationId), commandArray[2]);
+                            testCSMSv2_0_1.AddHTTPBasicAuth        (OCPPv2_0_1.ChargeBox_Id.Parse(chargingStationId), commandArray[2]);
+                            testCSMSv2_1.  AddOrUpdateHTTPBasicAuth(OCPPv2_1.  ChargingStation_Id.Parse(chargingStationId), commandArray[2]);
                         }
 
                         #endregion
 
 
-                        if (chargeBoxId == "")
+                        if (chargingStationId == "")
                             Console.WriteLine("No charging station selected!");
 
                         else {
@@ -754,7 +754,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                                 {
 
                                     var response = await testCSMSv1_6.Reset(
-                                                       ChargeBoxId:  OCPPv1_6.ChargeBox_Id.Parse(chargeBoxId),
+                                                       ChargeBoxId:  OCPPv1_6.ChargeBox_Id.Parse(chargingStationId),
                                                        ResetType:    OCPPv1_6.ResetTypes.Hard
                                                    );
 
@@ -767,8 +767,8 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
 
                                     var response = await testCSMSv2_1.Reset(
                                                        new OCPPv2_1.CSMS.ResetRequest(
-                                                           ChargeBoxId:   OCPPv2_1.ChargeBox_Id.Parse(chargeBoxId),
-                                                           ResetType:     OCPPv2_1.ResetTypes.Immediate
+                                                           ChargingStationId:   OCPPv2_1.ChargingStation_Id.Parse(chargingStationId),
+                                                           ResetType:           OCPPv2_1.ResetTypes.Immediate
                                                        )
                                                    );
 
@@ -787,7 +787,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                                 {
 
                                     var response = await testCSMSv1_6.Reset(
-                                                       ChargeBoxId:  OCPPv1_6.ChargeBox_Id.Parse(chargeBoxId),
+                                                       ChargeBoxId:  OCPPv1_6.ChargeBox_Id.Parse(chargingStationId),
                                                        ResetType:    OCPPv1_6.ResetTypes.Soft
                                                    );
 
@@ -800,8 +800,8 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
 
                                     var response = await testCSMSv2_1.Reset(
                                                        new OCPPv2_1.CSMS.ResetRequest(
-                                                           ChargeBoxId:   OCPPv2_1.ChargeBox_Id.Parse(chargeBoxId),
-                                                           ResetType:     OCPPv2_1.ResetTypes.OnIdle
+                                                           ChargingStationId:   OCPPv2_1.ChargingStation_Id.Parse(chargingStationId),
+                                                           ResetType:           OCPPv2_1.ResetTypes.OnIdle
                                                        )
                                                    );
 
@@ -827,9 +827,9 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
 
                                     var response = await testCSMSv2_1.Reset(
                                                        new OCPPv2_1.CSMS.ResetRequest(
-                                                           ChargeBoxId:   OCPPv2_1.ChargeBox_Id.Parse(chargeBoxId),
-                                                           ResetType:     OCPPv2_1.ResetTypes.Immediate,
-                                                           EVSEId:        OCPPv2_1.EVSE_Id.Parse(commandArray[1])
+                                                           ChargingStationId:   OCPPv2_1.ChargingStation_Id.Parse(chargingStationId),
+                                                           ResetType:           OCPPv2_1.ResetTypes.Immediate,
+                                                           EVSEId:              OCPPv2_1.EVSE_Id.Parse(commandArray[1])
                                                        )
                                                    );
 
@@ -853,9 +853,9 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
 
                                     var response = await testCSMSv2_1.Reset(
                                                        new OCPPv2_1.CSMS.ResetRequest(
-                                                           ChargeBoxId:   OCPPv2_1.ChargeBox_Id.Parse(chargeBoxId),
-                                                           ResetType:     OCPPv2_1.ResetTypes.OnIdle,
-                                                           EVSEId:        OCPPv2_1.EVSE_Id.Parse(commandArray[1])
+                                                           ChargingStationId:   OCPPv2_1.ChargingStation_Id.Parse(chargingStationId),
+                                                           ResetType:           OCPPv2_1.ResetTypes.OnIdle,
+                                                           EVSEId:              OCPPv2_1.EVSE_Id.Parse(commandArray[1])
                                                        )
                                                    );
 
@@ -876,7 +876,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
 
                                 var response = await testCSMSv2_1.UpdateFirmware(
                                                    new OCPPv2_1.CSMS.UpdateFirmwareRequest(
-                                                        ChargeBoxId:               OCPPv2_1.ChargeBox_Id.Parse(chargeBoxId),
+                                                        ChargingStationId:         OCPPv2_1.ChargingStation_Id.Parse(chargingStationId),
                                                         Firmware:                  new OCPPv2_1.Firmware(
                                                                                        FirmwareURL:          URL.Parse(commandArray[1]),
                                                                                        RetrieveTimestamp:    Timestamp.Now,
@@ -904,7 +904,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                             {
 
                                 var response = await testCSMSv1_6.SignedUpdateFirmware(
-                                                   ChargeBoxId:       OCPPv1_6.ChargeBox_Id.Parse(chargeBoxId),
+                                                   ChargeBoxId:       OCPPv1_6.ChargeBox_Id.Parse(chargingStationId),
                                                    Firmware:          new OCPPv1_6.FirmwareImage(
                                                                           RemoteLocation:      URL.Parse("https://api2.ocpp.charging.cloud:9901/security0001.log"),
                                                                           RetrieveTimestamp:   Timestamp.Now,
@@ -936,7 +936,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
 
                                 var response = await testCSMSv2_1.GetBaseReport(
                                                    new OCPPv2_1.CSMS.GetBaseReportRequest(
-                                                       ChargeBoxId:              OCPPv2_1.ChargeBox_Id.Parse(chargeBoxId),
+                                                       ChargingStationId:        OCPPv2_1.ChargingStation_Id.Parse(chargingStationId),
                                                        GetBaseReportRequestId:   RandomExtensions.RandomInt32(),
                                                        ReportBase:               commandArray[1] switch {
                                                                                      "conf"  => OCPPv2_1.ReportBases.ConfigurationInventory,
@@ -961,7 +961,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
 
                                 var response = await testCSMSv2_1.GetReport(
                                                    new OCPPv2_1.CSMS.GetReportRequest(
-                                                       ChargeBoxId:          OCPPv2_1.ChargeBox_Id.Parse(chargeBoxId),
+                                                       ChargingStationId:    OCPPv2_1.ChargingStation_Id.Parse(chargingStationId),
                                                        GetReportRequestId:   RandomExtensions.RandomInt32(),
                                                        //ComponentCriteria:    new[] {
                                                        //                          OCPPv2_1.ComponentCriteria.Active
@@ -1001,7 +1001,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                                     //   getlog https://api2.ocpp.charging.cloud:9901 diagnostics
                                     //   getlog https://api2.ocpp.charging.cloud:9901 security
                                     var response = await testCSMSv1_6.GetLog(
-                                                       ChargeBoxId:    OCPPv1_6.ChargeBox_Id.Parse(chargeBoxId),
+                                                       ChargeBoxId:    OCPPv1_6.ChargeBox_Id.Parse(chargingStationId),
                                                        LogType:        commandArray[2].ToLower() switch {
                                                                             "security"  => OCPPv1_6.LogTypes.SecurityLog,
                                                                             _           => OCPPv1_6.LogTypes.DiagnosticsLog
@@ -1029,7 +1029,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                                     //   getlog https://api2.ocpp.charging.cloud:9901 datacollector
                                     var response = await testCSMSv2_1.GetLog(
                                                        new OCPPv2_1.CSMS.GetLogRequest(
-                                                           ChargeBoxId:     OCPPv2_1.ChargeBox_Id.Parse(chargeBoxId),
+                                                           ChargingStationId:     OCPPv2_1.ChargingStation_Id.Parse(chargingStationId),
                                                            LogType:         commandArray[2].ToLower() switch {
                                                                                  "security"       => OCPPv2_1.LogTypes.SecurityLog,
                                                                                  "datacollector"  => OCPPv2_1.LogTypes.DataCollectorLog,
@@ -1063,7 +1063,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
 
                                 var response = await testCSMSv2_1.SetVariables(
                                                    new OCPPv2_1.CSMS.SetVariablesRequest(
-                                                       ChargeBoxId:    OCPPv2_1.ChargeBox_Id.Parse(chargeBoxId),
+                                                       ChargingStationId:    OCPPv2_1.ChargingStation_Id.Parse(chargingStationId),
                                                        VariableData:   new[] {
                                                                            new OCPPv2_1.SetVariableData(
                                                                                commandArray[3],
@@ -1097,7 +1097,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
 
                                 var response = await testCSMSv2_1.GetVariables(
                                                    new OCPPv2_1.CSMS.GetVariablesRequest(
-                                                       ChargeBoxId:    OCPPv2_1.ChargeBox_Id.Parse(chargeBoxId),
+                                                       ChargingStationId:    OCPPv2_1.ChargingStation_Id.Parse(chargingStationId),
                                                        VariableData:   new[] {
                                                                            new OCPPv2_1.GetVariableData(
                                                                                new OCPPv2_1.Component(
@@ -1131,7 +1131,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
 
                                 var response = await testCSMSv2_1.SetMonitoringBase(
                                                    new OCPPv2_1.CSMS.SetMonitoringBaseRequest(
-                                                       ChargeBoxId:      OCPPv2_1.ChargeBox_Id.Parse(chargeBoxId),
+                                                       ChargingStationId:OCPPv2_1.ChargingStation_Id.Parse(chargingStationId),
                                                        MonitoringBase:   commandArray[1] switch {
                                                                              "factory"  => OCPPv2_1.MonitoringBases.FactoryDefault,
                                                                              "hard"     => OCPPv2_1.MonitoringBases.HardWiredOnly,
@@ -1155,7 +1155,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
 
                                 var response = await testCSMSv2_1.GetMonitoringReport(
                                                    new OCPPv2_1.CSMS.GetMonitoringReportRequest(
-                                                       ChargeBoxId:                    OCPPv2_1.ChargeBox_Id.Parse(chargeBoxId),
+                                                       ChargingStationId:              OCPPv2_1.ChargingStation_Id.Parse(chargingStationId),
                                                        GetMonitoringReportRequestId:   RandomExtensions.RandomInt32(),
                                                        MonitoringCriteria:             new[] {
                                                                                            OCPPv2_1.MonitoringCriteria.PeriodicMonitoring
@@ -1201,7 +1201,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
 
                                 var response = await testCSMSv2_1.SetMonitoringLevel(
                                                    new OCPPv2_1.CSMS.SetMonitoringLevelRequest(
-                                                       ChargeBoxId:   OCPPv2_1.ChargeBox_Id.Parse(chargeBoxId),
+                                                       ChargingStationId:   OCPPv2_1.ChargingStation_Id.Parse(chargingStationId),
                                                        Severity:      commandArray[1].ToLower() switch {
                                                                           "danger"           => OCPPv2_1.Severities.Danger,
                                                                           "hardwarefailure"  => OCPPv2_1.Severities.HardwareFailure,
@@ -1232,7 +1232,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
 
                                 var response = await testCSMSv2_1.ClearVariableMonitoring(
                                                    new OCPPv2_1.CSMS.ClearVariableMonitoringRequest(
-                                                       ChargeBoxId:             OCPPv2_1.ChargeBox_Id.Parse(chargeBoxId),
+                                                       ChargingStationId:       OCPPv2_1.ChargingStation_Id.Parse(chargingStationId),
                                                        VariableMonitoringIds:   new[] {
                                                                                     OCPPv2_1.VariableMonitoring_Id.Parse(commandArray[1])
                                                                                 }
@@ -1257,7 +1257,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
 
                                 var response = await testCSMSv2_1.ChangeAvailability(
                                                    new OCPPv2_1.CSMS.ChangeAvailabilityRequest(
-                                                       ChargeBoxId:         OCPPv2_1.ChargeBox_Id.Parse(chargeBoxId),
+                                                       ChargingStationId:   OCPPv2_1.ChargingStation_Id.Parse(chargingStationId),
                                                        OperationalStatus:   commandArray[1].ToLower() switch {
                                                                                 "operative"  => OCPPv2_1.OperationalStatus.Operative,
                                                                                 _            => OCPPv2_1.OperationalStatus.Inoperative
@@ -1282,7 +1282,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                                 {
 
                                     var response = await testCSMSv1_6.ChangeAvailability(
-                                                       ChargeBoxId:    OCPPv1_6.ChargeBox_Id.Parse(chargeBoxId),
+                                                       ChargeBoxId:    OCPPv1_6.ChargeBox_Id.Parse(chargingStationId),
                                                        ConnectorId:    OCPPv1_6.Connector_Id.Parse(commandArray[1]),
                                                        Availability:   commandArray[2].ToLower() switch {
                                                                            "operative"  => OCPPv1_6.Availabilities.Operative,
@@ -1299,7 +1299,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
 
                                     var response = await testCSMSv2_1.ChangeAvailability(
                                                        new OCPPv2_1.CSMS.ChangeAvailabilityRequest(
-                                                           ChargeBoxId:         OCPPv2_1.ChargeBox_Id.Parse(chargeBoxId),
+                                                           ChargingStationId:   OCPPv2_1.ChargingStation_Id.Parse(chargingStationId),
                                                            OperationalStatus:   commandArray[2].ToLower() switch {
                                                                                     "operative"  => OCPPv2_1.OperationalStatus.Operative,
                                                                                     _            => OCPPv2_1.OperationalStatus.Inoperative
@@ -1326,7 +1326,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
 
                                 var response = await testCSMSv2_1.ChangeAvailability(
                                                    new OCPPv2_1.CSMS.ChangeAvailabilityRequest(
-                                                       ChargeBoxId:         OCPPv2_1.ChargeBox_Id.Parse(chargeBoxId),
+                                                       ChargingStationId:   OCPPv2_1.ChargingStation_Id.Parse(chargingStationId),
                                                        OperationalStatus:   commandArray[3].ToLower() switch {
                                                                                 "operative"  => OCPPv2_1.OperationalStatus.Operative,
                                                                                 _            => OCPPv2_1.OperationalStatus.Inoperative
@@ -1361,7 +1361,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                                 {
 
                                     var response = await testCSMSv1_6.TriggerMessage(
-                                                       ChargeBoxId:        OCPPv1_6.ChargeBox_Id.Parse(chargeBoxId),
+                                                       ChargeBoxId:        OCPPv1_6.ChargeBox_Id.Parse(chargingStationId),
                                                        RequestedMessage:   commandArray[1].ToLower() switch {
                                                                                "bootnotification"               => OCPPv1_6.MessageTriggers.BootNotification,
                                                                                "logstatusnotification"          => OCPPv1_6.MessageTriggers.LogStatusNotification,
@@ -1383,7 +1383,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
 
                                     var response = await testCSMSv2_1.TriggerMessage(
                                                        new OCPPv2_1.CSMS.TriggerMessageRequest(
-                                                           ChargeBoxId:        OCPPv2_1.ChargeBox_Id.Parse(chargeBoxId),
+                                                           ChargingStationId:  OCPPv2_1.ChargingStation_Id.Parse(chargingStationId),
                                                            RequestedMessage:   commandArray[1].ToLower() switch {
                                                                                    "bootnotification"                => OCPPv2_1.MessageTriggers.BootNotification,
                                                                                    "logstatusnotification"           => OCPPv2_1.MessageTriggers.LogStatusNotification,
@@ -1420,7 +1420,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                                 {
 
                                     var response = await testCSMSv1_6.TriggerMessage(
-                                                       ChargeBoxId:        OCPPv1_6.ChargeBox_Id.Parse(chargeBoxId),
+                                                       ChargeBoxId:        OCPPv1_6.ChargeBox_Id.Parse(chargingStationId),
                                                        RequestedMessage:   commandArray[2].ToLower() switch {
                                                                                "bootnotification"               => OCPPv1_6.MessageTriggers.BootNotification,
                                                                                "logstatusnotification"          => OCPPv1_6.MessageTriggers.LogStatusNotification,
@@ -1443,7 +1443,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
 
                                     var response = await testCSMSv2_1.TriggerMessage(
                                                        new OCPPv2_1.CSMS.TriggerMessageRequest(
-                                                           ChargeBoxId:        OCPPv2_1.ChargeBox_Id.Parse(chargeBoxId),
+                                                           ChargingStationId:  OCPPv2_1.ChargingStation_Id.Parse(chargingStationId),
                                                            RequestedMessage:   commandArray[2].ToLower() switch {
                                                                                    "bootnotification"                => OCPPv2_1.MessageTriggers.BootNotification,
                                                                                    "logstatusnotification"           => OCPPv2_1.MessageTriggers.LogStatusNotification,
@@ -1481,7 +1481,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
 
                                     var response = await testCSMSv2_1.TriggerMessage(
                                                        new OCPPv2_1.CSMS.TriggerMessageRequest(
-                                                           ChargeBoxId:        OCPPv2_1.ChargeBox_Id.Parse(chargeBoxId),
+                                                           ChargingStationId:  OCPPv2_1.ChargingStation_Id.Parse(chargingStationId),
                                                            RequestedMessage:   commandArray[3].ToLower() switch {
                                                                                    "bootnotification"                => OCPPv2_1.MessageTriggers.BootNotification,
                                                                                    "logstatusnotification"           => OCPPv2_1.MessageTriggers.LogStatusNotification,
@@ -1518,7 +1518,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                                 {
 
                                     var response = await testCSMSv1_6.UpdateFirmware(
-                                                       ChargeBoxId:         OCPPv1_6.ChargeBox_Id.Parse(chargeBoxId),
+                                                       ChargeBoxId:         OCPPv1_6.ChargeBox_Id.Parse(chargingStationId),
                                                        FirmwareURL:         URL.Parse(commandArray[1]),
                                                        RetrieveTimestamp:   Timestamp.Now + TimeSpan.FromMinutes(1)
                                                    );
@@ -1532,7 +1532,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
 
                                     var response = await testCSMSv2_1.UpdateFirmware(
                                                        new OCPPv2_1.CSMS.UpdateFirmwareRequest(
-                                                           ChargeBoxId:               OCPPv2_1.ChargeBox_Id.Parse(chargeBoxId),
+                                                           ChargingStationId:         OCPPv2_1.ChargingStation_Id.Parse(chargingStationId),
                                                            Firmware:                  new OCPPv2_1.Firmware(
                                                                                           FirmwareURL:          URL.Parse(commandArray[1]),
                                                                                           RetrieveTimestamp:    Timestamp.Now,
@@ -1582,7 +1582,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                             {
 
                                 var response = await testCSMSv1_6.ExtendedTriggerMessage(
-                                                   ChargeBoxId:        OCPPv1_6.ChargeBox_Id.Parse(chargeBoxId),
+                                                   ChargeBoxId:        OCPPv1_6.ChargeBox_Id.Parse(chargingStationId),
                                                    RequestedMessage:   commandArray[1].ToLower() switch {
                                                                            "bootnotification"               => OCPPv1_6.MessageTriggers.BootNotification,
                                                                            "logstatusnotification"          => OCPPv1_6.MessageTriggers.LogStatusNotification,
@@ -1615,7 +1615,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                             {
 
                                 var response = await testCSMSv1_6.ExtendedTriggerMessage(
-                                                   ChargeBoxId:        OCPPv1_6.ChargeBox_Id.Parse(chargeBoxId),
+                                                   ChargeBoxId:        OCPPv1_6.ChargeBox_Id.Parse(chargingStationId),
                                                    RequestedMessage:   commandArray[2].ToLower() switch {
                                                                            "bootnotification"               => OCPPv1_6.MessageTriggers.BootNotification,
                                                                            "logstatusnotification"          => OCPPv1_6.MessageTriggers.LogStatusNotification,
@@ -1646,7 +1646,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                                 {
 
                                     var response = await testCSMSv1_6.DataTransfer(
-                                                       ChargeBoxId:   OCPPv1_6.ChargeBox_Id.Parse(chargeBoxId),
+                                                       ChargeBoxId:   OCPPv1_6.ChargeBox_Id.Parse(chargingStationId),
                                                        VendorId:      commandArray[1]
                                                    );
 
@@ -1659,7 +1659,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
 
                                     var response = await testCSMSv2_1.TransferData(
                                                        new OCPPv2_1.CSMS.DataTransferRequest(
-                                                           ChargeBoxId:   OCPPv2_1.ChargeBox_Id.Parse(chargeBoxId),
+                                                           ChargingStationId:   OCPPv2_1.ChargingStation_Id.Parse(chargingStationId),
                                                            VendorId:      OCPPv2_1.Vendor_Id.   Parse(commandArray[1])
                                                        )
                                                    );
@@ -1682,7 +1682,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                                 {
 
                                     var response = await testCSMSv1_6.DataTransfer(
-                                                       ChargeBoxId:   OCPPv1_6.ChargeBox_Id.Parse(chargeBoxId),
+                                                       ChargeBoxId:   OCPPv1_6.ChargeBox_Id.Parse(chargingStationId),
                                                        VendorId:      commandArray[1],
                                                        MessageId:     commandArray[2]
                                                    );
@@ -1696,7 +1696,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
 
                                     var response = await testCSMSv2_1.TransferData(
                                                        new OCPPv2_1.CSMS.DataTransferRequest(
-                                                           ChargeBoxId:   OCPPv2_1.ChargeBox_Id.Parse(chargeBoxId),
+                                                           ChargingStationId:   OCPPv2_1.ChargingStation_Id.Parse(chargingStationId),
                                                            VendorId:      OCPPv2_1.Vendor_Id.   Parse(commandArray[1]),
                                                            MessageId:     commandArray[2]
                                                        )
@@ -1720,7 +1720,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                                 {
 
                                     var response = await testCSMSv1_6.DataTransfer(
-                                                       ChargeBoxId:   OCPPv1_6.ChargeBox_Id.Parse(chargeBoxId),
+                                                       ChargeBoxId:   OCPPv1_6.ChargeBox_Id.Parse(chargingStationId),
                                                        VendorId:      commandArray[1],
                                                        MessageId:     commandArray[2],
                                                        Data:          commandArray[3]
@@ -1735,10 +1735,10 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
 
                                     var response = await testCSMSv2_1.TransferData(
                                                        new OCPPv2_1.CSMS.DataTransferRequest(
-                                                           ChargeBoxId:   OCPPv2_1.ChargeBox_Id.Parse(chargeBoxId),
-                                                           VendorId:      OCPPv2_1.Vendor_Id.   Parse(commandArray[1]),
-                                                           MessageId:     commandArray[2],
-                                                           Data:          commandArray[3]
+                                                           ChargingStationId:   OCPPv2_1.ChargingStation_Id.Parse(chargingStationId),
+                                                           VendorId:            OCPPv2_1.Vendor_Id.   Parse(commandArray[1]),
+                                                           MessageId:           commandArray[2],
+                                                           Data:                commandArray[3]
                                                        )
                                                    );
 
@@ -1762,7 +1762,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                                 {
 
                                     var response = await testCSMSv1_6.CertificateSigned(
-                                                       ChargeBoxId:        OCPPv1_6.ChargeBox_Id.Parse(chargeBoxId),
+                                                       ChargeBoxId:        OCPPv1_6.ChargeBox_Id.Parse(chargingStationId),
                                                        CertificateChain:   OCPPv1_6.CertificateChain.Parse(
                                                                                File.ReadAllText(commandArray[1])
                                                                            )
@@ -1794,7 +1794,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
 
                                     var response = await testCSMSv2_1.SendSignedCertificate(
                                                        new OCPPv2_1.CSMS.CertificateSignedRequest(
-                                                           ChargeBoxId:        OCPPv2_1.ChargeBox_Id.Parse(chargeBoxId),
+                                                           ChargingStationId:  OCPPv2_1.ChargingStation_Id.Parse(chargingStationId),
                                                            CertificateChain:   OCPPv2_1.CertificateChain.Parse(
                                                                                    File.ReadAllText(commandArray[1])
                                                                                ),
@@ -1824,7 +1824,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
 
                                     //   InstallCertificate $FileName csrc|mrc
                                     var response = await testCSMSv1_6.InstallCertificate(
-                                                       ChargeBoxId:       OCPPv1_6.ChargeBox_Id.Parse(chargeBoxId),
+                                                       ChargeBoxId:       OCPPv1_6.ChargeBox_Id.Parse(chargingStationId),
                                                        CertificateType:   commandArray[2].ToLower() switch {
                                                                               "csrc"  => OCPPv1_6.CertificateUse.CentralSystemRootCertificate,
                                                                               _       => OCPPv1_6.CertificateUse.ManufacturerRootCertificate
@@ -1844,7 +1844,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                                     //   InstallCertificate $FileName v2grc|morc|csrc|v2gcc
                                     var response = await testCSMSv2_1.InstallCertificate(
                                                        new OCPPv2_1.CSMS.InstallCertificateRequest(
-                                                           ChargeBoxId:       OCPPv2_1.ChargeBox_Id.Parse(chargeBoxId),
+                                                           ChargingStationId: OCPPv2_1.ChargingStation_Id.Parse(chargingStationId),
                                                            CertificateType:   commandArray[2].ToLower() switch {
                                                                                   "v2grc"  => OCPPv2_1.CertificateUse.V2GRootCertificate,
                                                                                   "morc"   => OCPPv2_1.CertificateUse.MORootCertificate,
@@ -1877,7 +1877,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                                 {
 
                                     var response = await testCSMSv1_6.GetInstalledCertificateIds(
-                                                       ChargeBoxId:       OCPPv1_6.ChargeBox_Id.Parse(chargeBoxId),
+                                                       ChargeBoxId:       OCPPv1_6.ChargeBox_Id.Parse(chargingStationId),
                                                        CertificateType:   commandArray[1].ToLower() switch {
                                                                               "csrc"  => OCPPv1_6.CertificateUse.CentralSystemRootCertificate,
                                                                               _       => OCPPv1_6.CertificateUse.ManufacturerRootCertificate
@@ -1897,7 +1897,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                                     //   GetInstalledCertificateIds v2gcc
                                     var response = await testCSMSv2_1.GetInstalledCertificateIds(
                                                        new OCPPv2_1.CSMS.GetInstalledCertificateIdsRequest(
-                                                           ChargeBoxId:        OCPPv2_1.ChargeBox_Id.Parse(chargeBoxId),
+                                                           ChargingStationId:  OCPPv2_1.ChargingStation_Id.Parse(chargingStationId),
                                                            CertificateTypes:   new[] {
                                                                                    commandArray[1].ToLower() switch {
                                                                                        "v2grc"  => OCPPv2_1.CertificateUse.V2GRootCertificate,
@@ -1928,7 +1928,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                                 {
 
                                     var response = await testCSMSv1_6.DeleteCertificate(
-                                                       ChargeBoxId:           OCPPv1_6.ChargeBox_Id.Parse(chargeBoxId),
+                                                       ChargeBoxId:           OCPPv1_6.ChargeBox_Id.Parse(chargingStationId),
                                                        CertificateHashData:   new OCPPv1_6.CertificateHashData(
                                                                                   commandArray[1].ToLower() switch {
                                                                                       "sha512"  => OCPPv1_6.HashAlgorithms.SHA512,
@@ -1950,7 +1950,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
 
                                     var response = await testCSMSv2_1.DeleteCertificate(
                                                        new OCPPv2_1.CSMS.DeleteCertificateRequest(
-                                                           ChargeBoxId:           OCPPv2_1.ChargeBox_Id.Parse(chargeBoxId),
+                                                           ChargingStationId:     OCPPv2_1.ChargingStation_Id.Parse(chargingStationId),
                                                            CertificateHashData:   new OCPPv2_1.CertificateHashData(
                                                                                       commandArray[1].ToLower() switch {
                                                                                           "sha512"  => OCPPv2_1.HashAlgorithms.SHA512,
@@ -1985,7 +1985,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                                 if (version == 1)
                                 {
 
-                                    var response = await testCSMSv1_6.GetLocalListVersion(OCPPv1_6.ChargeBox_Id.Parse(chargeBoxId));
+                                    var response = await testCSMSv1_6.GetLocalListVersion(OCPPv1_6.ChargeBox_Id.Parse(chargingStationId));
 
                                     Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
                                     Console.WriteLine(response.ToJSON());
@@ -1996,7 +1996,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
 
                                     var response = await testCSMSv2_1.GetLocalListVersion(
                                                         new OCPPv2_1.CSMS.GetLocalListVersionRequest(
-                                                            OCPPv2_1.ChargeBox_Id.Parse(chargeBoxId)
+                                                      OCPPv2_1.ChargingStation_Id.Parse(chargingStationId)
                                                         )
                                                    );
 
@@ -2018,7 +2018,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                                 if (version == 1)
                                 {
 
-                                    var response = await testCSMSv1_6.SendLocalList(OCPPv1_6.ChargeBox_Id.Parse(chargeBoxId),
+                                    var response = await testCSMSv1_6.SendLocalList(OCPPv1_6.ChargeBox_Id.Parse(chargingStationId),
                                                                                          2, // 0 is not allowed!
                                                                                          OCPPv1_6.UpdateTypes.Full,
                                                                                          new OCPPv1_6.AuthorizationData[] {
@@ -2038,7 +2038,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
 
                                     var response = await testCSMSv2_1.SendLocalList(
                                                        new OCPPv2_1.CSMS.SendLocalListRequest(
-                                                           OCPPv2_1.ChargeBox_Id.Parse(chargeBoxId),
+                                                     OCPPv2_1.ChargingStation_Id.Parse(chargingStationId),
                                                            1, // 0 is not allowed!
                                                            OCPPv2_1.UpdateTypes.Full,
                                                            new[] {
@@ -2074,7 +2074,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                             if (command == "clearcache"             && commandArray.Length == 2)
                             {
 
-                                var response = await testCSMSv1_6.ClearCache(OCPPv1_6.ChargeBox_Id.Parse(chargeBoxId));
+                                var response = await testCSMSv1_6.ClearCache(OCPPv1_6.ChargeBox_Id.Parse(chargingStationId));
 
                                 Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
                                 Console.WriteLine(response.ToJSON());
@@ -2094,7 +2094,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                                 {
 
                                     var response = await testCSMSv1_6.ReserveNow(
-                                                       ChargeBoxId:     OCPPv1_6.ChargeBox_Id.  Parse(chargeBoxId),
+                                                       ChargeBoxId:     OCPPv1_6.ChargeBox_Id.  Parse(chargingStationId),
                                                        ConnectorId:     OCPPv1_6.Connector_Id.  Parse(commandArray[1]),
                                                        ReservationId:   OCPPv1_6.Reservation_Id.Parse(commandArray[2]),
                                                        ExpiryDate:      Timestamp.Now + TimeSpan.FromMinutes(15),
@@ -2110,7 +2110,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
 
                                     var response = await testCSMSv2_1.ReserveNow(
                                                        new OCPPv2_1.CSMS.ReserveNowRequest(
-                                                           ChargeBoxId:     OCPPv2_1.ChargeBox_Id.  Parse(chargeBoxId),
+                                                           ChargingStationId:     OCPPv2_1.ChargingStation_Id.  Parse(chargingStationId),
                                                            Id:   OCPPv2_1.Reservation_Id.Parse(commandArray[2]),
                                                            ExpiryDate:      Timestamp.Now + TimeSpan.FromMinutes(15),
                                                            IdToken:         new OCPPv2_1.IdToken(
@@ -2143,7 +2143,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                                 {
 
                                     var response = await testCSMSv1_6.CancelReservation(
-                                                       ChargeBoxId:     OCPPv1_6.ChargeBox_Id.  Parse(chargeBoxId),
+                                                       ChargeBoxId:     OCPPv1_6.ChargeBox_Id.  Parse(chargingStationId),
                                                        ReservationId:   OCPPv1_6.Reservation_Id.Parse(commandArray[1])
                                                    );
 
@@ -2156,7 +2156,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
 
                                     var response = await testCSMSv2_1.CancelReservation(
                                                        new OCPPv2_1.CSMS.CancelReservationRequest(
-                                                           ChargeBoxId:     OCPPv2_1.ChargeBox_Id.  Parse(chargeBoxId),
+                                                           ChargingStationId:     OCPPv2_1.ChargingStation_Id.  Parse(chargingStationId),
                                                            ReservationId:   OCPPv2_1.Reservation_Id.Parse(commandArray[1])
                                                        )
                                                    );
@@ -2180,7 +2180,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                                 {
 
                                     var response = await testCSMSv1_6.RemoteStartTransaction(
-                                                       ChargeBoxId:       OCPPv1_6.ChargeBox_Id.Parse(chargeBoxId),
+                                                       ChargeBoxId:       OCPPv1_6.ChargeBox_Id.Parse(chargingStationId),
                                                        IdTag:             OCPPv1_6.IdToken.     Parse(commandArray[2]),
                                                        ConnectorId:       OCPPv1_6.Connector_Id.Parse(commandArray[1]),
                                                        ChargingProfile:   null
@@ -2195,7 +2195,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
 
                                     var response = await testCSMSv2_1.StartCharging(
                                                        new OCPPv2_1.CSMS.RequestStartTransactionRequest(
-                                                           ChargeBoxId:                        OCPPv2_1.ChargeBox_Id.Parse(chargeBoxId),
+                                                           ChargingStationId:                  OCPPv2_1.ChargingStation_Id.Parse(chargingStationId),
                                                            RequestStartTransactionRequestId:   OCPPv2_1.RemoteStart_Id.NewRandom,
                                                            IdToken:                            new OCPPv2_1.IdToken(
                                                                                                    Value:             commandArray[2],
@@ -2227,7 +2227,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                                 {
 
                                     var response = await testCSMSv1_6.RemoteStopTransaction(
-                                                       ChargeBoxId:     OCPPv1_6.ChargeBox_Id.Parse(chargeBoxId),
+                                                       ChargeBoxId:     OCPPv1_6.ChargeBox_Id.Parse(chargingStationId),
                                                        TransactionId:   OCPPv1_6.Transaction_Id.Parse(commandArray[1])
                                                    );
 
@@ -2240,8 +2240,8 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
 
                                     var response = await testCSMSv2_1.StopCharging(
                                                        new OCPPv2_1.CSMS.RequestStopTransactionRequest(
-                                                           ChargeBoxId:     OCPPv2_1.ChargeBox_Id.  Parse(chargeBoxId),
-                                                           TransactionId:   OCPPv2_1.Transaction_Id.Parse(commandArray[1])
+                                                           ChargingStationId:   OCPPv2_1.ChargingStation_Id.Parse(chargingStationId),
+                                                           TransactionId:       OCPPv2_1.Transaction_Id.    Parse(commandArray[1])
                                                        )
                                                    );
 
@@ -2262,7 +2262,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
 
                                 var response = await testCSMSv2_1.GetTransactionStatus(
                                                    new OCPPv2_1.CSMS.GetTransactionStatusRequest(
-                                                       ChargeBoxId:   OCPPv2_1.ChargeBox_Id.Parse(chargeBoxId)
+                                                       ChargingStationId:   OCPPv2_1.ChargingStation_Id.Parse(chargingStationId)
                                                    )
                                                );
 
@@ -2279,8 +2279,8 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
 
                                 var response = await testCSMSv2_1.GetTransactionStatus(
                                                    new OCPPv2_1.CSMS.GetTransactionStatusRequest(
-                                                       ChargeBoxId:     OCPPv2_1.ChargeBox_Id.  Parse(chargeBoxId),
-                                                       TransactionId:   OCPPv2_1.Transaction_Id.Parse(commandArray[1])
+                                                       ChargingStationId:   OCPPv2_1.ChargingStation_Id.Parse(chargingStationId),
+                                                       TransactionId:       OCPPv2_1.Transaction_Id.    Parse(commandArray[1])
                                                    )
                                                );
 
@@ -2300,7 +2300,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                                 if (version == 1)
                                 {
 
-                                    var response = await testCSMSv1_6.SetChargingProfile(ChargeBoxId:      OCPPv1_6.ChargeBox_Id.Parse(chargeBoxId),
+                                    var response = await testCSMSv1_6.SetChargingProfile(ChargeBoxId:      OCPPv1_6.ChargeBox_Id.Parse(chargingStationId),
                                                                                          ConnectorId:      OCPPv1_6.Connector_Id.Parse(commandArray[2]),
                                                                                          ChargingProfile:  new OCPPv1_6.ChargingProfile(
                                                                                                                OCPPv1_6.ChargingProfile_Id.Parse("100"),
@@ -2345,7 +2345,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
 
                                     var response = await testCSMSv2_1.SetChargingProfile(
                                                        new OCPPv2_1.CSMS.SetChargingProfileRequest(
-                                                           ChargeBoxId:      OCPPv2_1.ChargeBox_Id.Parse(chargeBoxId),
+                                                           ChargingStationId:OCPPv2_1.ChargingStation_Id.Parse(chargingStationId),
                                                            EVSEId:           OCPPv2_1.EVSE_Id.     Parse(commandArray[1]),
                                                            ChargingProfile:  new OCPPv2_1.ChargingProfile(
                                                                                  OCPPv2_1.ChargingProfile_Id.Parse("100"),
@@ -2397,7 +2397,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                             if (command == "setprofile2"            && commandArray.Length == 3)
                             {
 
-                                var response = await testCSMSv1_6.SetChargingProfile(ChargeBoxId:      OCPPv1_6.ChargeBox_Id.Parse(chargeBoxId),
+                                var response = await testCSMSv1_6.SetChargingProfile(ChargeBoxId:      OCPPv1_6.ChargeBox_Id.Parse(chargingStationId),
                                                                                      ConnectorId:      OCPPv1_6.Connector_Id.Parse(commandArray[2]),
                                                                                      ChargingProfile:  new OCPPv1_6.ChargingProfile(
                                                                                                            OCPPv1_6.ChargingProfile_Id.Parse("100"),
@@ -2448,7 +2448,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
 
                                 var response = await testCSMSv2_1.GetChargingProfiles(
                                                    new OCPPv2_1.CSMS.GetChargingProfilesRequest(
-                                                       ChargeBoxId:                    OCPPv2_1.ChargeBox_Id.Parse(chargeBoxId),
+                                                       ChargingStationId:              OCPPv2_1.ChargingStation_Id.Parse(chargingStationId),
                                                        GetChargingProfilesRequestId:   RandomExtensions.RandomInt32(),
                                                        ChargingProfile:                new OCPPv2_1.ChargingProfileCriterion(
                                                                                            ChargingProfilePurpose:   OCPPv2_1.ChargingProfilePurposes.TxDefaultProfile,
@@ -2473,7 +2473,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
 
                                 var response = await testCSMSv2_1.GetChargingProfiles(
                                                    new OCPPv2_1.CSMS.GetChargingProfilesRequest(
-                                                       ChargeBoxId:                    OCPPv2_1.ChargeBox_Id.Parse(chargeBoxId),
+                                                       ChargingStationId:              OCPPv2_1.ChargingStation_Id.Parse(chargingStationId),
                                                        GetChargingProfilesRequestId:   RandomExtensions.RandomInt32(),
                                                        ChargingProfile:                new OCPPv2_1.ChargingProfileCriterion(
                                                                                            ChargingProfilePurpose:   null,
@@ -2504,7 +2504,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                                 {
 
                                     var response = await testCSMSv1_6.ClearChargingProfile(
-                                                       ChargeBoxId:   OCPPv1_6.ChargeBox_Id.Parse(chargeBoxId)
+                                                       ChargeBoxId:   OCPPv1_6.ChargeBox_Id.Parse(chargingStationId)
                                                    );
 
                                     Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
@@ -2516,7 +2516,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
 
                                     var response = await testCSMSv2_1.ClearChargingProfile(
                                                        new OCPPv2_1.CSMS.ClearChargingProfileRequest(
-                                                           ChargeBoxId:   OCPPv2_1.ChargeBox_Id.Parse(chargeBoxId)
+                                                           ChargingStationId:   OCPPv2_1.ChargingStation_Id.Parse(chargingStationId)
                                                        )
                                                    );
 
@@ -2537,7 +2537,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                                 {
 
                                     var response = await testCSMSv1_6.ClearChargingProfile(
-                                                       ChargeBoxId:        OCPPv1_6.ChargeBox_Id.Parse(chargeBoxId),
+                                                       ChargeBoxId:        OCPPv1_6.ChargeBox_Id.Parse(chargingStationId),
                                                        ChargingProfileId:  OCPPv1_6.ChargingProfile_Id.Parse(commandArray[1])
                                                    );
 
@@ -2550,7 +2550,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
 
                                     var response = await testCSMSv2_1.ClearChargingProfile(
                                                        new OCPPv2_1.CSMS.ClearChargingProfileRequest(
-                                                           ChargeBoxId:         OCPPv2_1.ChargeBox_Id.Parse(chargeBoxId),
+                                                           ChargingStationId:   OCPPv2_1.ChargingStation_Id.Parse(chargingStationId),
                                                            ChargingProfileId:   OCPPv2_1.ChargingProfile_Id.Parse(commandArray[1])
                                                        )
                                                    );
@@ -2573,7 +2573,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
 
                                     //   ClearChargingProfile $ConnectorId $ChargingProfileId
                                     var response = await testCSMSv1_6.ClearChargingProfile(
-                                                       ChargeBoxId:              OCPPv1_6.ChargeBox_Id.      Parse(chargeBoxId),
+                                                       ChargeBoxId:              OCPPv1_6.ChargeBox_Id.      Parse(chargingStationId),
                                                        ChargingProfileId:        OCPPv1_6.ChargingProfile_Id.Parse(commandArray[2]),
                                                        ConnectorId:              OCPPv1_6.Connector_Id.      Parse(commandArray[1]),
                                                        ChargingProfilePurpose:   null,
@@ -2590,7 +2590,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                                     //   ClearChargingProfile $EVSEId $ChargingProfileId
                                     var response = await testCSMSv2_1.ClearChargingProfile(
                                                        new OCPPv2_1.CSMS.ClearChargingProfileRequest(
-                                                           ChargeBoxId:               OCPPv2_1.ChargeBox_Id.      Parse(chargeBoxId),
+                                                           ChargingStationId:               OCPPv2_1.ChargingStation_Id.      Parse(chargingStationId),
                                                            ChargingProfileId:         OCPPv2_1.ChargingProfile_Id.Parse(commandArray[2]),
                                                            ChargingProfileCriteria:   new OCPPv2_1.ClearChargingProfile(
                                                                                           EVSEId:                   OCPPv2_1.EVSE_Id.Parse(commandArray[1]),
@@ -2619,7 +2619,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                                 {
 
                                     var response = await testCSMSv1_6.GetCompositeSchedule(
-                                                       ChargeBoxId:   OCPPv1_6.ChargeBox_Id.Parse(chargeBoxId),
+                                                       ChargeBoxId:   OCPPv1_6.ChargeBox_Id.Parse(chargingStationId),
                                                        ConnectorId:   OCPPv1_6.Connector_Id.Parse(commandArray[1]),
                                                        Duration:      TimeSpan.FromSeconds(UInt32.Parse(commandArray[2]))
                                                    );
@@ -2633,7 +2633,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
 
                                     var response = await testCSMSv2_1.GetCompositeSchedule(
                                                        new OCPPv2_1.CSMS.GetCompositeScheduleRequest(
-                                                           ChargeBoxId:        OCPPv2_1.ChargeBox_Id.Parse(chargeBoxId),
+                                                           ChargingStationId:  OCPPv2_1.ChargingStation_Id.Parse(chargingStationId),
                                                            Duration:           TimeSpan.FromSeconds(UInt32.Parse(commandArray[2])),
                                                            EVSEId:             OCPPv2_1.EVSE_Id.Parse(commandArray[1]),
                                                            ChargingRateUnit:   null
@@ -2665,7 +2665,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                                 {
 
                                     var response = await testCSMSv1_6.UnlockConnector(
-                                                       ChargeBoxId:   OCPPv1_6.ChargeBox_Id.Parse(chargeBoxId),
+                                                       ChargeBoxId:   OCPPv1_6.ChargeBox_Id.Parse(chargingStationId),
                                                        ConnectorId:   OCPPv1_6.Connector_Id.Parse(commandArray[1])
                                                    );
 
@@ -2695,7 +2695,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
 
                                     var response = await testCSMSv2_1.UnlockConnector(
                                                        new OCPPv2_1.CSMS.UnlockConnectorRequest(
-                                                           ChargeBoxId:   OCPPv2_1.ChargeBox_Id.Parse(chargeBoxId),
+                                                           ChargingStationId:   OCPPv2_1.ChargingStation_Id.Parse(chargingStationId),
                                                            EVSEId:        OCPPv2_1.EVSE_Id.     Parse(commandArray[1]),
                                                            ConnectorId:   OCPPv2_1.Connector_Id.Parse(commandArray[2])
                                                        )
@@ -2722,7 +2722,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
 
                                 var response = await testCSMSv2_1.SetDisplayMessage(
                                                    new OCPPv2_1.CSMS.SetDisplayMessageRequest(
-                                                       ChargeBoxId:   OCPPv2_1.ChargeBox_Id.Parse(chargeBoxId),
+                                                       ChargingStationId:   OCPPv2_1.ChargingStation_Id.Parse(chargingStationId),
                                                        Message:       new OCPPv2_1.MessageInfo(
                                                                           Id:               OCPPv2_1.DisplayMessage_Id.NewRandom,
                                                                           Priority:         OCPPv2_1.MessagePriorities.NormalCycle,
@@ -2755,7 +2755,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
 
                                 var response = await testCSMSv2_1.GetDisplayMessages(
                                                    new OCPPv2_1.CSMS.GetDisplayMessagesRequest(
-                                                       ChargeBoxId:                   OCPPv2_1.ChargeBox_Id.Parse(chargeBoxId),
+                                                       ChargingStationId:             OCPPv2_1.ChargingStation_Id.Parse(chargingStationId),
                                                        GetDisplayMessagesRequestId:   RandomExtensions.RandomInt32(),
                                                        Ids:                           null,
                                                        Priority:                      null,
@@ -2776,7 +2776,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
 
                                 var response = await testCSMSv2_1.GetDisplayMessages(
                                                    new OCPPv2_1.CSMS.GetDisplayMessagesRequest(
-                                                       ChargeBoxId:                   OCPPv2_1.ChargeBox_Id.Parse(chargeBoxId),
+                                                       ChargingStationId:             OCPPv2_1.ChargingStation_Id.Parse(chargingStationId),
                                                        GetDisplayMessagesRequestId:   RandomExtensions.RandomInt32(),
                                                        Ids:                           new[] {
                                                                                           OCPPv2_1.DisplayMessage_Id.Parse(commandArray[1])
@@ -2799,7 +2799,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
 
                                 var response = await testCSMSv2_1.GetDisplayMessages(
                                                    new OCPPv2_1.CSMS.GetDisplayMessagesRequest(
-                                                       ChargeBoxId:                   OCPPv2_1.ChargeBox_Id.Parse(chargeBoxId),
+                                                       ChargingStationId:             OCPPv2_1.ChargingStation_Id.Parse(chargingStationId),
                                                        GetDisplayMessagesRequestId:   RandomExtensions.RandomInt32(),
                                                        Ids:                           null,
                                                        Priority:                      null,
@@ -2827,7 +2827,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
 
                                 var response = await testCSMSv2_1.SendCostUpdated(
                                                    new OCPPv2_1.CSMS.CostUpdatedRequest(
-                                                       ChargeBoxId:     OCPPv2_1.ChargeBox_Id.  Parse(chargeBoxId),
+                                                       ChargingStationId:     OCPPv2_1.ChargingStation_Id.  Parse(chargingStationId),
                                                        TotalCost:       Decimal.                Parse(commandArray[1]),
                                                        TransactionId:   OCPPv2_1.Transaction_Id.Parse(commandArray[2])
                                                    )
@@ -2848,7 +2848,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
 
                                 var response = await testCSMSv2_1.RequestCustomerInformation(
                                                    new OCPPv2_1.CSMS.CustomerInformationRequest(
-                                                       ChargeBoxId:                    OCPPv2_1.ChargeBox_Id.Parse(chargeBoxId),
+                                                       ChargingStationId:              OCPPv2_1.ChargingStation_Id.Parse(chargingStationId),
                                                        CustomerInformationRequestId:   RandomExtensions.RandomInt32(),
                                                        Report:                         true,
                                                        Clear:                          false,
@@ -2878,7 +2878,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                             if (command == "getconf"                && commandArray.Length == 2)
                             {
 
-                                var response = await testCSMSv1_6.GetConfiguration(ChargeBoxId: OCPPv1_6.ChargeBox_Id.Parse(chargeBoxId));
+                                var response = await testCSMSv1_6.GetConfiguration(ChargeBoxId: OCPPv1_6.ChargeBox_Id.Parse(chargingStationId));
 
                                 Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
                                 Console.WriteLine(response.ToJSON());
@@ -2890,7 +2890,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                             if (command == "getconf"                && commandArray.Length > 2)
                             {
 
-                                var response = await testCSMSv1_6.GetConfiguration(ChargeBoxId:  OCPPv1_6.ChargeBox_Id.Parse(chargeBoxId),
+                                var response = await testCSMSv1_6.GetConfiguration(ChargeBoxId:  OCPPv1_6.ChargeBox_Id.Parse(chargingStationId),
                                                                                    Keys:         commandArray.Skip(2));
 
                                 Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
@@ -2906,7 +2906,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                             if (command == "setconf"                && commandArray.Length == 4)
                             {
 
-                                var response = await testCSMSv1_6.ChangeConfiguration(ChargeBoxId:  OCPPv1_6.ChargeBox_Id.Parse(chargeBoxId),
+                                var response = await testCSMSv1_6.ChangeConfiguration(ChargeBoxId:  OCPPv1_6.ChargeBox_Id.Parse(chargingStationId),
                                                                                       Key:          commandArray[2],
                                                                                       Value:        commandArray[3]);
 
@@ -2923,7 +2923,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                             if (command == "getdiag"                && commandArray.Length == 3)
                             {
 
-                                var response = await testCSMSv1_6.GetDiagnostics(ChargeBoxId:    OCPPv1_6.ChargeBox_Id.Parse(chargeBoxId),
+                                var response = await testCSMSv1_6.GetDiagnostics(ChargeBoxId:    OCPPv1_6.ChargeBox_Id.Parse(chargingStationId),
                                                                                  Location:       commandArray[2],
                                                                                  StartTime:      null,
                                                                                  StopTime:       null,
@@ -2939,7 +2939,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                             if (command == "getdiag"                && commandArray.Length == 7)
                             {
 
-                                var response = await testCSMSv1_6.GetDiagnostics(ChargeBoxId:    OCPPv1_6.ChargeBox_Id.Parse(chargeBoxId),
+                                var response = await testCSMSv1_6.GetDiagnostics(ChargeBoxId:    OCPPv1_6.ChargeBox_Id.Parse(chargingStationId),
                                                                                  Location:       commandArray[2],
                                                                                  StartTime:      DateTime.Parse(commandArray[3]).ToUniversalTime(),
                                                                                  StopTime:       DateTime.Parse(commandArray[4]).ToUniversalTime(),
