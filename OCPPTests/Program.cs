@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (c) 2014-2020 GraphDefined GmbH
+ * Copyright (c) 2014-2023 GraphDefined GmbH
  * This file is part of WWCP OCPP <https://github.com/OpenChargingCloud/WWCP_OCPP>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -102,8 +102,8 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
 
             #region Machine-dependent configuration
 
-            //SMTPClient API_SMTPClient  = null;
-            DNSClient  API_DNSClient   = null;
+            //SMTPClient? API_SMTPClient  = null;
+            DNSClient? API_DNSClient   = null;
 
             switch (Environment.MachineName)
             {
