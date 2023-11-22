@@ -34,6 +34,7 @@ using Org.BouncyCastle.Crypto.Parameters;
 using Org.BouncyCastle.Crypto.Utilities;
 using Org.BouncyCastle.Crypto;
 using Org.BouncyCastle.Security;
+using cloud.charging.open.protocols.OCPPv1_6;
 
 #endregion
 
@@ -219,6 +220,9 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
 
 
             Directory.CreateDirectory(Path.Combine(AppContext.BaseDirectory, "HTTPSSEs"));
+
+
+            cloud.charging.open.protocols.OCPPv2_1.TestChargingStation.ShowAllResponses();
 
 
             #region Setup CSMS v1.6
@@ -1763,7 +1767,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
 
 
                             //   TransferData graphdefined message
-                            if (command == "transferdata".ToLower() && commandArray.Length == 3)
+                            if (command == "transferdata".ToLower() && (commandArray.Length == 2 || commandArray.Length == 3))
                             {
 
                                 if (version == 1)
@@ -1772,7 +1776,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                                     var response = await testCSMSv1_6.DataTransfer(
                                                        ChargeBoxId:   OCPPv1_6.ChargeBox_Id.Parse(chargingStationId),
                                                        VendorId:      commandArray[1],
-                                                       MessageId:     commandArray[2]
+                                                       MessageId:     commandArray.Length == 3 ? commandArray[2] : null
                                                    );
 
                                     Console.WriteLine(commandArray.AggregateWith(" ") + " => " + response.Runtime.TotalMilliseconds + " ms");
@@ -1786,7 +1790,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                                                        new OCPPv2_1.CSMS.DataTransferRequest(
                                                            ChargingStationId:   OCPPv2_1.ChargingStation_Id.Parse(chargingStationId),
                                                            VendorId:      OCPPv2_1.Vendor_Id.   Parse(commandArray[1]),
-                                                           MessageId:     commandArray[2]
+                                                           MessageId:     commandArray.Length == 3 ? OCPPv2_1.Message_Id.Parse(commandArray[2]) : null
                                                        )
                                                    );
 
@@ -1824,8 +1828,8 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                                     var response = await testCSMSv2_1.TransferData(
                                                        new OCPPv2_1.CSMS.DataTransferRequest(
                                                            ChargingStationId:   OCPPv2_1.ChargingStation_Id.Parse(chargingStationId),
-                                                           VendorId:            OCPPv2_1.Vendor_Id.   Parse(commandArray[1]),
-                                                           MessageId:           commandArray[2],
+                                                           VendorId:            OCPPv2_1.Vendor_Id.         Parse(commandArray[1]),
+                                                           MessageId:           OCPPv2_1.Message_Id.        Parse(commandArray[2]),
                                                            Data:                commandArray[3]
                                                        )
                                                    );
