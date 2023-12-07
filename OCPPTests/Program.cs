@@ -34,7 +34,6 @@ using Org.BouncyCastle.Crypto.Parameters;
 using Org.BouncyCastle.Crypto.Utilities;
 using Org.BouncyCastle.Crypto;
 using Org.BouncyCastle.Security;
-using cloud.charging.open.protocols.OCPPv1_6;
 
 #endregion
 
@@ -257,47 +256,47 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
 
 
             (testCSMSv1_6.CentralSystemServers.First() as WebSocketServer).OnNewWebSocketConnection += async (timestamp, server, connection, eventTrackingId, ct) => {
-                DebugX.Log(String.Concat("HTTP web socket server on ", server.IPSocket, " new connection with ", connection.TryGetCustomData("chargeBoxId") + " (" + connection.RemoteSocket + ")"));
+                DebugX.Log(String.Concat("HTTP web socket server on ", server.IPSocket, " new connection with ", connection.TryGetCustomData("chargingStationId") + " (" + connection.RemoteSocket + ")"));
                 lock (testCSMSv1_6)
                 {
                     File.AppendAllText(Path.Combine(AppContext.BaseDirectory, "TextMessages.log"),
-                                       String.Concat(timestamp.ToIso8601(), "\tNEW\t", connection.TryGetCustomData("chargeBoxId"), "\t", connection.RemoteSocket, Environment.NewLine));
+                                       String.Concat(timestamp.ToIso8601(), "\tNEW\t", connection.TryGetCustomData("chargingStationId"), "\t", connection.RemoteSocket, Environment.NewLine));
                 }
             };
 
-            (testCSMSv1_6.CentralSystemServers.First() as WebSocketServer).OnTextMessageReceived     += async (timestamp, server, connection, eventTrackingId, requestMessage) => {
+            (testCSMSv1_6.CentralSystemServers.First() as WebSocketServer).OnTextMessageReceived     += async (timestamp, server, connection, eventTrackingId, requestMessage, cancellationToken) => {
                 DebugX.Log(String.Concat("Received a web socket TEXT message: '", requestMessage, "'!"));
                 lock (testCSMSv1_6)
                 {
                     File.AppendAllText(Path.Combine(AppContext.BaseDirectory, "TextMessages.log"),
-                                       String.Concat(timestamp.ToIso8601(), "\tIN\t", connection.TryGetCustomData("chargeBoxId"), "\t", connection.RemoteSocket, "\t", requestMessage, Environment.NewLine));
+                                       String.Concat(timestamp.ToIso8601(), "\tIN\t", connection.TryGetCustomData("chargingStationId"), "\t", connection.RemoteSocket, "\t", requestMessage, Environment.NewLine));
                 }
             };
 
-            (testCSMSv1_6.CentralSystemServers.First() as WebSocketServer).OnTextMessageSent        += async (timestamp, server, connection, eventTrackingId, requestMessage) => {
+            (testCSMSv1_6.CentralSystemServers.First() as WebSocketServer).OnTextMessageSent        += async (timestamp, server, connection, eventTrackingId, requestMessage, cancellationToken) => {
                 DebugX.Log(String.Concat("Sent     a web socket TEXT message: '", requestMessage, "'!"));
                 lock (testCSMSv1_6)
                 {
                     File.AppendAllText(Path.Combine(AppContext.BaseDirectory, "TextMessages.log"),
-                                       String.Concat(timestamp.ToIso8601(), "\tOUT\t", connection.TryGetCustomData("chargeBoxId"), "\t", connection.RemoteSocket, "\t", requestMessage, Environment.NewLine));
+                                       String.Concat(timestamp.ToIso8601(), "\tOUT\t", connection.TryGetCustomData("chargingStationId"), "\t", connection.RemoteSocket, "\t", requestMessage, Environment.NewLine));
                 }
             };
 
-            (testCSMSv1_6.CentralSystemServers.First() as WebSocketServer).OnCloseMessageReceived += async (timestamp, server, connection, eventTrackingId, statusCode, reason) => {
-                DebugX.Log(String.Concat("HTTP web socket server on ", server.IPSocket, " charge box ", connection.TryGetCustomData("chargeBoxId") + " (" + connection.RemoteSocket + ") closed web socket connection"));
+            (testCSMSv1_6.CentralSystemServers.First() as WebSocketServer).OnCloseMessageReceived += async (timestamp, server, connection, eventTrackingId, statusCode, reason, cancellationToken) => {
+                DebugX.Log(String.Concat("HTTP web socket server on ", server.IPSocket, " charge box ", connection.TryGetCustomData("chargingStationId") + " (" + connection.RemoteSocket + ") closed web socket connection"));
                 lock (testCSMSv1_6)
                 {
                     File.AppendAllText(Path.Combine(AppContext.BaseDirectory, "TextMessages.log"),
-                                       String.Concat(timestamp.ToIso8601(), "\tCLOSE\t", connection.TryGetCustomData("chargeBoxId"), "\t", connection.RemoteSocket, Environment.NewLine));
+                                       String.Concat(timestamp.ToIso8601(), "\tCLOSE\t", connection.TryGetCustomData("chargingStationId"), "\t", connection.RemoteSocket, Environment.NewLine));
                 }
             };
 
-            (testCSMSv1_6.CentralSystemServers.First() as WebSocketServer).OnTCPConnectionClosed += async (timestamp, server, connection, eventTrackingId, ct) => {
-                DebugX.Log(String.Concat("HTTP web socket server on ", server.IPSocket, " closed TCP connection with ", connection.TryGetCustomData("chargeBoxId") + " (" + connection.RemoteSocket + ")"));
+            (testCSMSv1_6.CentralSystemServers.First() as WebSocketServer).OnTCPConnectionClosed += async (timestamp, server, connection, eventTrackingId, reason, cancellationToken) => {
+                DebugX.Log(String.Concat("HTTP web socket server on ", server.IPSocket, " closed TCP connection with ", connection.TryGetCustomData("chargingStationId") + " (" + connection.RemoteSocket + ")"));
                 lock (testCSMSv1_6)
                 {
                     File.AppendAllText(Path.Combine(AppContext.BaseDirectory, "TextMessages.log"),
-                                       String.Concat(timestamp.ToIso8601(), "\tQUIT\t", connection.TryGetCustomData("chargeBoxId"), "\t", connection.RemoteSocket, Environment.NewLine));
+                                       String.Concat(timestamp.ToIso8601(), "\tQUIT\t", connection.TryGetCustomData("chargingStationId"), "\t", connection.RemoteSocket, Environment.NewLine));
                 }
             };
 
@@ -305,30 +304,30 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
 
 
 
-            (testCSMSv1_6.CentralSystemServers.First() as WebSocketServer).OnPingMessageReceived += async (timestamp, server, connection, eventTrackingId, frame) => {
-                DebugX.Log(nameof(WebSocketServer) + ": Ping received: '" + frame.Payload.ToUTF8String() + "' (" + connection.TryGetCustomData("chargeBoxId") + ", " + connection.RemoteSocket + ")");
+            (testCSMSv1_6.CentralSystemServers.First() as WebSocketServer).OnPingMessageReceived += async (timestamp, server, connection, eventTrackingId, frame, cancellationToken) => {
+                DebugX.Log(nameof(WebSocketServer) + ": Ping received: '" + frame.Payload.ToUTF8String() + "' (" + connection.TryGetCustomData("chargingStationId") + ", " + connection.RemoteSocket + ")");
                 lock (testCSMSv1_6)
                 {
                     File.AppendAllText(Path.Combine(AppContext.BaseDirectory, "TextMessages.log"),
-                                       String.Concat(timestamp.ToIso8601(), "\tPING IN\t", connection.TryGetCustomData("chargeBoxId"), "\t", connection.RemoteSocket, Environment.NewLine));
+                                       String.Concat(timestamp.ToIso8601(), "\tPING IN\t", connection.TryGetCustomData("chargingStationId"), "\t", connection.RemoteSocket, Environment.NewLine));
                 }
             };
 
-            (testCSMSv1_6.CentralSystemServers.First() as WebSocketServer).OnPingMessageSent     += async (timestamp, server, connection, eventTrackingId, frame) => {
-                DebugX.Log(nameof(WebSocketServer) + ": Ping sent:     '" + frame.Payload.ToUTF8String() + "' (" + connection.TryGetCustomData("chargeBoxId") + ", " + connection.RemoteSocket + ")");
+            (testCSMSv1_6.CentralSystemServers.First() as WebSocketServer).OnPingMessageSent     += async (timestamp, server, connection, eventTrackingId, frame, cancellationToken) => {
+                DebugX.Log(nameof(WebSocketServer) + ": Ping sent:     '" + frame.Payload.ToUTF8String() + "' (" + connection.TryGetCustomData("chargingStationId") + ", " + connection.RemoteSocket + ")");
                 lock (testCSMSv1_6)
                 {
                     File.AppendAllText(Path.Combine(AppContext.BaseDirectory, "TextMessages.log"),
-                                       String.Concat(timestamp.ToIso8601(), "\tPING OUT\t", connection.TryGetCustomData("chargeBoxId"), "\t", connection.RemoteSocket, Environment.NewLine));
+                                       String.Concat(timestamp.ToIso8601(), "\tPING OUT\t", connection.TryGetCustomData("chargingStationId"), "\t", connection.RemoteSocket, Environment.NewLine));
                 }
             };
 
-            (testCSMSv1_6.CentralSystemServers.First() as WebSocketServer).OnPongMessageReceived += async (timestamp, server, connection, eventTrackingId, frame) => {
-                DebugX.Log(nameof(WebSocketServer) + ": Pong received: '" + frame.Payload.ToUTF8String() + "' (" + connection.TryGetCustomData("chargeBoxId") + ", " + connection.RemoteSocket + ")");
+            (testCSMSv1_6.CentralSystemServers.First() as WebSocketServer).OnPongMessageReceived += async (timestamp, server, connection, eventTrackingId, frame, cancellationToken) => {
+                DebugX.Log(nameof(WebSocketServer) + ": Pong received: '" + frame.Payload.ToUTF8String() + "' (" + connection.TryGetCustomData("chargingStationId") + ", " + connection.RemoteSocket + ")");
                 lock (testCSMSv1_6)
                 {
                     File.AppendAllText(Path.Combine(AppContext.BaseDirectory, "TextMessages.log"),
-                                       String.Concat(timestamp.ToIso8601(), "\tPONG IN\t", connection.TryGetCustomData("chargeBoxId"), "\t", connection.RemoteSocket, Environment.NewLine));
+                                       String.Concat(timestamp.ToIso8601(), "\tPONG IN\t", connection.TryGetCustomData("chargingStationId"), "\t", connection.RemoteSocket, Environment.NewLine));
                 }
             };
 
@@ -356,47 +355,47 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
 
 
             (testCSMSv2_0_1.CSMSServers.First() as WebSocketServer).OnNewWebSocketConnection += async (timestamp, server, connection, eventTrackingId, ct) => {
-                DebugX.Log(String.Concat("HTTP web socket server on ", server.IPSocket, " new connection with ", connection.TryGetCustomData("chargeBoxId") + " (" + connection.RemoteSocket + ")"));
+                DebugX.Log(String.Concat("HTTP web socket server on ", server.IPSocket, " new connection with ", connection.TryGetCustomData("chargingStationId") + " (" + connection.RemoteSocket + ")"));
                 lock (testCSMSv2_0_1)
                 {
                     File.AppendAllText(Path.Combine(AppContext.BaseDirectory, "TextMessages.log"),
-                                       String.Concat(timestamp.ToIso8601(), "\tNEW\t", connection.TryGetCustomData("chargeBoxId"), "\t", connection.RemoteSocket, Environment.NewLine));
+                                       String.Concat(timestamp.ToIso8601(), "\tNEW\t", connection.TryGetCustomData("chargingStationId"), "\t", connection.RemoteSocket, Environment.NewLine));
                 }
             };
 
-            (testCSMSv2_0_1.CSMSServers.First() as WebSocketServer).OnTextMessageReceived     += async (timestamp, server, connection, eventTrackingId, requestMessage) => {
+            (testCSMSv2_0_1.CSMSServers.First() as WebSocketServer).OnTextMessageReceived     += async (timestamp, server, connection, eventTrackingId, requestMessage, cancellationToken) => {
                 DebugX.Log(String.Concat("Received a web socket TEXT message: '", requestMessage, "'!"));
                 lock (testCSMSv2_0_1)
                 {
                     File.AppendAllText(Path.Combine(AppContext.BaseDirectory, "TextMessages.log"),
-                                       String.Concat(timestamp.ToIso8601(), "\tIN\t", connection.TryGetCustomData("chargeBoxId"), "\t", connection.RemoteSocket, "\t", requestMessage, Environment.NewLine));
+                                       String.Concat(timestamp.ToIso8601(), "\tIN\t", connection.TryGetCustomData("chargingStationId"), "\t", connection.RemoteSocket, "\t", requestMessage, Environment.NewLine));
                 }
             };
 
-            (testCSMSv2_0_1.CSMSServers.First() as WebSocketServer).OnTextMessageSent        += async (timestamp, server, connection, eventTrackingId, requestMessage) => {
+            (testCSMSv2_0_1.CSMSServers.First() as WebSocketServer).OnTextMessageSent        += async (timestamp, server, connection, eventTrackingId, requestMessage, cancellationToken) => {
                 DebugX.Log(String.Concat("Sent     a web socket TEXT message: '", requestMessage, "'!"));
                 lock (testCSMSv2_0_1)
                 {
                     File.AppendAllText(Path.Combine(AppContext.BaseDirectory, "TextMessages.log"),
-                                       String.Concat(timestamp.ToIso8601(), "\tOUT\t", connection.TryGetCustomData("chargeBoxId"), "\t", connection.RemoteSocket, "\t", requestMessage, Environment.NewLine));
+                                       String.Concat(timestamp.ToIso8601(), "\tOUT\t", connection.TryGetCustomData("chargingStationId"), "\t", connection.RemoteSocket, "\t", requestMessage, Environment.NewLine));
                 }
             };
 
-            (testCSMSv2_0_1.CSMSServers.First() as WebSocketServer).OnCloseMessageReceived += async (timestamp, server, connection, eventTrackingId, statusCode, reason) => {
-                DebugX.Log(String.Concat("HTTP web socket server on ", server.IPSocket, " charge box ", connection.TryGetCustomData("chargeBoxId") + " (" + connection.RemoteSocket + ") closed web socket connection"));
+            (testCSMSv2_0_1.CSMSServers.First() as WebSocketServer).OnCloseMessageReceived += async (timestamp, server, connection, eventTrackingId, statusCode, reason, cancellationToken) => {
+                DebugX.Log(String.Concat("HTTP web socket server on ", server.IPSocket, " charge box ", connection.TryGetCustomData("chargingStationId") + " (" + connection.RemoteSocket + ") closed web socket connection"));
                 lock (testCSMSv2_0_1)
                 {
                     File.AppendAllText(Path.Combine(AppContext.BaseDirectory, "TextMessages.log"),
-                                       String.Concat(timestamp.ToIso8601(), "\tCLOSE\t", connection.TryGetCustomData("chargeBoxId"), "\t", connection.RemoteSocket, Environment.NewLine));
+                                       String.Concat(timestamp.ToIso8601(), "\tCLOSE\t", connection.TryGetCustomData("chargingStationId"), "\t", connection.RemoteSocket, Environment.NewLine));
                 }
             };
 
-            (testCSMSv2_0_1.CSMSServers.First() as WebSocketServer).OnTCPConnectionClosed += async (timestamp, server, connection, eventTrackingId, ct) => {
-                DebugX.Log(String.Concat("HTTP web socket server on ", server.IPSocket, " closed TCP connection with ", connection.TryGetCustomData("chargeBoxId") + " (" + connection.RemoteSocket + ")"));
+            (testCSMSv2_0_1.CSMSServers.First() as WebSocketServer).OnTCPConnectionClosed += async (timestamp, server, connection, eventTrackingId, reason, cancellationToken) => {
+                DebugX.Log(String.Concat("HTTP web socket server on ", server.IPSocket, " closed TCP connection with ", connection.TryGetCustomData("chargingStationId") + " (" + connection.RemoteSocket + ")"));
                 lock (testCSMSv2_0_1)
                 {
                     File.AppendAllText(Path.Combine(AppContext.BaseDirectory, "TextMessages.log"),
-                                       String.Concat(timestamp.ToIso8601(), "\tQUIT\t", connection.TryGetCustomData("chargeBoxId"), "\t", connection.RemoteSocket, Environment.NewLine));
+                                       String.Concat(timestamp.ToIso8601(), "\tQUIT\t", connection.TryGetCustomData("chargingStationId"), "\t", connection.RemoteSocket, Environment.NewLine));
                 }
             };
 
@@ -404,30 +403,30 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
 
 
 
-            (testCSMSv2_0_1.CSMSServers.First() as WebSocketServer).OnPingMessageReceived += async (timestamp, server, connection, eventTrackingId, frame) => {
-                DebugX.Log(nameof(WebSocketServer) + ": Ping received: '" + frame.Payload.ToUTF8String() + "' (" + connection.TryGetCustomData("chargeBoxId") + ", " + connection.RemoteSocket + ")");
+            (testCSMSv2_0_1.CSMSServers.First() as WebSocketServer).OnPingMessageReceived += async (timestamp, server, connection, eventTrackingId, frame, cancellationToken) => {
+                DebugX.Log(nameof(WebSocketServer) + ": Ping received: '" + frame.Payload.ToUTF8String() + "' (" + connection.TryGetCustomData("chargingStationId") + ", " + connection.RemoteSocket + ")");
                 lock (testCSMSv2_0_1)
                 {
                     File.AppendAllText(Path.Combine(AppContext.BaseDirectory, "TextMessages.log"),
-                                       String.Concat(timestamp.ToIso8601(), "\tPING IN\t", connection.TryGetCustomData("chargeBoxId"), "\t", connection.RemoteSocket, Environment.NewLine));
+                                       String.Concat(timestamp.ToIso8601(), "\tPING IN\t", connection.TryGetCustomData("chargingStationId"), "\t", connection.RemoteSocket, Environment.NewLine));
                 }
             };
 
-            (testCSMSv2_0_1.CSMSServers.First() as WebSocketServer).OnPingMessageSent     += async (timestamp, server, connection, eventTrackingId, frame) => {
-                DebugX.Log(nameof(WebSocketServer) + ": Ping sent:     '" + frame.Payload.ToUTF8String() + "' (" + connection.TryGetCustomData("chargeBoxId") + ", " + connection.RemoteSocket + ")");
+            (testCSMSv2_0_1.CSMSServers.First() as WebSocketServer).OnPingMessageSent     += async (timestamp, server, connection, eventTrackingId, frame, cancellationToken) => {
+                DebugX.Log(nameof(WebSocketServer) + ": Ping sent:     '" + frame.Payload.ToUTF8String() + "' (" + connection.TryGetCustomData("chargingStationId") + ", " + connection.RemoteSocket + ")");
                 lock (testCSMSv2_0_1)
                 {
                     File.AppendAllText(Path.Combine(AppContext.BaseDirectory, "TextMessages.log"),
-                                       String.Concat(timestamp.ToIso8601(), "\tPING OUT\t", connection.TryGetCustomData("chargeBoxId"), "\t", connection.RemoteSocket, Environment.NewLine));
+                                       String.Concat(timestamp.ToIso8601(), "\tPING OUT\t", connection.TryGetCustomData("chargingStationId"), "\t", connection.RemoteSocket, Environment.NewLine));
                 }
             };
 
-            (testCSMSv2_0_1.CSMSServers.First() as WebSocketServer).OnPongMessageReceived += async (timestamp, server, connection, eventTrackingId, frame) => {
-                DebugX.Log(nameof(WebSocketServer) + ": Pong received: '" + frame.Payload.ToUTF8String() + "' (" + connection.TryGetCustomData("chargeBoxId") + ", " + connection.RemoteSocket + ")");
+            (testCSMSv2_0_1.CSMSServers.First() as WebSocketServer).OnPongMessageReceived += async (timestamp, server, connection, eventTrackingId, frame, cancellationToken) => {
+                DebugX.Log(nameof(WebSocketServer) + ": Pong received: '" + frame.Payload.ToUTF8String() + "' (" + connection.TryGetCustomData("chargingStationId") + ", " + connection.RemoteSocket + ")");
                 lock (testCSMSv2_0_1)
                 {
                     File.AppendAllText(Path.Combine(AppContext.BaseDirectory, "TextMessages.log"),
-                                       String.Concat(timestamp.ToIso8601(), "\tPONG IN\t", connection.TryGetCustomData("chargeBoxId"), "\t", connection.RemoteSocket, Environment.NewLine));
+                                       String.Concat(timestamp.ToIso8601(), "\tPONG IN\t", connection.TryGetCustomData("chargingStationId"), "\t", connection.RemoteSocket, Environment.NewLine));
                 }
             };
 
@@ -455,47 +454,47 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
 
 
             (testCSMSv2_1.CSMSServers.First() as WebSocketServer).OnNewWebSocketConnection += async (timestamp, server, connection, eventTrackingId, ct) => {
-                DebugX.Log(String.Concat("HTTP web socket server on ", server.IPSocket, " new connection with ", connection.TryGetCustomData("chargeBoxId") + " (" + connection.RemoteSocket + ")"));
+                DebugX.Log(String.Concat("HTTP web socket server on ", server.IPSocket, " new connection with ", connection.TryGetCustomData("chargingStationId") + " (" + connection.RemoteSocket + ")"));
                 lock (testCSMSv2_1)
                 {
                     File.AppendAllText(Path.Combine(AppContext.BaseDirectory, "TextMessages.log"),
-                                       String.Concat(timestamp.ToIso8601(), "\tNEW\t", connection.TryGetCustomData("chargeBoxId"), "\t", connection.RemoteSocket, Environment.NewLine));
+                                       String.Concat(timestamp.ToIso8601(), "\tNEW\t", connection.TryGetCustomData("chargingStationId"), "\t", connection.RemoteSocket, Environment.NewLine));
                 }
             };
 
-            (testCSMSv2_1.CSMSServers.First() as WebSocketServer).OnTextMessageReceived += async (timestamp, server, connection, eventTrackingId, requestMessage) => {
+            (testCSMSv2_1.CSMSServers.First() as WebSocketServer).OnTextMessageReceived += async (timestamp, server, connection, eventTrackingId, requestMessage, cancellationToken) => {
                 DebugX.Log(String.Concat("Received a web socket TEXT message: '", requestMessage, "'!"));
                 lock (testCSMSv2_1)
                 {
                     File.AppendAllText(Path.Combine(AppContext.BaseDirectory, "TextMessages.log"),
-                                       String.Concat(timestamp.ToIso8601(), "\tIN\t", connection.TryGetCustomData("chargeBoxId"), "\t", connection.RemoteSocket, "\t", requestMessage, Environment.NewLine));
+                                       String.Concat(timestamp.ToIso8601(), "\tIN\t", connection.TryGetCustomData("chargingStationId"), "\t", connection.RemoteSocket, "\t", requestMessage, Environment.NewLine));
                 }
             };
 
-            (testCSMSv2_1.CSMSServers.First() as WebSocketServer).OnTextMessageSent += async (timestamp, server, connection, eventTrackingId, requestMessage) => {
+            (testCSMSv2_1.CSMSServers.First() as WebSocketServer).OnTextMessageSent += async (timestamp, server, connection, eventTrackingId, requestMessage, cancellationToken) => {
                 DebugX.Log(String.Concat("Sent     a web socket TEXT message: '", requestMessage, "'!"));
                 lock (testCSMSv2_1)
                 {
                     File.AppendAllText(Path.Combine(AppContext.BaseDirectory, "TextMessages.log"),
-                                       String.Concat(timestamp.ToIso8601(), "\tOUT\t", connection.TryGetCustomData("chargeBoxId"), "\t", connection.RemoteSocket, "\t", requestMessage, Environment.NewLine));
+                                       String.Concat(timestamp.ToIso8601(), "\tOUT\t", connection.TryGetCustomData("chargingStationId"), "\t", connection.RemoteSocket, "\t", requestMessage, Environment.NewLine));
                 }
             };
 
-            (testCSMSv2_1.CSMSServers.First() as WebSocketServer).OnCloseMessageReceived += async (timestamp, server, connection, eventTrackingId, statusCode, reason) => {
-                DebugX.Log(String.Concat("HTTP web socket server on ", server.IPSocket, " charge box ", connection.TryGetCustomData("chargeBoxId") + " (" + connection.RemoteSocket + ") closed web socket connection"));
+            (testCSMSv2_1.CSMSServers.First() as WebSocketServer).OnCloseMessageReceived += async (timestamp, server, connection, eventTrackingId, statusCode, reason, cancellationToken) => {
+                DebugX.Log(String.Concat("HTTP web socket server on ", server.IPSocket, " charge box ", connection.TryGetCustomData("chargingStationId") + " (" + connection.RemoteSocket + ") closed web socket connection"));
                 lock (testCSMSv2_1)
                 {
                     File.AppendAllText(Path.Combine(AppContext.BaseDirectory, "TextMessages.log"),
-                                       String.Concat(timestamp.ToIso8601(), "\tCLOSE\t", connection.TryGetCustomData("chargeBoxId"), "\t", connection.RemoteSocket, Environment.NewLine));
+                                       String.Concat(timestamp.ToIso8601(), "\tCLOSE\t", connection.TryGetCustomData("chargingStationId"), "\t", connection.RemoteSocket, Environment.NewLine));
                 }
             };
 
-            (testCSMSv2_1.CSMSServers.First() as WebSocketServer).OnTCPConnectionClosed += async (timestamp, server, connection, reason, eventTrackingId) => {
-                DebugX.Log(String.Concat("HTTP web socket server on ", server.IPSocket, " closed TCP connection with ", connection.TryGetCustomData("chargeBoxId") + $", reason: {reason} " + " (" + connection.RemoteSocket + ")"));
+            (testCSMSv2_1.CSMSServers.First() as WebSocketServer).OnTCPConnectionClosed += async (timestamp, server, connection, eventTrackingId, reason, cancellationToken) => {
+                DebugX.Log(String.Concat("HTTP web socket server on ", server.IPSocket, " closed TCP connection with ", connection.TryGetCustomData("chargingStationId") + $", reason: {reason} " + " (" + connection.RemoteSocket + ")"));
                 lock (testCSMSv2_1)
                 {
                     File.AppendAllText(Path.Combine(AppContext.BaseDirectory, "TextMessages.log"),
-                                       String.Concat(timestamp.ToIso8601(), "\tQUIT\t", connection.TryGetCustomData("chargeBoxId"), "\t", connection.RemoteSocket, Environment.NewLine));
+                                       String.Concat(timestamp.ToIso8601(), "\tQUIT\t", connection.TryGetCustomData("chargingStationId"), "\t", connection.RemoteSocket, Environment.NewLine));
                 }
             };
 
@@ -503,30 +502,30 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
 
 
 
-            (testCSMSv2_1.CSMSServers.First() as WebSocketServer).OnPingMessageReceived += async (timestamp, server, connection, eventTrackingId, frame) => {
-                DebugX.Log(nameof(WebSocketServer) + ": Ping received: '" + frame.Payload.ToUTF8String() + "' (" + connection.TryGetCustomData("chargeBoxId") + ", " + connection.RemoteSocket + ")");
+            (testCSMSv2_1.CSMSServers.First() as WebSocketServer).OnPingMessageReceived += async (timestamp, server, connection, eventTrackingId, frame, cancellationToken) => {
+                DebugX.Log(nameof(WebSocketServer) + ": Ping received: '" + frame.Payload.ToUTF8String() + "' (" + connection.TryGetCustomData("chargingStationId") + ", " + connection.RemoteSocket + ")");
                 lock (testCSMSv2_1)
                 {
                     File.AppendAllText(Path.Combine(AppContext.BaseDirectory, "TextMessages.log"),
-                                       String.Concat(timestamp.ToIso8601(), "\tPING IN\t", connection.TryGetCustomData("chargeBoxId"), "\t", connection.RemoteSocket, Environment.NewLine));
+                                       String.Concat(timestamp.ToIso8601(), "\tPING IN\t", connection.TryGetCustomData("chargingStationId"), "\t", connection.RemoteSocket, Environment.NewLine));
                 }
             };
 
-            (testCSMSv2_1.CSMSServers.First() as WebSocketServer).OnPingMessageSent += async (timestamp, server, connection, eventTrackingId, frame) => {
-                DebugX.Log(nameof(WebSocketServer) + ": Ping sent:     '" + frame.Payload.ToUTF8String() + "' (" + connection.TryGetCustomData("chargeBoxId") + ", " + connection.RemoteSocket + ")");
+            (testCSMSv2_1.CSMSServers.First() as WebSocketServer).OnPingMessageSent += async (timestamp, server, connection, eventTrackingId, frame, cancellationToken) => {
+                DebugX.Log(nameof(WebSocketServer) + ": Ping sent:     '" + frame.Payload.ToUTF8String() + "' (" + connection.TryGetCustomData("chargingStationId") + ", " + connection.RemoteSocket + ")");
                 lock (testCSMSv2_1)
                 {
                     File.AppendAllText(Path.Combine(AppContext.BaseDirectory, "TextMessages.log"),
-                                       String.Concat(timestamp.ToIso8601(), "\tPING OUT\t", connection.TryGetCustomData("chargeBoxId"), "\t", connection.RemoteSocket, Environment.NewLine));
+                                       String.Concat(timestamp.ToIso8601(), "\tPING OUT\t", connection.TryGetCustomData("chargingStationId"), "\t", connection.RemoteSocket, Environment.NewLine));
                 }
             };
 
-            (testCSMSv2_1.CSMSServers.First() as WebSocketServer).OnPongMessageReceived += async (timestamp, server, connection, eventTrackingId, frame) => {
-                DebugX.Log(nameof(WebSocketServer) + ": Pong received: '" + frame.Payload.ToUTF8String() + "' (" + connection.TryGetCustomData("chargeBoxId") + ", " + connection.RemoteSocket + ")");
+            (testCSMSv2_1.CSMSServers.First() as WebSocketServer).OnPongMessageReceived += async (timestamp, server, connection, eventTrackingId, frame, cancellationToken) => {
+                DebugX.Log(nameof(WebSocketServer) + ": Pong received: '" + frame.Payload.ToUTF8String() + "' (" + connection.TryGetCustomData("chargingStationId") + ", " + connection.RemoteSocket + ")");
                 lock (testCSMSv2_1)
                 {
                     File.AppendAllText(Path.Combine(AppContext.BaseDirectory, "TextMessages.log"),
-                                       String.Concat(timestamp.ToIso8601(), "\tPONG IN\t", connection.TryGetCustomData("chargeBoxId"), "\t", connection.RemoteSocket, Environment.NewLine));
+                                       String.Concat(timestamp.ToIso8601(), "\tPONG IN\t", connection.TryGetCustomData("chargingStationId"), "\t", connection.RemoteSocket, Environment.NewLine));
                 }
             };
 
@@ -611,16 +610,6 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
 
             //var response21a  = await testCentralSystem.Reset(chargingStation1.ChargingStationId, ResetTypes.Soft);
             //var response22a  = await testCentralSystem.Reset(chargingStation1.ChargingStationId, ResetTypes.Hard);
-
-
-            var fdfd1 = OCPPv2_1.IdTokenType.MACAddress;
-            var fdfd2 = OCPPv2_1.IdTokenType.Parse("MACAddress");
-            var fdfd3 = OCPPv2_1.IdTokenType.Parse("macAddress");
-            var fdfd4 = OCPPv2_1.IdTokenType.Parse("ketchup");
-
-            var xx = "y";
-
-
 
 
             #region OCPP v1.6 SOAP Tests
@@ -805,7 +794,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
 
                         #endregion
 
-                        #region Use chargeBoxId
+                        #region Use chargingStationId
 
                         if (command == "use".ToLower() && commandArray.Length == 2)
                         {
