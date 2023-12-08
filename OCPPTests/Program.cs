@@ -235,7 +235,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                                              DNSClient:                   API_DNSClient
                                          );
 
-            var testBackendWebSockets  = testCSMSv1_6.CreateWebSocketService(
+            var testBackendWebSockets  = testCSMSv1_6.AttachWebSocketService(
                                              TCPPort:                     IPPort.Parse(9900),
                                              //DisableWebSocketPings:       true,
                                              //SlowNetworkSimulationDelay:  TimeSpan.FromMilliseconds(10),
@@ -255,7 +255,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
             testCSMSv1_6.AddHTTPBasicAuth(OCPPv1_6.ChargeBox_Id.Parse("EVlink_Eichrecht"), "test1234test1234");
 
 
-            (testCSMSv1_6.CentralSystemServers.First() as WebSocketServer).OnNewWebSocketConnection += async (timestamp, server, connection, eventTrackingId, ct) => {
+            (testCSMSv1_6.CentralSystemServers.First() as WebSocketServer).OnNewWebSocketConnection += async (timestamp, server, connection, sharedSubprotocols, eventTrackingId, cancellationToken) => {
                 DebugX.Log(String.Concat("HTTP web socket server on ", server.IPSocket, " new connection with ", connection.TryGetCustomData("chargingStationId") + " (" + connection.RemoteSocket + ")"));
                 lock (testCSMSv1_6)
                 {
@@ -354,7 +354,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
 
 
 
-            (testCSMSv2_0_1.CSMSServers.First() as WebSocketServer).OnNewWebSocketConnection += async (timestamp, server, connection, eventTrackingId, ct) => {
+            (testCSMSv2_0_1.CSMSServers.First() as WebSocketServer).OnNewWebSocketConnection += async (timestamp, server, connection, eventTrackingId, sharedSubprotocols, cancellationToken) => {
                 DebugX.Log(String.Concat("HTTP web socket server on ", server.IPSocket, " new connection with ", connection.TryGetCustomData("chargingStationId") + " (" + connection.RemoteSocket + ")"));
                 lock (testCSMSv2_0_1)
                 {
@@ -441,7 +441,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                                                  DNSClient:                   API_DNSClient
                                              );
 
-            var testBackendWebSocketsv2_1  = testCSMSv2_1.CreateWebSocketService(
+            var testBackendWebSocketsv2_1  = testCSMSv2_1.AttachWebSocketService(
                                                  TCPPort:                     IPPort.Parse(9920),
                                                  DisableWebSocketPings:       false,
                                                  //SlowNetworkSimulationDelay:  TimeSpan.FromMilliseconds(10),
@@ -453,7 +453,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
 
 
 
-            (testCSMSv2_1.CSMSServers.First() as WebSocketServer).OnNewWebSocketConnection += async (timestamp, server, connection, eventTrackingId, ct) => {
+            (testCSMSv2_1.CSMSServers.First() as WebSocketServer).OnNewWebSocketConnection += async (timestamp, server, connection, eventTrackingId, sharedSubprotocols, cancellationToken) => {
                 DebugX.Log(String.Concat("HTTP web socket server on ", server.IPSocket, " new connection with ", connection.TryGetCustomData("chargingStationId") + " (" + connection.RemoteSocket + ")"));
                 lock (testCSMSv2_1)
                 {
