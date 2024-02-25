@@ -85,6 +85,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WWCP_OCPP_Common", "libs\WW
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "OCPP", "OCPP", "{97F6E0BF-8615-4FEE-8FA3-65747BC7D067}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OCPP_LocalController", "OCPP_LocalController\OCPP_LocalController.csproj", "{0422C68C-C41A-449D-B3FB-443AF2B52FE0}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -223,6 +225,10 @@ Global
 		{29C85B51-FD4F-4C05-BCE7-550A730B6F38}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{29C85B51-FD4F-4C05-BCE7-550A730B6F38}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{29C85B51-FD4F-4C05-BCE7-550A730B6F38}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0422C68C-C41A-449D-B3FB-443AF2B52FE0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0422C68C-C41A-449D-B3FB-443AF2B52FE0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0422C68C-C41A-449D-B3FB-443AF2B52FE0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0422C68C-C41A-449D-B3FB-443AF2B52FE0}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
