@@ -1,0 +1,5107 @@
+[
+	{
+		"component": {
+			"evse": {
+				"id": 2
+			},
+			"name": "DisplayCtrlr"
+		},
+		"variable": {
+			"name": "PortLabel"
+		},
+		"variableAttribute": [
+			{
+				"persistent": true,
+				"type": "Actual",
+				"value": ""
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "string",
+			"maxLimit": 2.0,
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"evse": {
+				"id": 2
+			},
+			"name": "EVSE"
+		},
+		"variable": {
+			"name": "AvailablePower"
+		},
+		"variableAttribute": [
+			{
+				"mutability": "ReadOnly",
+				"persistent": true,
+				"type": "Actual",
+				"value": "200"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "decimal",
+			"supportsMonitoring": false,
+			"unit": "kW"
+		}
+	},
+	{
+		"component": {
+			"evse": {
+				"id": 2
+			},
+			"name": "EVSE"
+		},
+		"variable": {
+			"name": "MaxPower"
+		},
+		"variableAttribute": [
+			{
+				"mutability": "ReadOnly",
+				"persistent": true,
+				"type": "Actual",
+				"value": "200"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "decimal",
+			"supportsMonitoring": false,
+			"unit": "kW"
+		}
+	},
+	{
+		"component": {
+			"evse": {
+				"id": 2
+			},
+			"name": "EVSE"
+		},
+		"variable": {
+			"name": "MaxVoltage"
+		},
+		"variableAttribute": [
+			{
+				"mutability": "ReadOnly",
+				"persistent": true,
+				"type": "Actual",
+				"value": "1000"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "decimal",
+			"supportsMonitoring": false,
+			"unit": "V"
+		}
+	},
+	{
+		"component": {
+			"evse": {
+				"id": 2
+			},
+			"name": "EVSE"
+		},
+		"variable": {
+			"name": "PhaseRotation"
+		},
+		"variableAttribute": [
+			{
+				"constant": true,
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "RST"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "string",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"evse": {
+				"id": 2
+			},
+			"name": "EVSE"
+		},
+		"variable": {
+			"name": "AvailabilityState"
+		},
+		"variableAttribute": [
+			{
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "Available"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "OptionList",
+			"supportsMonitoring": false,
+			"valuesList": "Available,Occupied,Reserved,Unavailable,Faulted"
+		}
+	},
+	{
+		"component": {
+			"evse": {
+				"id": 2
+			},
+			"name": "EVSE"
+		},
+		"variable": {
+			"name": "PowerLimit"
+		},
+		"variableAttribute": [
+			{
+				"persistent": true,
+				"type": "Actual",
+				"value": "-0.001"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "decimal",
+			"supportsMonitoring": false,
+			"unit": "kW"
+		}
+	},
+	{
+		"component": {
+			"evse": {
+				"id": 2
+			},
+			"name": "EVSE"
+		},
+		"variable": {
+			"name": "SupplyPhases"
+		},
+		"variableAttribute": [
+			{
+				"constant": true,
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "0"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "integer",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"evse": {
+				"id": 2
+			},
+			"name": "EVSE"
+		},
+		"variable": {
+			"name": "Available"
+		},
+		"variableAttribute": [
+			{
+				"constant": true,
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "true"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "boolean",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"evse": {
+				"connectorId": 1,
+				"id": 1
+			},
+			"name": "SEVB"
+		},
+		"variable": {
+			"name": "Available"
+		},
+		"variableAttribute": [
+			{
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "true"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "boolean",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"evse": {
+				"connectorId": 1,
+				"id": 1
+			},
+			"name": "SEVB"
+		},
+		"variable": {
+			"name": "DeviceId"
+		},
+		"variableAttribute": [
+			{
+				"constant": true,
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "UDID000000000001"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "string",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"evse": {
+				"connectorId": 1,
+				"id": 1
+			},
+			"name": "SEVB"
+		},
+		"variable": {
+			"name": "FirmwareVersion"
+		},
+		"variableAttribute": [
+			{
+				"constant": true,
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "1999.01.01"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "string",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"evse": {
+				"connectorId": 1,
+				"id": 1
+			},
+			"name": "SEVB"
+		},
+		"variable": {
+			"name": "BootloaderVersion"
+		},
+		"variableAttribute": [
+			{
+				"constant": true,
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "UNKNOWN"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "string",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"evse": {
+				"connectorId": 1,
+				"id": 1
+			},
+			"name": "SEVB"
+		},
+		"variable": {
+			"name": "HardwareVersion"
+		},
+		"variableAttribute": [
+			{
+				"constant": true,
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "SEVB-CCS"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "string",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"evse": {
+				"connectorId": 1,
+				"id": 1
+			},
+			"name": "SEVB"
+		},
+		"variable": {
+			"name": "Model"
+		},
+		"variableAttribute": [
+			{
+				"constant": true,
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "SEVB"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "string",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"evse": {
+				"connectorId": 1,
+				"id": 1
+			},
+			"name": "SEVB"
+		},
+		"variable": {
+			"name": "SerialNumber"
+		},
+		"variableAttribute": [
+			{
+				"constant": true,
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "SN5500000001"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "string",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"evse": {
+				"connectorId": 1,
+				"id": 1
+			},
+			"name": "SEVB"
+		},
+		"variable": {
+			"name": "FruName"
+		},
+		"variableAttribute": [
+			{
+				"constant": true,
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "SEVB1"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "string",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"instance": "PM2",
+			"name": "PowerModule"
+		},
+		"variable": {
+			"name": "Available"
+		},
+		"variableAttribute": [
+			{
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "true"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "boolean",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"instance": "PM2",
+			"name": "PowerModule"
+		},
+		"variable": {
+			"name": "FirmwareVersion"
+		},
+		"variableAttribute": [
+			{
+				"constant": true,
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "0.11.2.abcdef01"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "string",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"instance": "PM2",
+			"name": "PowerModule"
+		},
+		"variable": {
+			"name": "BootloaderVersion"
+		},
+		"variableAttribute": [
+			{
+				"constant": true,
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "1.00.0.00000000"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "string",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"instance": "PM2",
+			"name": "PowerModule"
+		},
+		"variable": {
+			"name": "HardwareVersion"
+		},
+		"variableAttribute": [
+			{
+				"constant": true,
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "43-001200-03-BY"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "string",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"instance": "PM2",
+			"name": "PowerModule"
+		},
+		"variable": {
+			"name": "Model"
+		},
+		"variableAttribute": [
+			{
+				"constant": true,
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "PM"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "string",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"instance": "PM2",
+			"name": "PowerModule"
+		},
+		"variable": {
+			"name": "SerialNumber"
+		},
+		"variableAttribute": [
+			{
+				"constant": true,
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "SN7700000002"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "string",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"instance": "PM2",
+			"name": "PowerModule"
+		},
+		"variable": {
+			"name": "FruName"
+		},
+		"variableAttribute": [
+			{
+				"constant": true,
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "PM2"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "string",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "DeviceDataCtrlr"
+		},
+		"variable": {
+			"instance": "GetReport",
+			"name": "BytesPerMessage"
+		},
+		"variableAttribute": [
+			{
+				"constant": true,
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "1000000"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "integer",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "DeviceDataCtrlr"
+		},
+		"variable": {
+			"instance": "SetVariables",
+			"name": "BytesPerMessage"
+		},
+		"variableAttribute": [
+			{
+				"constant": true,
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "1000000"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "integer",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "DeviceDataCtrlr"
+		},
+		"variable": {
+			"instance": "GetReport",
+			"name": "ItemsPerMessage"
+		},
+		"variableAttribute": [
+			{
+				"constant": true,
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "1000"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "integer",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "DeviceDataCtrlr"
+		},
+		"variable": {
+			"instance": "GetVariables",
+			"name": "ItemsPerMessage"
+		},
+		"variableAttribute": [
+			{
+				"constant": true,
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "1000"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "integer",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "DeviceDataCtrlr"
+		},
+		"variable": {
+			"instance": "GetVariables",
+			"name": "BytesPerMessage"
+		},
+		"variableAttribute": [
+			{
+				"constant": true,
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "1000000"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "integer",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "DeviceDataCtrlr"
+		},
+		"variable": {
+			"instance": "SetVariables",
+			"name": "ItemsPerMessage"
+		},
+		"variableAttribute": [
+			{
+				"constant": true,
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "1000"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "integer",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "Camera"
+		},
+		"variable": {
+			"name": "Available"
+		},
+		"variableAttribute": [
+			{
+				"constant": true,
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "true"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "boolean",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "ElectricalFeed"
+		},
+		"variable": {
+			"name": "SupplyPhases"
+		},
+		"variableAttribute": [
+			{
+				"constant": true,
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "0"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "integer",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "Bluetooth"
+		},
+		"variable": {
+			"name": "Enabled"
+		},
+		"variableAttribute": [
+			{
+				"type": "Actual",
+				"value": "false"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "boolean",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "ChargingStation"
+		},
+		"variable": {
+			"name": "Available"
+		},
+		"variableAttribute": [
+			{
+				"constant": true,
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "true"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "boolean",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "ChargingStation"
+		},
+		"variable": {
+			"name": "AvailabilityState"
+		},
+		"variableAttribute": [
+			{
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "Available"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "OptionList",
+			"supportsMonitoring": false,
+			"valuesList": "Available,Occupied,Reserved,Unavailable,Faulted"
+		}
+	},
+	{
+		"component": {
+			"name": "ChargingStation"
+		},
+		"variable": {
+			"name": "PowerLimit"
+		},
+		"variableAttribute": [
+			{
+				"persistent": true,
+				"type": "Actual",
+				"value": "-0.001"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "decimal",
+			"supportsMonitoring": false,
+			"unit": "kW"
+		}
+	},
+	{
+		"component": {
+			"name": "ChargingStation"
+		},
+		"variable": {
+			"name": "CircuitSharing"
+		},
+		"variableAttribute": [
+			{
+				"persistent": true,
+				"type": "Actual",
+				"value": "false"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "boolean",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "ChargingStation"
+		},
+		"variable": {
+			"name": "SupplyPhases"
+		},
+		"variableAttribute": [
+			{
+				"constant": true,
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "0"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "integer",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "ChargingStation"
+		},
+		"variable": {
+			"name": "Model"
+		},
+		"variableAttribute": [
+			{
+				"constant": true,
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": ""
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "string",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "DCD"
+		},
+		"variable": {
+			"name": "Available"
+		},
+		"variableAttribute": [
+			{
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "true"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "boolean",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "DCD"
+		},
+		"variable": {
+			"name": "DeviceId"
+		},
+		"variableAttribute": [
+			{
+				"constant": true,
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "UDID0000000000000000000000000000"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "string",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "DCD"
+		},
+		"variable": {
+			"name": "FirmwareVersion"
+		},
+		"variableAttribute": [
+			{
+				"constant": true,
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "VERSION000000000000000000000000000000000000000000000000000000000"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "string",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "DCD"
+		},
+		"variable": {
+			"name": "BootloaderVersion"
+		},
+		"variableAttribute": [
+			{
+				"constant": true,
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "BOOTLOADER000000000000000000000000000000000000000000000000000000"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "string",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "DCD"
+		},
+		"variable": {
+			"name": "HardwareVersion"
+		},
+		"variableAttribute": [
+			{
+				"constant": true,
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "DCD,4"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "string",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "DCD"
+		},
+		"variable": {
+			"name": "Model"
+		},
+		"variableAttribute": [
+			{
+				"constant": true,
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "DCD"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "string",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "DCD"
+		},
+		"variable": {
+			"name": "SerialNumber"
+		},
+		"variableAttribute": [
+			{
+				"constant": true,
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "SN6600000001"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "string",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "DCD"
+		},
+		"variable": {
+			"name": "FruName"
+		},
+		"variableAttribute": [
+			{
+				"constant": true,
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "DCD1"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "string",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "SecurityCtrlr"
+		},
+		"variable": {
+			"name": "OrganizationName"
+		},
+		"variableAttribute": [
+			{
+				"persistent": true,
+				"type": "Actual",
+				"value": "ChargePoint Holdings, Inc"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "string",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "SecurityCtrlr"
+		},
+		"variable": {
+			"name": "CertSigningRepeatTimes"
+		},
+		"variableAttribute": [
+			{
+				"persistent": true,
+				"type": "Actual",
+				"value": "3"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "integer",
+			"minLimit": 0.0,
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "SecurityCtrlr"
+		},
+		"variable": {
+			"name": "CertSigningWaitMinimum"
+		},
+		"variableAttribute": [
+			{
+				"persistent": true,
+				"type": "Actual",
+				"value": "120"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "integer",
+			"supportsMonitoring": false,
+			"unit": "s"
+		}
+	},
+	{
+		"component": {
+			"name": "SecurityCtrlr"
+		},
+		"variable": {
+			"name": "CertificateEntries"
+		},
+		"variableAttribute": [
+			{
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "0"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "integer",
+			"maxLimit": 10.0,
+			"minLimit": 0.0,
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "SecurityCtrlr"
+		},
+		"variable": {
+			"name": "SecurityProfile"
+		},
+		"variableAttribute": [
+			{
+				"mutability": "ReadOnly",
+				"persistent": true,
+				"type": "Actual",
+				"value": "0"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "integer",
+			"maxLimit": 3.0,
+			"minLimit": 0.0,
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "SecurityCtrlr"
+		},
+		"variable": {
+			"name": "Identity"
+		},
+		"variableAttribute": [
+			{
+				"persistent": true,
+				"type": "Actual",
+				"value": "EXPP"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "string",
+			"maxLimit": 48.0,
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "SecurityCtrlr"
+		},
+		"variable": {
+			"name": "BasicAuthPassword"
+		},
+		"variableAttribute": [
+			{
+				"mutability": "WriteOnly",
+				"persistent": true,
+				"type": "Actual"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "string",
+			"maxLimit": 40.0,
+			"minLimit": 16.0,
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"evse": {
+				"connectorId": 1,
+				"id": 2
+			},
+			"name": "SEVB"
+		},
+		"variable": {
+			"name": "Available"
+		},
+		"variableAttribute": [
+			{
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "true"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "boolean",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"evse": {
+				"connectorId": 1,
+				"id": 2
+			},
+			"name": "SEVB"
+		},
+		"variable": {
+			"name": "DeviceId"
+		},
+		"variableAttribute": [
+			{
+				"constant": true,
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "UDID000000000002"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "string",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"evse": {
+				"connectorId": 1,
+				"id": 2
+			},
+			"name": "SEVB"
+		},
+		"variable": {
+			"name": "FirmwareVersion"
+		},
+		"variableAttribute": [
+			{
+				"constant": true,
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "1999.01.01"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "string",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"evse": {
+				"connectorId": 1,
+				"id": 2
+			},
+			"name": "SEVB"
+		},
+		"variable": {
+			"name": "BootloaderVersion"
+		},
+		"variableAttribute": [
+			{
+				"constant": true,
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "UNKNOWN"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "string",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"evse": {
+				"connectorId": 1,
+				"id": 2
+			},
+			"name": "SEVB"
+		},
+		"variable": {
+			"name": "HardwareVersion"
+		},
+		"variableAttribute": [
+			{
+				"constant": true,
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "SEVB-CH"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "string",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"evse": {
+				"connectorId": 1,
+				"id": 2
+			},
+			"name": "SEVB"
+		},
+		"variable": {
+			"name": "Model"
+		},
+		"variableAttribute": [
+			{
+				"constant": true,
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "SEVB"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "string",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"evse": {
+				"connectorId": 1,
+				"id": 2
+			},
+			"name": "SEVB"
+		},
+		"variable": {
+			"name": "SerialNumber"
+		},
+		"variableAttribute": [
+			{
+				"constant": true,
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "SN5500000002"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "string",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"evse": {
+				"connectorId": 1,
+				"id": 2
+			},
+			"name": "SEVB"
+		},
+		"variable": {
+			"name": "FruName"
+		},
+		"variableAttribute": [
+			{
+				"constant": true,
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "SEVB2"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "string",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"evse": {
+				"id": 1
+			},
+			"name": "EVSE"
+		},
+		"variable": {
+			"name": "AvailablePower"
+		},
+		"variableAttribute": [
+			{
+				"mutability": "ReadOnly",
+				"persistent": true,
+				"type": "Actual",
+				"value": "200"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "decimal",
+			"supportsMonitoring": false,
+			"unit": "kW"
+		}
+	},
+	{
+		"component": {
+			"evse": {
+				"id": 1
+			},
+			"name": "EVSE"
+		},
+		"variable": {
+			"name": "MaxPower"
+		},
+		"variableAttribute": [
+			{
+				"mutability": "ReadOnly",
+				"persistent": true,
+				"type": "Actual",
+				"value": "200"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "decimal",
+			"supportsMonitoring": false,
+			"unit": "kW"
+		}
+	},
+	{
+		"component": {
+			"evse": {
+				"id": 1
+			},
+			"name": "EVSE"
+		},
+		"variable": {
+			"name": "MaxVoltage"
+		},
+		"variableAttribute": [
+			{
+				"mutability": "ReadOnly",
+				"persistent": true,
+				"type": "Actual",
+				"value": "1000"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "decimal",
+			"supportsMonitoring": false,
+			"unit": "V"
+		}
+	},
+	{
+		"component": {
+			"evse": {
+				"id": 1
+			},
+			"name": "EVSE"
+		},
+		"variable": {
+			"name": "PhaseRotation"
+		},
+		"variableAttribute": [
+			{
+				"constant": true,
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "RST"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "string",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"evse": {
+				"id": 1
+			},
+			"name": "EVSE"
+		},
+		"variable": {
+			"name": "AvailabilityState"
+		},
+		"variableAttribute": [
+			{
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "Available"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "OptionList",
+			"supportsMonitoring": false,
+			"valuesList": "Available,Occupied,Reserved,Unavailable,Faulted"
+		}
+	},
+	{
+		"component": {
+			"evse": {
+				"id": 1
+			},
+			"name": "EVSE"
+		},
+		"variable": {
+			"name": "PowerLimit"
+		},
+		"variableAttribute": [
+			{
+				"persistent": true,
+				"type": "Actual",
+				"value": "-0.001"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "decimal",
+			"supportsMonitoring": false,
+			"unit": "kW"
+		}
+	},
+	{
+		"component": {
+			"evse": {
+				"id": 1
+			},
+			"name": "EVSE"
+		},
+		"variable": {
+			"name": "SupplyPhases"
+		},
+		"variableAttribute": [
+			{
+				"constant": true,
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "0"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "integer",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"evse": {
+				"id": 1
+			},
+			"name": "EVSE"
+		},
+		"variable": {
+			"name": "Available"
+		},
+		"variableAttribute": [
+			{
+				"constant": true,
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "true"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "boolean",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "Display"
+		},
+		"variable": {
+			"name": "Available"
+		},
+		"variableAttribute": [
+			{
+				"constant": true,
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "true"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "boolean",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "FDC"
+		},
+		"variable": {
+			"name": "Available"
+		},
+		"variableAttribute": [
+			{
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "true"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "boolean",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "FDC"
+		},
+		"variable": {
+			"name": "DeviceId"
+		},
+		"variableAttribute": [
+			{
+				"constant": true,
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "UDID0000000000000000000000000000"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "string",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "FDC"
+		},
+		"variable": {
+			"name": "PublicKey"
+		},
+		"variableAttribute": [
+			{
+				"constant": true,
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "PUBKEY00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "string",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "FDC"
+		},
+		"variable": {
+			"name": "FirmwareVersion"
+		},
+		"variableAttribute": [
+			{
+				"constant": true,
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "VERSION000000000000000000000000000000000000000000000000000000000"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "string",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "FDC"
+		},
+		"variable": {
+			"name": "BootloaderVersion"
+		},
+		"variableAttribute": [
+			{
+				"constant": true,
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "BOOTLOADER000000000000000000000000000000000000000000000000000000"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "string",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "FDC"
+		},
+		"variable": {
+			"name": "HardwareVersion"
+		},
+		"variableAttribute": [
+			{
+				"constant": true,
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "FDC,3"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "string",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "FDC"
+		},
+		"variable": {
+			"name": "Model"
+		},
+		"variableAttribute": [
+			{
+				"constant": true,
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "FDC"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "string",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "FDC"
+		},
+		"variable": {
+			"name": "SerialNumber"
+		},
+		"variableAttribute": [
+			{
+				"constant": true,
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "SN4400000001"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "string",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "FDC"
+		},
+		"variable": {
+			"name": "FruName"
+		},
+		"variableAttribute": [
+			{
+				"constant": true,
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "FDC1"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "string",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "CustomizationCtrlr"
+		},
+		"variable": {
+			"instance": "",
+			"name": "CustomImplementationEnabled"
+		},
+		"variableAttribute": [
+			{
+				"persistent": true,
+				"type": "Actual",
+				"value": "true"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "boolean",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "AuthCtrlr"
+		},
+		"variable": {
+			"name": "LocalPreAuthorize"
+		},
+		"variableAttribute": [
+			{
+				"persistent": true,
+				"type": "Actual",
+				"value": "false"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "boolean",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "AuthCtrlr"
+		},
+		"variable": {
+			"name": "LocalAuthorizeOffline"
+		},
+		"variableAttribute": [
+			{
+				"persistent": true,
+				"type": "Actual",
+				"value": "false"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "boolean",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "AuthCtrlr"
+		},
+		"variable": {
+			"name": "AuthorizeRemoteStart"
+		},
+		"variableAttribute": [
+			{
+				"mutability": "ReadOnly",
+				"persistent": true,
+				"type": "Actual",
+				"value": "false"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "boolean",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "AuthCtrlr"
+		},
+		"variable": {
+			"name": "OfflineTxForUnknownIdEnabled"
+		},
+		"variableAttribute": [
+			{
+				"persistent": true,
+				"type": "Actual",
+				"value": "true"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "boolean",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "AuthCtrlr"
+		},
+		"variable": {
+			"name": "GroupIdAuthEnabled"
+		},
+		"variableAttribute": [
+			{
+				"persistent": true,
+				"type": "Actual",
+				"value": "true"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "boolean",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "AuthCtrlr"
+		},
+		"variable": {
+			"name": "OfflineTxForExternalIdEnabled"
+		},
+		"variableAttribute": [
+			{
+				"persistent": true,
+				"type": "Actual",
+				"value": "true"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "boolean",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "AuthCtrlr"
+		},
+		"variable": {
+			"name": "Enabled"
+		},
+		"variableAttribute": [
+			{
+				"persistent": true,
+				"type": "Actual",
+				"value": "true"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "boolean",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "AlignedDataCtrlr"
+		},
+		"variable": {
+			"name": "Measurands"
+		},
+		"variableAttribute": [
+			{
+				"persistent": true,
+				"type": "Actual",
+				"value": "Energy.Active.Import.Register"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "MemberList",
+			"supportsMonitoring": false,
+			"valuesList": "Energy.Active.Export.Register,Energy.Active.Import.Register,Voltage"
+		}
+	},
+	{
+		"component": {
+			"name": "AlignedDataCtrlr"
+		},
+		"variable": {
+			"name": "TxEndedMeasurands"
+		},
+		"variableAttribute": [
+			{
+				"persistent": true,
+				"type": "Actual",
+				"value": "Energy.Active.Import.Register"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "MemberList",
+			"supportsMonitoring": false,
+			"valuesList": "Energy.Active.Export.Register,Energy.Active.Import.Register,Voltage"
+		}
+	},
+	{
+		"component": {
+			"name": "AlignedDataCtrlr"
+		},
+		"variable": {
+			"name": "TxEndedInterval"
+		},
+		"variableAttribute": [
+			{
+				"persistent": true,
+				"type": "Actual",
+				"value": "0"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "integer",
+			"minLimit": 0.0,
+			"supportsMonitoring": false,
+			"unit": "s"
+		}
+	},
+	{
+		"component": {
+			"name": "AlignedDataCtrlr"
+		},
+		"variable": {
+			"name": "Interval"
+		},
+		"variableAttribute": [
+			{
+				"persistent": true,
+				"type": "Actual",
+				"value": "900"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "integer",
+			"minLimit": 0.0,
+			"supportsMonitoring": false,
+			"unit": "s"
+		}
+	},
+	{
+		"component": {
+			"name": "OCPPCommCtrlr"
+		},
+		"variable": {
+			"name": "UnlockOnEVSideDisconnect"
+		},
+		"variableAttribute": [
+			{
+				"mutability": "ReadOnly",
+				"persistent": true,
+				"type": "Actual",
+				"value": "false"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "boolean",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "OCPPCommCtrlr"
+		},
+		"variable": {
+			"name": "RetryBackOffRandomRange"
+		},
+		"variableAttribute": [
+			{
+				"persistent": true,
+				"type": "Actual",
+				"value": "5"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "integer",
+			"supportsMonitoring": false,
+			"unit": "s"
+		}
+	},
+	{
+		"component": {
+			"name": "OCPPCommCtrlr"
+		},
+		"variable": {
+			"name": "NetworkConfigurationPriority"
+		},
+		"variableAttribute": [
+			{
+				"persistent": true,
+				"type": "Actual",
+				"value": "1"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "SequenceList",
+			"maxLimit": 5.0,
+			"supportsMonitoring": false,
+			"valuesList": "1,2,3"
+		}
+	},
+	{
+		"component": {
+			"name": "OCPPCommCtrlr"
+		},
+		"variable": {
+			"name": "RetryBackOffWaitMinimum"
+		},
+		"variableAttribute": [
+			{
+				"persistent": true,
+				"type": "Actual",
+				"value": "5"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "integer",
+			"supportsMonitoring": false,
+			"unit": "s"
+		}
+	},
+	{
+		"component": {
+			"name": "OCPPCommCtrlr"
+		},
+		"variable": {
+			"instance": "Default",
+			"name": "MessageTimeout"
+		},
+		"variableAttribute": [
+			{
+				"mutability": "ReadOnly",
+				"persistent": true,
+				"type": "Actual",
+				"value": "30"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "integer",
+			"supportsMonitoring": false,
+			"unit": "s"
+		}
+	},
+	{
+		"component": {
+			"name": "OCPPCommCtrlr"
+		},
+		"variable": {
+			"name": "NetworkProfileConnectionAttempts"
+		},
+		"variableAttribute": [
+			{
+				"persistent": true,
+				"type": "Actual",
+				"value": "3"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "integer",
+			"minLimit": 0.0,
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "OCPPCommCtrlr"
+		},
+		"variable": {
+			"instance": "TransactionEvent",
+			"name": "MessageAttempts"
+		},
+		"variableAttribute": [
+			{
+				"persistent": true,
+				"type": "Actual",
+				"value": "4"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "integer",
+			"maxLimit": 16.0,
+			"minLimit": 1.0,
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "OCPPCommCtrlr"
+		},
+		"variable": {
+			"name": "RetryBackOffRepeatTimes"
+		},
+		"variableAttribute": [
+			{
+				"persistent": true,
+				"type": "Actual",
+				"value": "4"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "integer",
+			"minLimit": 0.0,
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "OCPPCommCtrlr"
+		},
+		"variable": {
+			"name": "OfflineThreshold"
+		},
+		"variableAttribute": [
+			{
+				"persistent": true,
+				"type": "Actual",
+				"value": "5"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "integer",
+			"supportsMonitoring": false,
+			"unit": "s"
+		}
+	},
+	{
+		"component": {
+			"name": "OCPPCommCtrlr"
+		},
+		"variable": {
+			"name": "FileTransferProtocols"
+		},
+		"variableAttribute": [
+			{
+				"constant": true,
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "HTTPS"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "MemberList",
+			"supportsMonitoring": false,
+			"valuesList": "HTTPS"
+		}
+	},
+	{
+		"component": {
+			"name": "OCPPCommCtrlr"
+		},
+		"variable": {
+			"name": "ResetRetries"
+		},
+		"variableAttribute": [
+			{
+				"persistent": true,
+				"type": "Actual",
+				"value": "0"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "integer",
+			"minLimit": 0.0,
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "OCPPCommCtrlr"
+		},
+		"variable": {
+			"name": "ActiveNetworkProfile"
+		},
+		"variableAttribute": [
+			{
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "0"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "integer",
+			"maxLimit": 3.0,
+			"minLimit": 0.0,
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "OCPPCommCtrlr"
+		},
+		"variable": {
+			"name": "WebSocketPingInterval"
+		},
+		"variableAttribute": [
+			{
+				"persistent": true,
+				"type": "Actual",
+				"value": "120"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "integer",
+			"maxLimit": 1800.0,
+			"minLimit": 5.0,
+			"supportsMonitoring": false,
+			"unit": "s"
+		}
+	},
+	{
+		"component": {
+			"name": "OCPPCommCtrlr"
+		},
+		"variable": {
+			"instance": "TransactionEvent",
+			"name": "MessageAttemptInterval"
+		},
+		"variableAttribute": [
+			{
+				"persistent": true,
+				"type": "Actual",
+				"value": "15"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "integer",
+			"maxLimit": 300.0,
+			"minLimit": 0.0,
+			"supportsMonitoring": false,
+			"unit": "s"
+		}
+	},
+	{
+		"component": {
+			"name": "TxCtrlr"
+		},
+		"variable": {
+			"name": "StopTxOnEVSideDisconnect"
+		},
+		"variableAttribute": [
+			{
+				"constant": true,
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "true"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "boolean",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "TxCtrlr"
+		},
+		"variable": {
+			"name": "PlugoutProtectionTimeout"
+		},
+		"variableAttribute": [
+			{
+				"persistent": true,
+				"type": "Actual",
+				"value": "0"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "integer",
+			"supportsMonitoring": false,
+			"unit": "s"
+		}
+	},
+	{
+		"component": {
+			"name": "TxCtrlr"
+		},
+		"variable": {
+			"name": "TxUpdateOnLimitReached"
+		},
+		"variableAttribute": [
+			{
+				"persistent": true,
+				"type": "Actual",
+				"value": "false"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "boolean",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "TxCtrlr"
+		},
+		"variable": {
+			"name": "StopTxOnInvalidId"
+		},
+		"variableAttribute": [
+			{
+				"persistent": true,
+				"type": "Actual",
+				"value": "true"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "boolean",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "TxCtrlr"
+		},
+		"variable": {
+			"name": "TxStopPoint"
+		},
+		"variableAttribute": [
+			{
+				"persistent": true,
+				"type": "Actual",
+				"value": "EVConnected"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "MemberList",
+			"supportsMonitoring": false,
+			"valuesList": "EVConnected,Authorized,PowerPathClosed"
+		}
+	},
+	{
+		"component": {
+			"name": "TxCtrlr"
+		},
+		"variable": {
+			"name": "ResumeTxOnReboot"
+		},
+		"variableAttribute": [
+			{
+				"persistent": true,
+				"type": "Actual",
+				"value": "false"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "boolean",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "TxCtrlr"
+		},
+		"variable": {
+			"name": "TxStartRandomizedDelayLimit"
+		},
+		"variableAttribute": [
+			{
+				"persistent": true,
+				"type": "Actual",
+				"value": "0"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "integer",
+			"maxLimit": 1800.0,
+			"minLimit": 0.0,
+			"supportsMonitoring": false,
+			"unit": "s"
+		}
+	},
+	{
+		"component": {
+			"name": "TxCtrlr"
+		},
+		"variable": {
+			"name": "TxStartPoint"
+		},
+		"variableAttribute": [
+			{
+				"persistent": true,
+				"type": "Actual",
+				"value": "PowerPathClosed"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "MemberList",
+			"supportsMonitoring": false,
+			"valuesList": "EVConnected,Authorized,PowerPathClosed,EnergyTransfer"
+		}
+	},
+	{
+		"component": {
+			"name": "TxCtrlr"
+		},
+		"variable": {
+			"name": "StopTxOnLimitReached"
+		},
+		"variableAttribute": [
+			{
+				"persistent": true,
+				"type": "Actual",
+				"value": "false"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "boolean",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "TxCtrlr"
+		},
+		"variable": {
+			"name": "CableLossAdjustmentEnabled"
+		},
+		"variableAttribute": [
+			{
+				"persistent": true,
+				"type": "Actual",
+				"value": "false"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "boolean",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "TxCtrlr"
+		},
+		"variable": {
+			"name": "TxBeforeAcceptedEnabled"
+		},
+		"variableAttribute": [
+			{
+				"persistent": true,
+				"type": "Actual",
+				"value": "true"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "boolean",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "TxCtrlr"
+		},
+		"variable": {
+			"name": "TxTimeLimit"
+		},
+		"variableAttribute": [
+			{
+				"persistent": true,
+				"type": "Actual",
+				"value": "0"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "integer",
+			"supportsMonitoring": false,
+			"unit": "s"
+		}
+	},
+	{
+		"component": {
+			"name": "TxCtrlr"
+		},
+		"variable": {
+			"name": "EVConnectionTimeOut"
+		},
+		"variableAttribute": [
+			{
+				"persistent": true,
+				"type": "Actual",
+				"value": "60"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "integer",
+			"minLimit": 15.0,
+			"supportsMonitoring": false,
+			"unit": "s"
+		}
+	},
+	{
+		"component": {
+			"name": "TxCtrlr"
+		},
+		"variable": {
+			"name": "TxEnergyLimit"
+		},
+		"variableAttribute": [
+			{
+				"persistent": true,
+				"type": "Actual",
+				"value": "0"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "decimal",
+			"supportsMonitoring": false,
+			"unit": "kWh"
+		}
+	},
+	{
+		"component": {
+			"name": "SampledDataCtrlr"
+		},
+		"variable": {
+			"name": "TxStartedMeasurands"
+		},
+		"variableAttribute": [
+			{
+				"persistent": true,
+				"type": "Actual",
+				"value": "Energy.Active.Import.Register"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "MemberList",
+			"supportsMonitoring": false,
+			"valuesList": "Energy.Active.Import.Register,SoC"
+		}
+	},
+	{
+		"component": {
+			"name": "SampledDataCtrlr"
+		},
+		"variable": {
+			"name": "TxEndedMeasurands"
+		},
+		"variableAttribute": [
+			{
+				"persistent": true,
+				"type": "Actual",
+				"value": "Energy.Active.Import.Register"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "MemberList",
+			"supportsMonitoring": false,
+			"valuesList": "Energy.Active.Export.Register,Energy.Active.Import.Register,SoC,Voltage"
+		}
+	},
+	{
+		"component": {
+			"name": "SampledDataCtrlr"
+		},
+		"variable": {
+			"name": "TxUpdatedMeasurands"
+		},
+		"variableAttribute": [
+			{
+				"persistent": true,
+				"type": "Actual",
+				"value": "Energy.Active.Import.Register,Voltage,Current.Import,Power.Active.Import,Power.Factor"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "MemberList",
+			"supportsMonitoring": false,
+			"valuesList": "Current.Import,Current.Offered,Energy.Active.Export.Register,Energy.Active.Import.Register,Power.Active.Import,Power.Factor,Power.Offered,SoC,Voltage"
+		}
+	},
+	{
+		"component": {
+			"name": "SampledDataCtrlr"
+		},
+		"variable": {
+			"name": "TxEndedInterval"
+		},
+		"variableAttribute": [
+			{
+				"persistent": true,
+				"type": "Actual",
+				"value": "0"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "integer",
+			"minLimit": 0.0,
+			"supportsMonitoring": false,
+			"unit": "s"
+		}
+	},
+	{
+		"component": {
+			"name": "SampledDataCtrlr"
+		},
+		"variable": {
+			"name": "RateChangedInterval"
+		},
+		"variableAttribute": [
+			{
+				"persistent": true,
+				"type": "Actual",
+				"value": "0"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "integer",
+			"minLimit": 0.0,
+			"supportsMonitoring": false,
+			"unit": "s"
+		}
+	},
+	{
+		"component": {
+			"name": "SampledDataCtrlr"
+		},
+		"variable": {
+			"name": "RateChangedMeasurands"
+		},
+		"variableAttribute": [
+			{
+				"persistent": true,
+				"type": "Actual",
+				"value": "Voltage,Current.Import,Power.Active.Import"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "MemberList",
+			"supportsMonitoring": false,
+			"valuesList": "Current.Import,Current.Offered,Energy.Active.Export.Register,Energy.Active.Import.Register,Power.Active.Import,Power.Factor,Power.Offered,SoC,Voltage"
+		}
+	},
+	{
+		"component": {
+			"name": "SampledDataCtrlr"
+		},
+		"variable": {
+			"name": "TxUpdatedOfflineInterval"
+		},
+		"variableAttribute": [
+			{
+				"persistent": true,
+				"type": "Actual",
+				"value": "300"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "integer",
+			"minLimit": 0.0,
+			"supportsMonitoring": false,
+			"unit": "s"
+		}
+	},
+	{
+		"component": {
+			"name": "SampledDataCtrlr"
+		},
+		"variable": {
+			"name": "TxUpdatedInterval"
+		},
+		"variableAttribute": [
+			{
+				"persistent": true,
+				"type": "Actual",
+				"value": "60"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "integer",
+			"minLimit": 0.0,
+			"supportsMonitoring": false,
+			"unit": "s"
+		}
+	},
+	{
+		"component": {
+			"name": "ISO15118Ctrlr"
+		},
+		"variable": {
+			"name": "ContractValidationOffline"
+		},
+		"variableAttribute": [
+			{
+				"persistent": true,
+				"type": "Actual",
+				"value": "false"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "boolean",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "ISO15118Ctrlr"
+		},
+		"variable": {
+			"name": "Enabled"
+		},
+		"variableAttribute": [
+			{
+				"persistent": true,
+				"type": "Actual",
+				"value": "true"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "boolean",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "ISO15118Ctrlr"
+		},
+		"variable": {
+			"name": "SeccId"
+		},
+		"variableAttribute": [
+			{
+				"persistent": true,
+				"type": "Actual",
+				"value": ""
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "string",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "TariffCostCtrlr"
+		},
+		"variable": {
+			"name": "TariffFallbackMessage"
+		},
+		"variableAttribute": [
+			{
+				"persistent": true,
+				"type": "Actual",
+				"value": ""
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "string",
+			"maxLimit": 255.0,
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "TariffCostCtrlr"
+		},
+		"variable": {
+			"name": "TotalCostFallbackMessage"
+		},
+		"variableAttribute": [
+			{
+				"persistent": true,
+				"type": "Actual",
+				"value": ""
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "string",
+			"maxLimit": 255.0,
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "TariffCostCtrlr"
+		},
+		"variable": {
+			"instance": "Idle",
+			"name": "CostInfo"
+		},
+		"variableAttribute": [
+			{
+				"persistent": true,
+				"type": "Actual",
+				"value": ""
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "string",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "TariffCostCtrlr"
+		},
+		"variable": {
+			"name": "Currency"
+		},
+		"variableAttribute": [
+			{
+				"persistent": true,
+				"type": "Actual",
+				"value": ""
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "string",
+			"maxLimit": 3.0,
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "TariffCostCtrlr"
+		},
+		"variable": {
+			"instance": "Cost",
+			"name": "Enabled"
+		},
+		"variableAttribute": [
+			{
+				"persistent": true,
+				"type": "Actual",
+				"value": "true"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "boolean",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"evse": {
+				"connectorId": 1,
+				"id": 2
+			},
+			"name": "Connector"
+		},
+		"variable": {
+			"name": "LiquidCooled"
+		},
+		"variableAttribute": [
+			{
+				"constant": true,
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "true"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "boolean",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"evse": {
+				"connectorId": 1,
+				"id": 2
+			},
+			"name": "Connector"
+		},
+		"variable": {
+			"name": "CableLength"
+		},
+		"variableAttribute": [
+			{
+				"constant": true,
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "5.5"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "decimal",
+			"supportsMonitoring": false,
+			"unit": "m"
+		}
+	},
+	{
+		"component": {
+			"evse": {
+				"connectorId": 1,
+				"id": 2
+			},
+			"name": "Connector"
+		},
+		"variable": {
+			"name": "CableAmpacity"
+		},
+		"variableAttribute": [
+			{
+				"constant": true,
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "350"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "integer",
+			"supportsMonitoring": false,
+			"unit": "A"
+		}
+	},
+	{
+		"component": {
+			"evse": {
+				"connectorId": 1,
+				"id": 2
+			},
+			"name": "Connector"
+		},
+		"variable": {
+			"name": "MaxVoltage"
+		},
+		"variableAttribute": [
+			{
+				"constant": true,
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "0"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "decimal",
+			"supportsMonitoring": false,
+			"unit": "V"
+		}
+	},
+	{
+		"component": {
+			"evse": {
+				"connectorId": 1,
+				"id": 2
+			},
+			"name": "Connector"
+		},
+		"variable": {
+			"name": "LedBrightness"
+		},
+		"variableAttribute": [
+			{
+				"persistent": true,
+				"type": "Actual",
+				"value": "100"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "integer",
+			"maxLimit": 100.0,
+			"minLimit": 0.0,
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"evse": {
+				"connectorId": 1,
+				"id": 2
+			},
+			"name": "Connector"
+		},
+		"variable": {
+			"name": "Available"
+		},
+		"variableAttribute": [
+			{
+				"constant": true,
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "true"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "boolean",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"evse": {
+				"connectorId": 1,
+				"id": 2
+			},
+			"name": "Connector"
+		},
+		"variable": {
+			"name": "SupplyPhases"
+		},
+		"variableAttribute": [
+			{
+				"constant": true,
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "0"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "integer",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"evse": {
+				"connectorId": 1,
+				"id": 2
+			},
+			"name": "Connector"
+		},
+		"variable": {
+			"name": "AvailabilityState"
+		},
+		"variableAttribute": [
+			{
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "Available"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "OptionList",
+			"supportsMonitoring": false,
+			"valuesList": "Available,Occupied,Reserved,Unavailable,Faulted"
+		}
+	},
+	{
+		"component": {
+			"evse": {
+				"connectorId": 1,
+				"id": 2
+			},
+			"name": "Connector"
+		},
+		"variable": {
+			"name": "ConnectorType"
+		},
+		"variableAttribute": [
+			{
+				"constant": true,
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "cCCS2"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "string",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "SmartChargingCtrlr"
+		},
+		"variable": {
+			"instance": "ChargingProfiles",
+			"name": "Entries"
+		},
+		"variableAttribute": [
+			{
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "0"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "integer",
+			"minLimit": 0.0,
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "SmartChargingCtrlr"
+		},
+		"variable": {
+			"name": "ExternalControlSignalsEnabled"
+		},
+		"variableAttribute": [
+			{
+				"constant": true,
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "false"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "boolean",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "SmartChargingCtrlr"
+		},
+		"variable": {
+			"name": "PeriodsPerSchedule"
+		},
+		"variableAttribute": [
+			{
+				"constant": true,
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "255"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "integer",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "SmartChargingCtrlr"
+		},
+		"variable": {
+			"name": "RateUnit"
+		},
+		"variableAttribute": [
+			{
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "W"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "string",
+			"supportsMonitoring": false,
+			"valuesList": "W,A"
+		}
+	},
+	{
+		"component": {
+			"name": "SmartChargingCtrlr"
+		},
+		"variable": {
+			"name": "LimitChangeSignificance"
+		},
+		"variableAttribute": [
+			{
+				"persistent": true,
+				"type": "Actual",
+				"value": "3"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "decimal",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "SmartChargingCtrlr"
+		},
+		"variable": {
+			"name": "Available"
+		},
+		"variableAttribute": [
+			{
+				"constant": true,
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "true"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "boolean",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "SmartChargingCtrlr"
+		},
+		"variable": {
+			"name": "ProfileStackLevel"
+		},
+		"variableAttribute": [
+			{
+				"constant": true,
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "255"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "integer",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "SmartChargingCtrlr"
+		},
+		"variable": {
+			"name": "Enabled"
+		},
+		"variableAttribute": [
+			{
+				"persistent": true,
+				"type": "Actual",
+				"value": "true"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "boolean",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"evse": {
+				"connectorId": 1,
+				"id": 1
+			},
+			"name": "ConnectorHolsterRelease"
+		},
+		"variable": {
+			"name": "Available"
+		},
+		"variableAttribute": [
+			{
+				"constant": true,
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "true"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "boolean",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "Controller"
+		},
+		"variable": {
+			"name": "FirmwareVersion"
+		},
+		"variableAttribute": [
+			{
+				"constant": true,
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": ""
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "string",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "Controller"
+		},
+		"variable": {
+			"name": "HardwareVersion"
+		},
+		"variableAttribute": [
+			{
+				"constant": true,
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": ""
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "string",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "Controller"
+		},
+		"variable": {
+			"name": "Model"
+		},
+		"variableAttribute": [
+			{
+				"constant": true,
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": ""
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "string",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "Controller"
+		},
+		"variable": {
+			"name": "Available"
+		},
+		"variableAttribute": [
+			{
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "true"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "boolean",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "Controller"
+		},
+		"variable": {
+			"name": "NodeId"
+		},
+		"variableAttribute": [
+			{
+				"constant": true,
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "89530cc17bb34f4ea41b8b849d2a9250"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "string",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "Controller"
+		},
+		"variable": {
+			"name": "DeviceId"
+		},
+		"variableAttribute": [
+			{
+				"constant": true,
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "0000000000000000"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "string",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "Controller"
+		},
+		"variable": {
+			"name": "SerialNumber"
+		},
+		"variableAttribute": [
+			{
+				"constant": true,
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": ""
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "string",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "Controller"
+		},
+		"variable": {
+			"name": "FruName"
+		},
+		"variableAttribute": [
+			{
+				"constant": true,
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": ""
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "string",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "ConnectorHolsterRelease"
+		},
+		"variable": {
+			"name": "Enabled"
+		},
+		"variableAttribute": [
+			{
+				"persistent": true,
+				"type": "Actual",
+				"value": "true"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "boolean",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "EichrechtCtrlr"
+		},
+		"variable": {
+			"name": "HWCompliant"
+		},
+		"variableAttribute": [
+			{
+				"mutability": "ReadOnly",
+				"persistent": true,
+				"type": "Actual",
+				"value": "false"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "boolean",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "EichrechtCtrlr"
+		},
+		"variable": {
+			"name": "UploadURL"
+		},
+		"variableAttribute": [
+			{
+				"persistent": true,
+				"type": "Actual",
+				"value": ""
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "string",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "EichrechtCtrlr"
+		},
+		"variable": {
+			"name": "UploadPeriod"
+		},
+		"variableAttribute": [
+			{
+				"persistent": true,
+				"type": "Actual",
+				"value": "0"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "integer",
+			"minLimit": 0.0,
+			"supportsMonitoring": false,
+			"unit": "s"
+		}
+	},
+	{
+		"component": {
+			"name": "EichrechtCtrlr"
+		},
+		"variable": {
+			"name": "Enabled"
+		},
+		"variableAttribute": [
+			{
+				"persistent": true,
+				"type": "Actual",
+				"value": "false"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "boolean",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "EichrechtCtrlr"
+		},
+		"variable": {
+			"name": "PublicKey"
+		},
+		"variableAttribute": [
+			{
+				"mutability": "ReadOnly",
+				"persistent": true,
+				"type": "Actual",
+				"value": ""
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "string",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "EichrechtCtrlr"
+		},
+		"variable": {
+			"name": "LRSVersion"
+		},
+		"variableAttribute": [
+			{
+				"mutability": "ReadOnly",
+				"persistent": true,
+				"type": "Actual",
+				"value": ""
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "string",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "EichrechtCtrlr"
+		},
+		"variable": {
+			"name": "LRSHash"
+		},
+		"variableAttribute": [
+			{
+				"mutability": "ReadOnly",
+				"persistent": true,
+				"type": "Actual",
+				"value": ""
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "string",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"evse": {
+				"id": 1
+			},
+			"name": "DisplayCtrlr"
+		},
+		"variable": {
+			"name": "PortLabel"
+		},
+		"variableAttribute": [
+			{
+				"persistent": true,
+				"type": "Actual",
+				"value": ""
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "string",
+			"maxLimit": 2.0,
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "TelemetryCtrlr"
+		},
+		"variable": {
+			"name": "FilterList"
+		},
+		"variableAttribute": [
+			{
+				"persistent": true,
+				"type": "Actual",
+				"value": ""
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "string",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "TelemetryCtrlr"
+		},
+		"variable": {
+			"name": "ReportInterval"
+		},
+		"variableAttribute": [
+			{
+				"persistent": true,
+				"type": "Actual",
+				"value": "60"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "integer",
+			"minLimit": 0.0,
+			"supportsMonitoring": false,
+			"unit": "s"
+		}
+	},
+	{
+		"component": {
+			"name": "TelemetryCtrlr"
+		},
+		"variable": {
+			"name": "Enabled"
+		},
+		"variableAttribute": [
+			{
+				"persistent": true,
+				"type": "Actual",
+				"value": "false"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "boolean",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"evse": {
+				"connectorId": 1,
+				"id": 2
+			},
+			"name": "ConnectorHolsterRelease"
+		},
+		"variable": {
+			"name": "Available"
+		},
+		"variableAttribute": [
+			{
+				"constant": true,
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "true"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "boolean",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "DisplayMessageCtrlr"
+		},
+		"variable": {
+			"name": "SupportedPriorities"
+		},
+		"variableAttribute": [
+			{
+				"constant": true,
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "NormalCycle"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "string",
+			"supportsMonitoring": false,
+			"valuesList": "AlwaysFront,InFront,NormalCycle"
+		}
+	},
+	{
+		"component": {
+			"name": "DisplayMessageCtrlr"
+		},
+		"variable": {
+			"name": "SupportedFormats"
+		},
+		"variableAttribute": [
+			{
+				"constant": true,
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "ASCII,UTF8"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "string",
+			"supportsMonitoring": false,
+			"valuesList": "ASCII,HTML,URI,UTF8"
+		}
+	},
+	{
+		"component": {
+			"name": "DisplayMessageCtrlr"
+		},
+		"variable": {
+			"name": "DisplayMessages"
+		},
+		"variableAttribute": [
+			{
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "0"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "integer",
+			"maxLimit": 1.0,
+			"minLimit": 0.0,
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "DisplayMessageCtrlr"
+		},
+		"variable": {
+			"name": "Available"
+		},
+		"variableAttribute": [
+			{
+				"constant": true,
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "true"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "boolean",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "DisplayMessageCtrlr"
+		},
+		"variable": {
+			"name": "Enabled"
+		},
+		"variableAttribute": [
+			{
+				"persistent": true,
+				"type": "Actual",
+				"value": "true"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "boolean",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"evse": {
+				"connectorId": 1,
+				"id": 1
+			},
+			"name": "Connector"
+		},
+		"variable": {
+			"name": "LiquidCooled"
+		},
+		"variableAttribute": [
+			{
+				"constant": true,
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "true"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "boolean",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"evse": {
+				"connectorId": 1,
+				"id": 1
+			},
+			"name": "Connector"
+		},
+		"variable": {
+			"name": "CableLength"
+		},
+		"variableAttribute": [
+			{
+				"constant": true,
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "5.5"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "decimal",
+			"supportsMonitoring": false,
+			"unit": "m"
+		}
+	},
+	{
+		"component": {
+			"evse": {
+				"connectorId": 1,
+				"id": 1
+			},
+			"name": "Connector"
+		},
+		"variable": {
+			"name": "CableAmpacity"
+		},
+		"variableAttribute": [
+			{
+				"constant": true,
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "350"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "integer",
+			"supportsMonitoring": false,
+			"unit": "A"
+		}
+	},
+	{
+		"component": {
+			"evse": {
+				"connectorId": 1,
+				"id": 1
+			},
+			"name": "Connector"
+		},
+		"variable": {
+			"name": "MaxVoltage"
+		},
+		"variableAttribute": [
+			{
+				"constant": true,
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "0"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "decimal",
+			"supportsMonitoring": false,
+			"unit": "V"
+		}
+	},
+	{
+		"component": {
+			"evse": {
+				"connectorId": 1,
+				"id": 1
+			},
+			"name": "Connector"
+		},
+		"variable": {
+			"name": "LedBrightness"
+		},
+		"variableAttribute": [
+			{
+				"persistent": true,
+				"type": "Actual",
+				"value": "100"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "integer",
+			"maxLimit": 100.0,
+			"minLimit": 0.0,
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"evse": {
+				"connectorId": 1,
+				"id": 1
+			},
+			"name": "Connector"
+		},
+		"variable": {
+			"name": "Available"
+		},
+		"variableAttribute": [
+			{
+				"constant": true,
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "true"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "boolean",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"evse": {
+				"connectorId": 1,
+				"id": 1
+			},
+			"name": "Connector"
+		},
+		"variable": {
+			"name": "SupplyPhases"
+		},
+		"variableAttribute": [
+			{
+				"constant": true,
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "0"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "integer",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"evse": {
+				"connectorId": 1,
+				"id": 1
+			},
+			"name": "Connector"
+		},
+		"variable": {
+			"name": "AvailabilityState"
+		},
+		"variableAttribute": [
+			{
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "Available"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "OptionList",
+			"supportsMonitoring": false,
+			"valuesList": "Available,Occupied,Reserved,Unavailable,Faulted"
+		}
+	},
+	{
+		"component": {
+			"evse": {
+				"connectorId": 1,
+				"id": 1
+			},
+			"name": "Connector"
+		},
+		"variable": {
+			"name": "ConnectorType"
+		},
+		"variableAttribute": [
+			{
+				"constant": true,
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "cCCS2"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "string",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "ClockCtrlr"
+		},
+		"variable": {
+			"name": "TimeSource"
+		},
+		"variableAttribute": [
+			{
+				"persistent": true,
+				"type": "Actual",
+				"value": "NTP"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "SequenceList",
+			"supportsMonitoring": false,
+			"valuesList": "Heartbeat,NTP"
+		}
+	},
+	{
+		"component": {
+			"name": "ClockCtrlr"
+		},
+		"variable": {
+			"name": "TimeZone"
+		},
+		"variableAttribute": [
+			{
+				"persistent": true,
+				"type": "Actual",
+				"value": ""
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "string",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "ClockCtrlr"
+		},
+		"variable": {
+			"name": "DateTime"
+		},
+		"variableAttribute": [
+			{
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "2024-02-29T14:18:09Z"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "dateTime",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"evse": {
+				"id": 1
+			},
+			"name": "ControlMetering"
+		},
+		"variable": {
+			"name": "Available"
+		},
+		"variableAttribute": [
+			{
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "true"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "boolean",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"evse": {
+				"id": 1
+			},
+			"name": "ControlMetering"
+		},
+		"variable": {
+			"name": "DeviceId"
+		},
+		"variableAttribute": [
+			{
+				"constant": true,
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "UDID0000000000000000000000000000"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "string",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"evse": {
+				"id": 1
+			},
+			"name": "ControlMetering"
+		},
+		"variable": {
+			"name": "PublicKey"
+		},
+		"variableAttribute": [
+			{
+				"constant": true,
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "PUBKEY00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "string",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"evse": {
+				"id": 1
+			},
+			"name": "ControlMetering"
+		},
+		"variable": {
+			"name": "FirmwareVersion"
+		},
+		"variableAttribute": [
+			{
+				"constant": true,
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "VERSION000000000000000000000000000000000000000000000000000000000"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "string",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"evse": {
+				"id": 1
+			},
+			"name": "ControlMetering"
+		},
+		"variable": {
+			"name": "BootloaderVersion"
+		},
+		"variableAttribute": [
+			{
+				"constant": true,
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "BOOTLOADER000000000000000000000000000000000000000000000000000000"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "string",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"evse": {
+				"id": 1
+			},
+			"name": "ControlMetering"
+		},
+		"variable": {
+			"name": "HardwareVersion"
+		},
+		"variableAttribute": [
+			{
+				"constant": true,
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "MDS,2"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "string",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"evse": {
+				"id": 1
+			},
+			"name": "ControlMetering"
+		},
+		"variable": {
+			"name": "Model"
+		},
+		"variableAttribute": [
+			{
+				"constant": true,
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "MDS"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "string",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"evse": {
+				"id": 1
+			},
+			"name": "ControlMetering"
+		},
+		"variable": {
+			"name": "SerialNumber"
+		},
+		"variableAttribute": [
+			{
+				"constant": true,
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "SN3300000001"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "string",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"evse": {
+				"id": 1
+			},
+			"name": "ControlMetering"
+		},
+		"variable": {
+			"name": "FruName"
+		},
+		"variableAttribute": [
+			{
+				"constant": true,
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "MDS1"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "string",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "TokenReader"
+		},
+		"variable": {
+			"instance": "IClass",
+			"name": "Enabled"
+		},
+		"variableAttribute": [
+			{
+				"persistent": true,
+				"type": "Actual",
+				"value": "true"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "boolean",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "TokenReader"
+		},
+		"variable": {
+			"name": "PaymentProfile"
+		},
+		"variableAttribute": [
+			{
+				"persistent": true,
+				"type": "Actual",
+				"value": "default"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "string",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "TokenReader"
+		},
+		"variable": {
+			"instance": "MIFARE",
+			"name": "Enabled"
+		},
+		"variableAttribute": [
+			{
+				"persistent": true,
+				"type": "Actual",
+				"value": "true"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "boolean",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "TokenReader"
+		},
+		"variable": {
+			"instance": "NEMA",
+			"name": "Enabled"
+		},
+		"variableAttribute": [
+			{
+				"persistent": true,
+				"type": "Actual",
+				"value": "true"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "boolean",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "TokenReader"
+		},
+		"variable": {
+			"instance": "Payment",
+			"name": "Enabled"
+		},
+		"variableAttribute": [
+			{
+				"persistent": true,
+				"type": "Actual",
+				"value": "true"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "boolean",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "TokenReader"
+		},
+		"variable": {
+			"instance": "AppleVAS",
+			"name": "Enabled"
+		},
+		"variableAttribute": [
+			{
+				"persistent": true,
+				"type": "Actual",
+				"value": "true"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "boolean",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "TokenReader"
+		},
+		"variable": {
+			"instance": "ISO15693",
+			"name": "Enabled"
+		},
+		"variableAttribute": [
+			{
+				"persistent": true,
+				"type": "Actual",
+				"value": "true"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "boolean",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"instance": "BLANK3",
+			"name": "SEVB"
+		},
+		"variable": {
+			"name": "Available"
+		},
+		"variableAttribute": [
+			{
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "true"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "boolean",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"instance": "BLANK3",
+			"name": "SEVB"
+		},
+		"variable": {
+			"name": "DeviceId"
+		},
+		"variableAttribute": [
+			{
+				"constant": true,
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "UDID000000000003"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "string",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"instance": "BLANK3",
+			"name": "SEVB"
+		},
+		"variable": {
+			"name": "FirmwareVersion"
+		},
+		"variableAttribute": [
+			{
+				"constant": true,
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "1999.01.01"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "string",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"instance": "BLANK3",
+			"name": "SEVB"
+		},
+		"variable": {
+			"name": "BootloaderVersion"
+		},
+		"variableAttribute": [
+			{
+				"constant": true,
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "UNKNOWN"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "string",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"instance": "BLANK3",
+			"name": "SEVB"
+		},
+		"variable": {
+			"name": "HardwareVersion"
+		},
+		"variableAttribute": [
+			{
+				"constant": true,
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "SEVB-BLANK"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "string",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"instance": "BLANK3",
+			"name": "SEVB"
+		},
+		"variable": {
+			"name": "Model"
+		},
+		"variableAttribute": [
+			{
+				"constant": true,
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "SEVB"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "string",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"instance": "BLANK3",
+			"name": "SEVB"
+		},
+		"variable": {
+			"name": "SerialNumber"
+		},
+		"variableAttribute": [
+			{
+				"constant": true,
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "SN5500000003"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "string",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"instance": "BLANK3",
+			"name": "SEVB"
+		},
+		"variable": {
+			"name": "FruName"
+		},
+		"variableAttribute": [
+			{
+				"constant": true,
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "BLANK3"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "string",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "DisplayCtrlr"
+		},
+		"variable": {
+			"name": "IdleVideoEnabled"
+		},
+		"variableAttribute": [
+			{
+				"persistent": true,
+				"type": "Actual",
+				"value": "false"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "boolean",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "DisplayCtrlr"
+		},
+		"variable": {
+			"name": "DiagnosticView"
+		},
+		"variableAttribute": [
+			{
+				"persistent": true,
+				"type": "Actual",
+				"value": "false"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "boolean",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "DisplayCtrlr"
+		},
+		"variable": {
+			"name": "StationName"
+		},
+		"variableAttribute": [
+			{
+				"persistent": true,
+				"type": "Actual",
+				"value": "ChargePoint "
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "string",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "DisplayCtrlr"
+		},
+		"variable": {
+			"name": "ServiceCode"
+		},
+		"variableAttribute": [
+			{
+				"mutability": "WriteOnly",
+				"persistent": true,
+				"type": "Actual"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "string",
+			"maxLimit": 5.0,
+			"minLimit": 5.0,
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "DisplayCtrlr"
+		},
+		"variable": {
+			"name": "SupportNumber"
+		},
+		"variableAttribute": [
+			{
+				"persistent": true,
+				"type": "Actual",
+				"value": ""
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "string",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "DisplayCtrlr"
+		},
+		"variable": {
+			"name": "SupportURL"
+		},
+		"variableAttribute": [
+			{
+				"persistent": true,
+				"type": "Actual",
+				"value": ""
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "string",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "DisplayCtrlr"
+		},
+		"variable": {
+			"instance": "Default",
+			"name": "Language"
+		},
+		"variableAttribute": [
+			{
+				"persistent": true,
+				"type": "Actual",
+				"value": "en"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "string",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "DisplayCtrlr"
+		},
+		"variable": {
+			"name": "NewToChargingURL"
+		},
+		"variableAttribute": [
+			{
+				"persistent": true,
+				"type": "Actual",
+				"value": ""
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "string",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "DisplayCtrlr"
+		},
+		"variable": {
+			"name": "CTEPNumber"
+		},
+		"variableAttribute": [
+			{
+				"persistent": true,
+				"type": "Actual",
+				"value": ""
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "string",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "DisplayCtrlr"
+		},
+		"variable": {
+			"name": "StationAddress"
+		},
+		"variableAttribute": [
+			{
+				"persistent": true,
+				"type": "Actual",
+				"value": ""
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "string",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "DisplayCtrlr"
+		},
+		"variable": {
+			"name": "ActivationDate"
+		},
+		"variableAttribute": [
+			{
+				"persistent": true,
+				"type": "Actual",
+				"value": "1970-01-01T00:00:00Z"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "dateTime",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "DisplayCtrlr"
+		},
+		"variable": {
+			"name": "StationMessage"
+		},
+		"variableAttribute": [
+			{
+				"persistent": true,
+				"type": "Actual",
+				"value": ""
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "string",
+			"maxLimit": 81.0,
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "DisplayCtrlr"
+		},
+		"variable": {
+			"name": "MobileEnabled"
+		},
+		"variableAttribute": [
+			{
+				"persistent": true,
+				"type": "Actual",
+				"value": "false"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "boolean",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "DisplayCtrlr"
+		},
+		"variable": {
+			"name": "Unbranded"
+		},
+		"variableAttribute": [
+			{
+				"persistent": true,
+				"type": "Actual",
+				"value": "false"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "boolean",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "DisplayCtrlr"
+		},
+		"variable": {
+			"name": "CustomThemeEnabled"
+		},
+		"variableAttribute": [
+			{
+				"persistent": true,
+				"type": "Actual",
+				"value": "false"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "boolean",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "DisplayCtrlr"
+		},
+		"variable": {
+			"name": "TechnicalView"
+		},
+		"variableAttribute": [
+			{
+				"persistent": true,
+				"type": "Actual",
+				"value": "false"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "boolean",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "ReservationCtrlr"
+		},
+		"variable": {
+			"name": "JoinWaitlistFromStation"
+		},
+		"variableAttribute": [
+			{
+				"persistent": true,
+				"type": "Actual",
+				"value": "false"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "boolean",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "ReservationCtrlr"
+		},
+		"variable": {
+			"name": "NonEvseSpecific"
+		},
+		"variableAttribute": [
+			{
+				"constant": true,
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "true"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "boolean",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "ReservationCtrlr"
+		},
+		"variable": {
+			"name": "Available"
+		},
+		"variableAttribute": [
+			{
+				"constant": true,
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "true"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "boolean",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"name": "ReservationCtrlr"
+		},
+		"variable": {
+			"name": "Enabled"
+		},
+		"variableAttribute": [
+			{
+				"persistent": true,
+				"type": "Actual",
+				"value": "false"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "boolean",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"instance": "PM1",
+			"name": "PowerModule"
+		},
+		"variable": {
+			"name": "Available"
+		},
+		"variableAttribute": [
+			{
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "true"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "boolean",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"instance": "PM1",
+			"name": "PowerModule"
+		},
+		"variable": {
+			"name": "FirmwareVersion"
+		},
+		"variableAttribute": [
+			{
+				"constant": true,
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "0.11.2.abcdef01"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "string",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"instance": "PM1",
+			"name": "PowerModule"
+		},
+		"variable": {
+			"name": "BootloaderVersion"
+		},
+		"variableAttribute": [
+			{
+				"constant": true,
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "1.00.0.00000000"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "string",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"instance": "PM1",
+			"name": "PowerModule"
+		},
+		"variable": {
+			"name": "HardwareVersion"
+		},
+		"variableAttribute": [
+			{
+				"constant": true,
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "43-001200-03-BY"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "string",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"instance": "PM1",
+			"name": "PowerModule"
+		},
+		"variable": {
+			"name": "Model"
+		},
+		"variableAttribute": [
+			{
+				"constant": true,
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "PM"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "string",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"instance": "PM1",
+			"name": "PowerModule"
+		},
+		"variable": {
+			"name": "SerialNumber"
+		},
+		"variableAttribute": [
+			{
+				"constant": true,
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "SN7700000001"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "string",
+			"supportsMonitoring": false
+		}
+	},
+	{
+		"component": {
+			"instance": "PM1",
+			"name": "PowerModule"
+		},
+		"variable": {
+			"name": "FruName"
+		},
+		"variableAttribute": [
+			{
+				"constant": true,
+				"mutability": "ReadOnly",
+				"type": "Actual",
+				"value": "PM1"
+			}
+		],
+		"variableCharacteristics": {
+			"dataType": "string",
+			"supportsMonitoring": false
+		}
+	}
+]
