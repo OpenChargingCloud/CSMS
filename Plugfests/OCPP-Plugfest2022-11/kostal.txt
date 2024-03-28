@@ -1,0 +1,484 @@
+Kostal
+
+- StatusNotification when reconnected!
+
+
+
+[11/10/2022 14:25:09] CentralSystemWSServer connection from 23.88.66.160:40402 using authorization: kostal_elaad_teststation/plugXest20221110
+[11/10/2022 14:25:09] HTTP web socket server on 0.0.0.0:9900 new connection with kostal_elaad_teststation (23.88.66.160:40402)
+[11/10/2022 14:25:09] Received a web socket TEXT message: '[2,"69d80069-ce38-4a97-9fe6-8fe1897af998","BootNotification",{"chargeBoxSerialNumber":"Elaad-01","chargePointModel":"WB DC-bidi 11kW","chargePointVendor":"KOSTAL Industrie Ele","firmwareVersion":"2022.43.18306.NB"}]'!
+OnBootNotification: kostal_elaad_teststation, KOSTAL Industrie Ele, WB DC-bidi 11kW, , Elaad-01
+[11/10/2022 14:25:09] Sent     a web socket TEXT message: '[3,"69d80069-ce38-4a97-9fe6-8fe1897af998",{"status":"Accepted","currentTime":"2022-11-10T14:25:09.944Z","interval":300}]'!
+[11/10/2022 14:25:10] Received a web socket TEXT message: '[2,"f9dacfa2-7516-43e0-9cd9-1d8525ee35be","StatusNotification",{"connectorId":1,"errorCode":"NoError","status":"Available","timestamp":"2022-11-10T14:25:09.641Z"}]'!
+OnStatusNotification: 1, Available, NoError, , 11/10/2022 14:25:09, ,
+[11/10/2022 14:25:10] Sent     a web socket TEXT message: '[3,"f9dacfa2-7516-43e0-9cd9-1d8525ee35be",{}]'!
+[11/10/2022 14:25:30] Received a web socket TEXT message: '[2,"720578f0-6403-48a6-8d8a-6bb0ea0467d4","MeterValues",{"connectorId":0,"meterValue":[{"sampledValue":[{"context":"Sample.Clock","location":"Inlet","measurand":"Energy.Active.Import.Register","unit":"Wh","value":"1.62828e+06"},{"context":"Sample.Clock","location":"Inlet","measurand":"Voltage","phase":"L1","unit":"V","value":"231.379"},{"context":"Sample.Clock","location":"Inlet","measurand":"Voltage","phase":"L2","unit":"V","value":"230.32"},{"context":"Sample.Clock","location":"Inlet","measurand":"Voltage","phase":"L3","unit":"V","value":"230.877"}],"timestamp":"2022-11-10T14:25:30.094Z"}]}]'!
+OnMeterValues: 0,
+2022-11-10T14:25:30.094ZSampleClock, 1.62828e+06, 1.62828e+06; SampleClock, 231.379, 231.379; SampleClock, 230.32, 230.32; SampleClock, 230.877, 230.877
+[11/10/2022 14:25:30] Sent     a web socket TEXT message: '[3,"720578f0-6403-48a6-8d8a-6bb0ea0467d4",{}]'!
+[11/10/2022 14:25:30] Received a web socket TEXT message: '[2,"092e0cc4-deaf-4ef0-adde-be8de619cbc3","MeterValues",{"connectorId":1,"meterValue":[{"sampledValue":[{"context":"Sample.Clock","location":"Outlet","measurand":"Energy.Active.Import.Register","unit":"Wh","value":"1.60311e+06"},{"context":"Sample.Clock","location":"Outlet","measurand":"Voltage","unit":"V","value":"0"}],"timestamp":"2022-11-10T14:25:30.096Z"}]}]'!
+OnMeterValues: 1,
+2022-11-10T14:25:30.096ZSampleClock, 1.60311e+06, 1.60311e+06; SampleClock, 0, 0
+[11/10/2022 14:25:30] Sent     a web socket TEXT message: '[3,"092e0cc4-deaf-4ef0-adde-be8de619cbc3",{}]'!
+[11/10/2022 14:25:39] WebSocketServer: Ping received: '' (kostal_elaad_teststation, 23.88.66.160:40402)
+[11/10/2022 14:25:39] WebSocketServer: Ping sent:     '702e2072-9133-4433-bdc9-26b94502b8f1' (kostal_elaad_teststation, 23.88.66.160:40402)
+[11/10/2022 14:25:39] WebSocketServer: Pong received: '702e2072-9133-4433-bdc9-26b94502b8f1' (kostal_elaad_teststation, 23.88.66.160:40402)
+
+
+
+{
+  "configurationKey": [
+    {
+      "key": "AllowOfflineTxForUnknownId",
+      "readonly": false,
+      "value": "true"
+    },
+    {
+      "key": "AuthorizationCacheEnabled",
+      "readonly": false,
+      "value": "true"
+    },
+    {
+      "key": "AuthorizeRemoteTxRequests",
+      "readonly": false,
+      "value": "true"
+    },
+    {
+      "key": "ChargeProfileMaxStackLevel",
+      "readonly": true,
+      "value": "100"
+    },
+    {
+      "key": "ChargingScheduleAllowedChargingRateUnit",
+      "readonly": true,
+      "value": "A,W"
+    },
+    {
+      "key": "ChargingScheduleMaxPeriods",
+      "readonly": true,
+      "value": "1000"
+    },
+    {
+      "key": "ClockAlignedDataInterval",
+      "readonly": false,
+      "value": "30"
+    },
+    {
+      "key": "ConnectionTimeOut",
+      "readonly": false,
+      "value": "55"
+    },
+    {
+      "key": "ConnectorPhaseRotation",
+      "readonly": false,
+      "value": "Unknown"
+    },
+    {
+      "key": "GetConfigurationMaxKeys",
+      "readonly": true,
+      "value": "1000"
+    },
+    {
+      "key": "HeartbeatInterval",
+      "readonly": false,
+      "value": "300"
+    },
+    {
+      "key": "LocalAuthListEnabled",
+      "readonly": false,
+      "value": "true"
+    },
+    {
+      "key": "LocalAuthListMaxLength",
+      "readonly": true,
+      "value": "1000"
+    },
+    {
+      "key": "LocalAuthorizeOffline",
+      "readonly": false,
+      "value": "true"
+    },
+    {
+      "key": "LocalPreAuthorize",
+      "readonly": false,
+      "value": "true"
+    },
+    {
+      "key": "MaxChargingProfilesInstalled",
+      "readonly": true,
+      "value": "1000"
+    },
+    {
+      "key": "MaxEnergyOnInvalidId",
+      "readonly": false,
+      "value": "0"
+    },
+    {
+      "key": "MeterValuesAlignedData",
+      "readonly": false,
+      "value": "Energy.Active.Import.Register,Voltage"
+    },
+    {
+      "key": "MeterValuesAlignedDataMaxLength",
+      "readonly": true,
+      "value": "1000"
+    },
+    {
+      "key": "MeterValueSampleInterval",
+      "readonly": false,
+      "value": "10"
+    },
+    {
+      "key": "MeterValuesSampledData",
+      "readonly": false,
+      "value": "Power.Active.Import,Voltage"
+    },
+    {
+      "key": "MeterValuesSampledDataMaxLength",
+      "readonly": true,
+      "value": "1000"
+    },
+    {
+      "key": "NumberOfConnectors",
+      "readonly": true,
+      "value": "1"
+    },
+    {
+      "key": "ResetRetries",
+      "readonly": false,
+      "value": "3"
+    },
+    {
+      "key": "SendLocalListMaxLength",
+      "readonly": true,
+      "value": "1000"
+    },
+    {
+      "key": "StopTransactionOnEVSideDisconnect",
+      "readonly": false,
+      "value": "false"
+    },
+    {
+      "key": "StopTransactionOnInvalidId",
+      "readonly": false,
+      "value": "true"
+    },
+    {
+      "key": "StopTxnAlignedData",
+      "readonly": false,
+      "value": "Energy.Active.Import.Register"
+    },
+    {
+      "key": "StopTxnAlignedDataMaxLength",
+      "readonly": true,
+      "value": "1000"
+    },
+    {
+      "key": "StopTxnSampledData",
+      "readonly": false,
+      "value": "Energy.Active.Import.Register"
+    },
+    {
+      "key": "StopTxnSampledDataMaxLength",
+      "readonly": true,
+      "value": "1000"
+    },
+    {
+      "key": "SupportedFeatureProfiles",
+      "readonly": true,
+      "value": "Core,FirmwareManagement,SmartCharging,RemoteTrigger,LocalAuthListManagement"
+    },
+    {
+      "key": "TransactionMessageAttempts",
+      "readonly": false,
+      "value": "3"
+    },
+    {
+      "key": "TransactionMessageRetryInterval",
+      "readonly": false,
+      "value": "5"
+    }
+  ]
+}
+
+
+setconf kostal_elaad_teststation HeartbeatInterval 10
+
+[11/10/2022 14:27:08] Sent     a web socket TEXT message: '[2,"900002","ChangeConfiguration",{"key":"HeartbeatInterval","value":"10"}]'!
+[11/10/2022 14:27:08] Received a web socket TEXT message: '[3,"900002",{"status":"Accepted"}]'!
+setconf kostal_elaad_teststation HeartbeatInterval 10 => 72.8603 ms
+{
+  "status": "Accepted"
+}
+
+
+
+
+setconf kostal_elaad_teststation HeartbeatInterval 10
+
+
+
+[11/10/2022 14:27:30] Received a web socket TEXT message: '[2,"1d4d52d9-6d1f-4e76-bb44-3d3559ab978b","MeterValues",{"connectorId":0,"meterValue":[{"sampledValue":[{"context":"Sample.Clock","location":"Inlet","measurand":"Energy.Active.Import.Register","unit":"Wh","value":"1.62828e+06"},{"context":"Sample.Clock","location":"Inlet","measurand":"Voltage","phase":"L1","unit":"V","value":"231.67"},{"context":"Sample.Clock","location":"Inlet","measurand":"Voltage","phase":"L2","unit":"V","value":"230.931"},{"context":"Sample.Clock","location":"Inlet","measurand":"Voltage","phase":"L3","unit":"V","value":"231.617"}],"timestamp":"2022-11-10T14:27:30.095Z"}]}]'!
+OnMeterValues: 0,
+2022-11-10T14:27:30.095ZSampleClock, 1.62828e+06, 1.62828e+06; SampleClock, 231.67, 231.67; SampleClock, 230.931, 230.931; SampleClock, 231.617, 231.617
+[11/10/2022 14:27:30] Sent     a web socket TEXT message: '[3,"1d4d52d9-6d1f-4e76-bb44-3d3559ab978b",{}]'!
+
+[11/10/2022 14:27:30] Received a web socket TEXT message: '[2,"8f15a671-5762-43bd-b05d-02de7b462e4a","MeterValues",{"connectorId":1,"meterValue":[{"sampledValue":[{"context":"Sample.Clock","location":"Outlet","measurand":"Energy.Active.Import.Register","unit":"Wh","value":"1.60311e+06"},{"context":"Sample.Clock","location":"Outlet","measurand":"Voltage","unit":"V","value":"0"}],"timestamp":"2022-11-10T14:27:30.096Z"}]}]'!
+OnMeterValues: 1,
+2022-11-10T14:27:30.096ZSampleClock, 1.60311e+06, 1.60311e+06; SampleClock, 0, 0
+[11/10/2022 14:27:30] Sent     a web socket TEXT message: '[3,"8f15a671-5762-43bd-b05d-02de7b462e4a",{}]'!
+
+
+
+
+getdiag kostal_elaad_teststation http://23.88.66.160:9901/diagnostics/
+
+
+
+
+trigger kostal_elaad_teststation BootNotification
+
+
+
+
+getschedule kostal_elaad_teststation 1 3600
+[11/10/2022 14:45:29] Sent     a web socket TEXT message: '[2,"900002","GetCompositeSchedule",{"connectorId":1,"duration":3600}]'!
+[11/10/2022 14:45:29] Received a web socket TEXT message: '[3,"900002",{"chargingSchedule":{"chargingRateUnit":"W","chargingSchedulePeriod":[{"limit":11000,"startPeriod":0}],"duration":3600,"startSchedule":"2022-11-10T14:45:28.748Z"},"connectorId":1,"scheduleStart":"2022-11-10T14:45:28.748Z","status":"Accepted"}]'!
+getschedule kostal_elaad_teststation 1 3600 => 67.7386 ms
+{
+  "status": "Accepted",
+  "connectorId": 1,
+  "scheduleStart": "2022-11-10T14:45:28.748Z",
+  "chargingSchedule": {
+    "duration": 3600,
+    "startSchedule": "2022-11-10T14:45:28.748Z",
+    "chargingRateUnit": "W",
+    "chargingSchedulePeriod": [
+      {
+        "startPeriod": 0,
+        "limit": 11000.0
+      }
+    ]
+  }
+}
+
+
+
+setprofile1 kostal_elaad_teststation 1
+[11/10/2022 14:46:08] Sent     a web socket TEXT message: '[2,"900003","SetChargingProfile",{"connectorId":1,"csChargingProfiles":{"chargingProfileId":100,"stackLevel":0,"chargingProfilePurpose":"TxDefaultProfile","chargingProfileKind":"Recurring","validFrom":"2022-11-01T00:00:00.000Z","validTo":"2022-12-01T00:00:00.000Z","recurrencyKind":"Daily","chargingSchedule":{"duration":86400,"startSchedule":"2022-11-01T00:00:00.000Z","chargingRateUnit":"W","chargingSchedulePeriod":[{"startPeriod":0,"limit":11000.0,"numberPhases":3},{"startPeriod":28800,"limit":6000.0,"numberPhases":3},{"startPeriod":72000,"limit":11000.0,"numberPhases":3}]}}}]'!
+[11/10/2022 14:46:08] Received a web socket TEXT message: '[3,"900003",{"status":"Accepted"}]'!
+setprofile1 kostal_elaad_teststation 1 => 72.3511 ms
+{
+  "status": "Accepted"
+}
+[11/10/2022 14:46:09] WebSocketServer: Ping received: '' (kostal_elaad_teststation, 23.88.66.160:34336)
+
+
+
+
+
+
+getschedule kostal_elaad_teststation 1 3600
+[11/10/2022 14:46:13] Sent     a web socket TEXT message: '[2,"900004","GetCompositeSchedule",{"connectorId":1,"duration":3600}]'!
+[11/10/2022 14:46:14] Received a web socket TEXT message: '[3,"900004",{"chargingSchedule":{"chargingRateUnit":"W","chargingSchedulePeriod":[{"limit":6000,"numberPhases":3,"startPeriod":0}],"duration":3600,"startSchedule":"2022-11-10T14:46:13.653Z"},"connectorId":1,"scheduleStart":"2022-11-10T14:46:13.653Z","status":"Accepted"}]'!
+getschedule kostal_elaad_teststation 1 3600 => 59.4857 ms
+{
+  "status": "Accepted",
+  "connectorId": 1,
+  "scheduleStart": "2022-11-10T14:46:13.653Z",
+  "chargingSchedule": {
+    "duration": 3600,
+    "startSchedule": "2022-11-10T14:46:13.653Z",
+    "chargingRateUnit": "W",
+    "chargingSchedulePeriod": [
+      {
+        "startPeriod": 0,
+        "limit": 6000.0,
+        "numberPhases": 3
+      }
+    ]
+  }
+}
+
+
+reserve kostal_elaad_teststation 1 1234 aabbccdd
+[11/10/2022 14:47:57] Sent     a web socket TEXT message: '[2,"900005","ReserveNow",{"connectorId":1,"expiryDate":"2022-11-10T15:02:57.985Z","idTag":"aabbccdd","reservationId":1234}]'!
+[11/10/2022 14:47:58] Received a web socket TEXT message: '[4,"900005","NotImplemented","Received 'call' frame 'ReserveNow' has no registered handler.",{}]'!
+reserve kostal_elaad_teststation 1 1234 aabbccdd => 68.7203 ms
+{
+  "status": "unknown"
+}
+
+
+
+remotestart kostal_elaad_teststation aabbccdd 1
+[11/10/2022 14:48:34] Sent     a web socket TEXT message: '[2,"900006","RemoteStartTransaction",{"connectorId":1,"idTag":"aabbccdd"}]'!
+[11/10/2022 14:48:34] Received a web socket TEXT message: '[3,"900006",{"status":"Accepted"}]'!
+[11/10/2022 14:48:34] Received a web socket TEXT message: '[2,"4f9a77a2-4f97-469e-92de-dedc4d53e7a8","Authorize",{"idTag":"aabbccdd"}]'!
+OnAuthorize: kostal_elaad_teststation, aabbccdd
+remotestart kostal_elaad_teststation aabbccdd 1 => 83.2375 ms
+{
+  "status": "Accepted"
+}
+[11/10/2022 14:48:34] Sent     a web socket TEXT message: '[3,"4f9a77a2-4f97-469e-92de-dedc4d53e7a8",{"idTagInfo":{"status":"Accepted","expiryDate":"2022-11-13T14:48:34.259Z"}}]'!
+[11/10/2022 14:48:34] Received a web socket TEXT message: '[2,"96ec6b9a-e313-492f-93b5-f2754977891a","StartTransaction",{"connectorId":1,"idTag":"n/a","meterStart":1603109,"timestamp":"2022-11-10T14:48:33.789Z"}]'!
+OnStartTransaction: kostal_elaad_teststation, 1, n/a, 11/10/2022 14:48:33, 1603109,
+[11/10/2022 14:48:34] Sent     a web socket TEXT message: '[3,"96ec6b9a-e313-492f-93b5-f2754977891a",{"transactionId":1536292485,"idTagInfo":{"status":"Accepted","expiryDate":"2022-11-13T14:48:34.416Z"}}]'!
+
+
+
+[11/10/2022 14:49:27] Received a web socket TEXT message: '[2,"4d62e921-9840-4959-aa7f-ef6fcdc971e9","StatusNotification",{"connectorId":1,"errorCode":"NoError","status":"Preparing","timestamp":"2022-11-10T14:49:27.512Z"}]'!
+OnStatusNotification: 1, Preparing, NoError, , 11/10/2022 14:49:27, ,
+[11/10/2022 14:49:27] Sent     a web socket TEXT message: '[3,"4d62e921-9840-4959-aa7f-ef6fcdc971e9",{}]'!
+
+[11/10/2022 14:49:28] Received a web socket TEXT message: '[2,"1d7b621a-b0bb-4db5-b06e-4cd6be791141","StatusNotification",{"connectorId":1,"errorCode":"NoError","status":"Finishing","timestamp":"2022-11-10T14:49:27.544Z"}]'!
+OnStatusNotification: 1, Finishing, NoError, , 11/10/2022 14:49:27, ,
+[11/10/2022 14:49:28] Sent     a web socket TEXT message: '[3,"1d7b621a-b0bb-4db5-b06e-4cd6be791141",{}]'!
+
+
+[11/10/2022 14:50:06] Received a web socket TEXT message: '[2,"369f80f5-05f4-4575-b6d7-2a0be6eb824d","StatusNotification",{"connectorId":1,"errorCode":"NoError","status":"Charging","timestamp":"2022-11-10T14:50:05.744Z"}]'!
+OnStatusNotification: 1, Charging, NoError, , 11/10/2022 14:50:05, ,
+[11/10/2022 14:50:06] Sent     a web socket TEXT message: '[3,"369f80f5-05f4-4575-b6d7-2a0be6eb824d",{}]'!
+
+
+
+
+
+
+trigger kostal_elaad_teststation StatusNotification 1
+[11/10/2022 14:54:26] Sent     a web socket TEXT message: '[2,"900001","TriggerMessage",{"requestedMessage":"StatusNotification","connectorId":1}]'!
+[11/10/2022 14:54:26] Received a web socket TEXT message: '[3,"900001",{"status":"Accepted"}]'!
+trigger kostal_elaad_teststation StatusNotification 1 => 144.1027 ms
+{
+  "status": "Accepted"
+}
+
+
+[11/10/2022 14:54:33] Received a web socket TEXT message: '[2,"80e4abc2-a800-4acd-accb-7609b5da8c28","StatusNotification",{"connectorId":1,"errorCode":"NoError","status":"Charging","timestamp":"2022-11-10T14:54:25.834Z"}]'!
+OnStatusNotification: 1, Charging, NoError, , 11/10/2022 14:54:25, ,
+[11/10/2022 14:54:34] Sent     a web socket TEXT message: '[3,"80e4abc2-a800-4acd-accb-7609b5da8c28",{}]'!
+
+
+
+remotestop kostal_elaad_teststation 1536292485
+[11/10/2022 14:55:52] Sent     a web socket TEXT message: '[2,"900002","RemoteStopTransaction",{"transactionId":1536292485}]'!
+[11/10/2022 14:55:52] Received a web socket TEXT message: '[3,"900002",{"status":"Accepted"}]'!
+remotestop kostal_elaad_teststation 1536292485 => 64.7558 ms
+{
+  "status": "Accepted"
+}
+[11/10/2022 14:55:52] Received a web socket TEXT message: '[2,"df6a2423-1545-4cd1-8287-50598d96e43d","StopTransaction",{"meterStop":1603671,"reason":"Remote","timestamp":"2022-11-10T14:55:52.359Z","transactionId":1536292485}]'!
+OnStopTransaction: 1536292485, , 2022-11-10T14:55:52.359Z, 1603671, Remote
+
+[11/10/2022 14:55:52] Sent     a web socket TEXT message: '[3,"df6a2423-1545-4cd1-8287-50598d96e43d",{"idTagInfo":{"status":"Accepted","expiryDate":"2022-11-13T14:55:52.916Z"}}]'!
+
+
+
+
+
+
+
+getlocallistversion kostal_elaad_teststation
+[11/10/2022 14:58:37] Sent     a web socket TEXT message: '[2,"900004","GetLocalListVersion",{}]'!
+[11/10/2022 14:58:37] Received a web socket TEXT message: '[3,"900004",{"listVersion":1}]'!
+getlocallistversion kostal_elaad_teststation => 61.5692 ms
+{
+  "listVersion": 1
+}
+
+
+sendlocallist kostal_elaad_teststation
+[11/10/2022 14:59:16] Sent     a web socket TEXT message: '[2,"900005","SendLocalList",{"listVersion":2,"updateType":"Full","localAuthorizationList":[{"idTag":"046938f2fc6880","idTagInfo":{"status":"Blocked"}},{"idTag":"aabbcc11","idTagInfo":{"status":"Accepted"}},{"idTag":"aabbcc22","idTagInfo":{"status":"Accepted"}},{"idTag":"aabbcc33","idTagInfo":{"status":"Accepted"}},{"idTag":"aabbcc44","idTagInfo":{"status":"Blocked"}}]}]'!
+[11/10/2022 14:59:16] Received a web socket TEXT message: '[3,"900005",{"status":"Accepted"}]'!
+sendlocallist kostal_elaad_teststation => 76.5121 ms
+{
+  "status": "Accepted"
+}
+
+
+getlocallistversion kostal_elaad_teststation[11/10/2022 14:59:34] WebSocketServer: Ping sent:     '295df683-8393-4bb1-965a-755d012d89b1' (kostal_elaad_teststation, 23.88.66.160:44950)
+[11/10/2022 14:59:34] WebSocketServer: Pong received: '295df683-8393-4bb1-965a-755d012d89b1' (kostal_elaad_teststation, 23.88.66.160:44950)
+
+[11/10/2022 14:59:34] Sent     a web socket TEXT message: '[2,"900006","GetLocalListVersion",{}]'!
+[11/10/2022 14:59:34] Received a web socket TEXT message: '[3,"900006",{"listVersion":2}]'!
+getlocallistversion kostal_elaad_teststation => 61.5262 ms
+{
+  "listVersion": 2
+}
+
+
+setconf kostal_elaad_teststation MeterValueSampleInterval 120
+[11/10/2022 15:00:54] Sent     a web socket TEXT message: '[2,"900007","ChangeConfiguration",{"key":"MeterValueSampleInterval","value":"120"}]'!
+[11/10/2022 15:00:54] Received a web socket TEXT message: '[3,"900007",{"status":"Accepted"}]'!
+setconf kostal_elaad_teststation MeterValueSampleInterval 120 => 76.7888 ms
+{
+  "status": "Accepted"
+}
+
+
+
+[11/10/2022 15:02:00] Received a web socket TEXT message: '[2,"d476214c-ce8c-4483-a583-7fed8d68c675","MeterValues",{"connectorId":0,"meterValue":[{"sampledValue":[{"context":"Sample.Clock","location":"Inlet","measurand":"Energy.Active.Import.Register","unit":"Wh","value":"1.62885e+06"},{"context":"Sample.Clock","location":"Inlet","measurand":"Voltage","phase":"L1","unit":"V","value":"230.521"},{"context":"Sample.Clock","location":"Inlet","measurand":"Voltage","phase":"L2","unit":"V","value":"229.84"},{"context":"Sample.Clock","location":"Inlet","measurand":"Voltage","phase":"L3","unit":"V","value":"230.83"}],"timestamp":"2022-11-10T15:02:00.095Z"}]}]'!
+OnMeterValues: 0,
+2022-11-10T15:02:00.095ZSampleClock, 1.62885e+06, 1.62885e+06; SampleClock, 230.521, 230.521; SampleClock, 229.84, 229.84; SampleClock, 230.83, 230.83
+[11/10/2022 15:02:00] Sent     a web socket TEXT message: '[3,"d476214c-ce8c-4483-a583-7fed8d68c675",{}]'!
+
+[11/10/2022 15:02:00] Received a web socket TEXT message: '[2,"47bbc727-fb2a-4b25-a9ff-07e496d7fcac","MeterValues",{"connectorId":1,"meterValue":[{"sampledValue":[{"context":"Sample.Clock","location":"Outlet","measurand":"Energy.Active.Import.Register","unit":"Wh","value":"1.60368e+06"},{"context":"Sample.Clock","location":"Outlet","measurand":"Voltage","unit":"V","value":"0"}],"timestamp":"2022-11-10T15:02:00.097Z"}]}]'!
+OnMeterValues: 1,
+2022-11-10T15:02:00.097ZSampleClock, 1.60368e+06, 1.60368e+06; SampleClock, 0, 0
+[11/10/2022 15:02:00] Sent     a web socket TEXT message: '[3,"47bbc727-fb2a-4b25-a9ff-07e496d7fcac",{}]'!
+
+
+
+
+
+[11/10/2022 15:03:48] Received a web socket TEXT message: '[2,"a2fd22ef-7760-4ecb-b0bb-08b61b284d6c","Authorize",{"idTag":"12345678"}]'!
+OnAuthorize: kostal_elaad_teststation, 12345678
+[11/10/2022 15:03:48] Sent     a web socket TEXT message: '[3,"a2fd22ef-7760-4ecb-b0bb-08b61b284d6c",{"idTagInfo":{"status":"Accepted","expiryDate":"2022-11-13T15:03:48.756Z"}}]'!
+
+
+
+getcerts kostal_elaad_teststation csrc
+[11/10/2022 15:05:50] Sent     a web socket TEXT message: '[2,"900008","GetInstalledCertificateIds",{"certificateType":"CentralSystemRootCertificate"}]'!
+[11/10/2022 15:05:50] Received a web socket TEXT message: '[4,"900008","NotImplemented","Received 'call' frame 'GetInstalledCertificateIds' has no registered handler.",{}]'!
+getcerts kostal_elaad_teststation csrc => 91.7045 ms
+{
+  "status": "unknown"
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

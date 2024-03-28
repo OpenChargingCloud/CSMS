@@ -1,0 +1,291 @@
+{
+  "configurationKey": [
+    {
+      "key": "ConnectionTimeOut",
+      "readonly": false,
+      "value": "30"
+    },
+    {
+      "key": "MinimumStatusDuration",
+      "readonly": false,
+      "value": "0"
+    },
+    {
+      "key": "StopTransactionOnInvalidId",
+      "readonly": false,
+      "value": "true"
+    },
+    {
+      "key": "StopTransactionOnEVSideDisconnect",
+      "readonly": false,
+      "value": "true"
+    },
+    {
+      "key": "UnlockConnectorOnEVSideDisconnect",
+      "readonly": false,
+      "value": "true"
+    },
+    {
+      "key": "LocalAuthorizeOffline",
+      "readonly": false,
+      "value": "false"
+    },
+    {
+      "key": "LocalPreAuthorize",
+      "readonly": false,
+      "value": "false"
+    },
+    {
+      "key": "ResetRetries",
+      "readonly": false,
+      "value": "2"
+    },
+    {
+      "key": "HeartbeatInterval",
+      "readonly": false,
+      "value": "300"
+    },
+    {
+      "key": "MeterValuesSampledData",
+      "readonly": false,
+      "value": "Energy.Active.Import.Register,Power.Active.Import"
+    },
+    {
+      "key": "MeterValueSampleInterval",
+      "readonly": false,
+      "value": "60"
+    },
+    {
+      "key": "StopTxnSampledData",
+      "readonly": false,
+      "value": "Energy.Active.Import.Register"
+    },
+    {
+      "key": "MeterValuesAlignedData",
+      "readonly": false,
+      "value": "Energy.Active.Import.Register,Power.Active.Import"
+    },
+    {
+      "key": "ClockAlignedDataInterval",
+      "readonly": false,
+      "value": "0"
+    },
+    {
+      "key": "StopTxnAlignedData",
+      "readonly": false,
+      "value": ""
+    },
+    {
+      "key": "MeterValuesSampledDataMaxLength",
+      "readonly": true,
+      "value": "1"
+    },
+    {
+      "key": "MeterValuesAlignedDataMaxLength",
+      "readonly": true,
+      "value": "1"
+    },
+    {
+      "key": "NumberOfConnectors",
+      "readonly": true,
+      "value": "1"
+    },
+    {
+      "key": "SupportedFeatureProfiles",
+      "readonly": true,
+      "value": "Core,RemoteTrigger,FirmwareManagement,SmartCharging"
+    },
+    {
+      "key": "AuthorizeRemoteTxRequests",
+      "readonly": true,
+      "value": "false"
+    },
+    {
+      "key": "GetConfigurationMaxKeys",
+      "readonly": true,
+      "value": "30"
+    },
+    {
+      "key": "ChargeProfileMaxStackLevel",
+      "readonly": true,
+      "value": "8"
+    },
+    {
+      "key": "ChargingScheduleAllowedChargingRateUnit",
+      "readonly": true,
+      "value": "Power"
+    },
+    {
+      "key": "ChargingScheduleMaxPeriods",
+      "readonly": true,
+      "value": "24"
+    },
+    {
+      "key": "MaxChargingProfilesInstalled",
+      "readonly": true,
+      "value": "10"
+    },
+    {
+      "key": "StopTxnSampledDataMaxLength",
+      "readonly": true,
+      "value": "4"
+    },
+    {
+      "key": "StopTxnAlignedDataMaxLength",
+      "readonly": true,
+      "value": "4"
+    }
+  ]
+}
+
+
+
+
+setprofile1 arduinoocpp 1
+
+
+[11/09/2022 15:10:01] Sent     a web socket TEXT message: '[2,"900002","SetChargingProfile",{"connectorId":1,"csChargingProfiles":{"chargingProfileId":100,"transactionId":5678,"stackLevel":0,"chargingProfilePurpose":"TxDefaultProfile","chargingProfileKind":"Recurring","validFrom":"2022-11-01T00:00:00.000Z","validTo":"2022-12-01T00:00:00.000Z","recurrencyKind":"Daily","chargingSchedule":{"duration":86400,"startSchedule":"2022-11-01T00:00:00.000Z","chargingRateUnit":"W","chargingSchedulePeriod":[{"startPeriod":0,"limit":11000.0,"numberPhases":3},{"startPeriod":28800,"limit":6000.0,"numberPhases":3},{"startPeriod":72000,"limit":11000.0,"numberPhases":3}]}}}]'!
+[11/09/2022 15:10:01] Received a web socket TEXT message: '[3,"900002",{"status":"Accepted"}]'!
+setprofile1 arduinoocpp 1 => 232.8219 ms
+{
+  "status": "Accepted"
+}
+
+setprofile2 arduinoocpp 1
+[11/09/2022 15:11:46] Sent     a web socket TEXT message: '[2,"900003","SetChargingProfile",{"connectorId":1,"csChargingProfiles":{"chargingProfileId":100,"transactionId":6789,"stackLevel":0,"chargingProfilePurpose":"TxDefaultProfile","chargingProfileKind":"Recurring","validFrom":"2022-11-01T00:00:00.000Z","validTo":"2022-12-01T00:00:00.000Z","recurrencyKind":"Daily","chargingSchedule":{"duration":86400,"startSchedule":"2022-11-01T00:00:00.000Z","chargingRateUnit":"W","chargingSchedulePeriod":[{"startPeriod":0,"limit":11000.0,"numberPhases":3},{"startPeriod":21600,"limit":10000.0,"numberPhases":3},{"startPeriod":75600,"limit":11000.0,"numberPhases":3}]}}}]'!
+[11/09/2022 15:11:46] Received a web socket TEXT message: '[3,"900003",{"status":"Accepted"}]'!
+setprofile2 arduinoocpp 1 => 471.1379 ms
+{
+  "status": "Accepted"
+}
+
+
+
+
+getschedule arduinoocpp 1 3600
+
+
+getschedule arduinoocpp 1 3600
+[11/09/2022 15:13:06] Sent     a web socket TEXT message: '[2,"900004","GetCompositeSchedule",{"connectorId":1,"duration":3600}]'!
+[11/09/2022 15:13:06] Received a web socket TEXT message: '[3,"900004",{"status":"Accepted","connectorId":1,"scheduleStart":"2022-11-09T15:13:06.000Z","chargingSchedule":{"duration":3600,"startSchedule":"2022-11-09T15:13:06.000Z","chargingRateUnit":"W","chargingSchedulePeriod":[{"startPeriod":0,"limit":10000}]}}]'!
+getschedule arduinoocpp 1 3600 => 231.1993 ms
+{
+  "status": "Accepted",
+  "connectorId": 1,
+  "scheduleStart": "2022-11-09T15:13:06.000Z",
+  "chargingSchedule": {
+    "duration": 3600,
+    "startSchedule": "2022-11-09T15:13:06.000Z",
+    "chargingRateUnit": "W",
+    "chargingSchedulePeriod": [
+      {
+        "startPeriod": 0,
+        "limit": 10000.0
+      }
+    ]
+  }
+}
+
+
+remotestart arduinoocpp ccddaabb 1
+
+
+
+
+[11/09/2022 15:19:11] WebSocketServer: Ping sent:     '0c1ac1fd-d6da-42d0-a000-b9b8dda04179' (arduinoocpp, 23.88.66.160:46444)
+[11/09/2022 15:19:12] WebSocketServer: Pong received: '0c1ac1fd-d6da-42d0-a000-b9b8dda04179' (arduinoocpp, 23.88.66.160:46444)
+remotestart arduinoocpp aabbccdd 1
+[11/09/2022 15:19:29] Sent     a web socket TEXT message: '[2,"900005","RemoteStartTransaction",{"connectorId":1,"idTag":"aabbccdd"}]'!
+[11/09/2022 15:19:31] Received a web socket TEXT message: '[3,"900005",{"status":"Accepted"}]'!
+[11/09/2022 15:19:31] Received a web socket TEXT message: '[2,"1000023","StatusNotification",{"connectorId":1,"errorCode":"NoError","status":"Preparing","timestamp":"2022-11-09T15:19:31.000Z"}]'!
+OnStatusNotification: 1, Preparing, NoError, , 11/09/2022 15:19:31, ,
+remotestart arduinoocpp aabbccdd 1 => 2517.0152 ms
+{
+  "status": "Accepted"
+}
+
+[11/09/2022 15:19:31] Sent     a web socket TEXT message: '[3,"1000023",{}]'!
+[11/09/2022 15:19:41] WebSocketServer: Ping sent:     'c54da7cf-88ba-49f9-9797-320e9ce6c591' (arduinoocpp, 23.88.66.160:46444)
+[11/09/2022 15:19:41] WebSocketServer: Pong received: 'c54da7cf-88ba-49f9-9797-320e9ce6c591' (arduinoocpp, 23.88.66.160:46444)
+[11/09/2022 15:19:48] Received a web socket TEXT message: '[2,"1000024","StartTransaction",{"connectorId":1,"idTag":"aabbccdd","meterStart":0,"timestamp":"2022-11-09T15:19:46.000Z"}]'!
+OnStartTransaction: arduinoocpp, 1, aabbccdd, 11/09/2022 15:19:46, 0,
+[11/09/2022 15:19:48] Sent     a web socket TEXT message: '[3,"1000024",{"transactionId":2044950446,"idTagInfo":{"status":"Accepted","expiryDate":"2022-11-12T15:19:48.315Z"}}]'!
+[11/09/2022 15:19:49] Received a web socket TEXT message: '[2,"1000025","StatusNotification",{"connectorId":1,"errorCode":"NoError","status":"SuspendedEV","timestamp":"2022-11-09T15:19:48.000Z"}]'!
+OnStatusNotification: 1, SuspendedEV, NoError, , 11/09/2022 15:19:48, ,
+[11/09/2022 15:19:49] Sent     a web socket TEXT message: '[3,"1000025",{}]'!
+[11/09/2022 15:20:11] WebSocketServer: Ping sent:     '287cf2bd-5a8f-4a47-9be9-1e6aaf3cdadb' (arduinoocpp, 23.88.66.160:46444)
+[11/09/2022 15:20:12] WebSocketServer: Pong received: '287cf2bd-5a8f-4a47-9be9-1e6aaf3cdadb' (arduinoocpp, 23.88.66.160:46444)
+
+
+remotestop arduinoocpp 2044950446
+
+
+
+
+
+[11/09/2022 15:21:44] WebSocketServer: Pong received: 'e6eb643d-aae5-465d-bde6-3c2a8dfa6b05' (arduinoocpp, 23.88.66.160:46444)
+[11/09/2022 15:21:44] Received a web socket TEXT message: '[2,"1000030","StartTransaction",{"connectorId":1,"idTag":"ccddaabb","meterStart":0,"timestamp":"2022-11-09T15:21:43.000Z"}]'!
+OnStartTransaction: arduinoocpp, 1, ccddaabb, 11/09/2022 15:21:43, 0,
+[11/09/2022 15:21:44] Sent     a web socket TEXT message: '[3,"1000030",{"transactionId":230054287,"idTagInfo":{"status":"Accepted","expiryDate":"2022-11-12T15:21:44.901Z"}}]'!
+
+[11/09/2022 15:21:46] Received a web socket TEXT message: '[2,"1000031","StatusNotification",{"connectorId":1,"errorCode":"NoError","status":"SuspendedEV","timestamp":"2022-11-09T15:21:44.000Z"}]'!
+OnStatusNotification: 1, SuspendedEV, NoError, , 11/09/2022 15:21:44, ,
+[11/09/2022 15:21:46] Sent     a web socket TEXT message: '[3,"1000031",{}]'!
+[11/09/2022 15:21:50] Received a web socket TEXT message: '[2,"1000032","StatusNotification",{"connectorId":1,"errorCode":"NoError","status":"Charging","timestamp":"2022-11-09T15:21:50.000Z"}]'!
+OnStatusNotification: 1, Charging, NoError, , 11/09/2022 15:21:50, ,
+[11/09/2022 15:21:50] Sent     a web socket TEXT message: '[3,"1000032",{}]'!
+
+
+remotestop arduinoocpp 230054287
+
+
+
+
+
+
+
+remotestop arduinoocpp 230054287
+[11/09/2022 15:22:54] Sent     a web socket TEXT message: '[2,"900007","RemoteStopTransaction",{"transactionId":230054287}]'!
+[11/09/2022 15:22:55] Received a web socket TEXT message: '[3,"900007",{"status":"Accepted"}]'!
+remotestop arduinoocpp 230054287 => 1131.7635 ms
+{
+  "status": "Accepted"
+}
+
+
+
+[11/09/2022 15:22:58] Received a web socket TEXT message: '[2,"1000035","StopTransaction",{"meterStop":175,"timestamp":"2022-11-09T15:22:55.000Z","transactionId":230054287,"reason":"Remote","transactionData":[{"timestamp":"2022-11-09T15:21:43.000Z","sampledValue":[{"value":"0","context":"Transaction.Begin","measurand":"Energy.Active.Import.Register","location":"Outlet","unit":"Wh"}]},{"timestamp":"2022-11-09T15:22:43.000Z","sampledValue":[{"value":"146","context":"Sample.Periodic","measurand":"Energy.Active.Import.Register","location":"Outlet","unit":"Wh"}]},{"timestamp":"2022-11-09T15:22:55.000Z","sampledValue":[{"value":"175","context":"Transaction.End","measurand":"Energy.Active.Import.Register","location":"Outlet","unit":"Wh"}]}]}]'!
+OnStopTransaction: 230054287, , 2022-11-09T15:22:55.000Z, 175, Remote
+2022-11-09T15:21:43.000ZTransactionBegin, 0, 0
+2022-11-09T15:22:43.000ZSamplePeriodic, 146, 146
+2022-11-09T15:22:55.000ZTransactionEnd, 175, 175
+[11/09/2022 15:22:58] Sent     a web socket TEXT message: '[3,"1000035",{"idTagInfo":{"status":"Accepted","expiryDate":"2022-11-12T15:22:58.328Z"}}]'!
+[11/09/2022 15:23:01] Received a web socket TEXT message: '[2,"1000036","StatusNotification",{"connectorId":1,"errorCode":"NoError","status":"Finishing","timestamp":"2022-11-09T15:22:57.000Z"}]'!
+OnStatusNotification: 1, Finishing, NoError, , 11/09/2022 15:22:57, ,
+[11/09/2022 15:23:01] Sent     a web socket TEXT message: '[3,"1000036",{}]'!
+
+
+[11/09/2022 15:23:11] WebSocketServer: Ping sent:     '80451ded-4436-4f0b-9176-869148b9daf6' (arduinoocpp, 23.88.66.160:46444)
+[11/09/2022 15:23:11] WebSocketServer: Pong received: '80451ded-4436-4f0b-9176-869148b9daf6' (arduinoocpp, 23.88.66.160:46444)
+[11/09/2022 15:23:16] Received a web socket TEXT message: '[2,"1000037","StatusNotification",{"connectorId":1,"errorCode":"NoError","status":"Available","timestamp":"2022-11-09T15:23:15.000Z"}]'!
+OnStatusNotification: 1, Available, NoError, , 11/09/2022 15:23:15, ,
+[11/09/2022 15:23:16] Sent     a web socket TEXT message: '[3,"1000037",{}]'!
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
