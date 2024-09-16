@@ -297,6 +297,9 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
             #endregion
 
 
+            Directory.CreateDirectory(Path.Combine(AppContext.BaseDirectory, "HTTPSSEs"));
+
+
             #region Setup PKI
 
             #region Data
@@ -1145,12 +1148,12 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
             //var testCentralSystemV1_6 = new OCPPv1_6.TestCentralSystem(
             //                                CentralSystemId:         OCPPv1_6.CentralSystem_Id.Parse("OCPPv1.6-Test-01"),
             //                                RequireAuthentication:   false,
-            //                                HTTPUploadPort:          IPPort.Parse(9901),
+            //                                HTTPUploadPort:          IPPort.Parse(8801),
             //                                DNSClient:               dnsClient
             //                            );
 
             //testCentralSystemV1_6.AttachWebSocketService(
-            //    TCPPort:                     IPPort.Parse(9900),
+            //    TCPPort:                     IPPort.Parse(8800),
             //    DisableWebSocketPings:       false,
             //    //SlowNetworkSimulationDelay:  TimeSpan.FromMilliseconds(10),
             //    AutoStart:                   true
@@ -1363,10 +1366,10 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
 
                                );
 
-            #region 9920 - OCPP v2.1 without internal security, but maybe with external TLS termination
+            #region 8820 - OCPP v2.1 without internal security, but maybe with external TLS termination
 
             testCSMSv2_1.AttachWebSocketServer(
-                TCPPort:                         IPPort.Parse(9920),
+                TCPPort:                         IPPort.Parse(8820),
                 Description:                     I18NString.Create("OCPP v2.1 without internal security, but maybe with external TLS termination"),
                 RequireAuthentication:           true,
                 DisableWebSocketPings:           false,
@@ -1379,7 +1382,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
 
             #endregion
 
-            #region 9921 - OCPP v2.1 with internal TLS termination using a private ECC PKI
+            #region 8821 - OCPP v2.1 with internal TLS termination using a private ECC PKI
 
             // cat serverCA.cert rootCA.cert > caChain.cert
             // openssl s_client -connect 127.0.0.1:9921 -CAfile caChain.cert -showcerts
@@ -1403,7 +1406,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
             // written to disk in a way that SChannel can find it). You shouldn't need to bother with changing the PFX load flags off of the defaults,
             // though some complicatedly constrained users might need to use MachineKeySet.
             testCSMSv2_1.AttachWebSocketServer(
-                TCPPort:                     IPPort.Parse(9921),
+                TCPPort:                     IPPort.Parse(8821),
                 Description:                 I18NString.Create("OCPP v2.1 with internal TLS termination using a private ECC PKI"),
                 RequireAuthentication:       true,
                 ServerCertificateSelector:   () => //new System.Security.Cryptography.X509Certificates.X509Certificate2(server1ECC_pfx, "", System.Security.Cryptography.X509Certificates.X509KeyStorageFlags.PersistKeySet),
@@ -1427,7 +1430,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
 
             #endregion
 
-            #region 9922 - OCPP v2.1 with internal TLS termination using a private RSA PKI
+            #region 8822 - OCPP v2.1 with internal TLS termination using a private RSA PKI
 
             // cat serverCA_RSA.cert rootCA_RSA.cert > caChain_RSA.cert
             // openssl s_client -connect 127.0.0.1:9922 -CAfile caChain_RSA.cert -showcerts
@@ -1446,7 +1449,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
             //    a:PKEY: rsaEncryption, 2048 (bit); sigalg: RSA-SHA256
             //    v:NotBefore: Mar  2 00:34:59 2024 GMT; NotAfter: Jun  3 00:34:59 2024 GMT
             testCSMSv2_1.AttachWebSocketServer(
-                TCPPort:                     IPPort.Parse(9922),
+                TCPPort:                     IPPort.Parse(8822),
                 Description:                 I18NString.Create("OCPP v2.1 with internal TLS termination using a private RSA PKI"),
                 RequireAuthentication:       true,
                 ServerCertificateSelector:   () => ToDotNet(server1_RSA_Certificate, server1_RSA_KeyPair.Private)!,
@@ -1462,7 +1465,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
 
             #endregion
 
-            #region 9923 - OCPP v2.1 with internal TLS termination using a private RSA PKI enforcing TLS client authentication
+            #region 8823 - OCPP v2.1 with internal TLS termination using a private RSA PKI enforcing TLS client authentication
 
             // Show client certificate details: openssl.exe x509 -in client1RSA.cert -text -noout
             //
@@ -1470,7 +1473,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
             // openssl s_client -connect 127.0.0.1:9923 -cert client1_RSA.cert -key client1_RSA.key -CAfile caChain_RSA.cert -showcerts
             testCSMSv2_1.AttachWebSocketServer(
 
-                TCPPort:                      IPPort.Parse(9923),
+                TCPPort:                      IPPort.Parse(8823),
                 Description:                  I18NString.Create("OCPP v2.1 with internal TLS termination using a private RSA PKI enforcing TLS client authentication"),
                 RequireAuthentication:        true,
                 ServerCertificateSelector:    () => ToDotNet(server1_RSA_Certificate, server1_RSA_KeyPair.Private)!,
@@ -1518,6 +1521,49 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
 
             #endregion
 
+            #region Connect to LocalController
+
+            var ocppGatewayConnectResult1    = await testCSMSv2_1.ConnectOCPPWebSocketClient(
+
+                                                   RemoteURL:                    URL.Parse($"ws://127.0.0.1:9920"),
+                                                   VirtualHostname:              null,
+                                                   Description:                  I18NString.Create("CSMS to LC"),
+                                                   PreferIPv4:                   null,
+                                                   RemoteCertificateValidator:   null,
+                                                   LocalCertificateSelector:     null,
+                                                   ClientCert:                   null,
+                                                   TLSProtocol:                  null,
+                                                   HTTPUserAgent:                null,
+                                                   HTTPAuthentication:           HTTPBasicAuthentication.Create(
+                                                                                     "csms1",
+                                                                                     "csms2lc_12345678!"
+                                                                                 ),
+                                                   RequestTimeout:               null,
+                                                   TransmissionRetryDelay:       null,
+                                                   MaxNumberOfRetries:           3,
+                                                   InternalBufferSize:           null,
+
+                                                   SecWebSocketProtocols:        null,
+                                                   NetworkingMode:               NetworkingMode.OverlayNetwork,
+                                                   NextHopNetworkingNodeId:      NetworkingNode_Id.Parse("lc1"),
+
+                                                   DisableWebSocketPings:        false,
+                                                   WebSocketPingEvery:           null,
+                                                   SlowNetworkSimulationDelay:   null,
+
+                                                   DisableMaintenanceTasks:      false,
+                                                   MaintenanceEvery:             null,
+
+                                                   LoggingPath:                  null,
+                                                   LoggingContext:               String.Empty,
+                                                   LogfileCreator:               null,
+                                                   HTTPLogger:                   null,
+                                                   DNSClient:                    null
+
+                                               );
+
+            #endregion
+
 
             #region HowTo test using Win11 + WSL
 
@@ -1559,8 +1605,6 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
             // [INFO  websocat::ws_peer] Received WebSocket ping
 
             #endregion
-
-            testCSMSv2_1.AddOrUpdateHTTPBasicAuth(NetworkingNode_Id.Parse("a"), "b");
 
 
             #region HTTP Web Socket connections
