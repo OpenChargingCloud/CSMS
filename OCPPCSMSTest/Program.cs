@@ -41,11 +41,10 @@ using org.GraphDefined.Vanaheimr.Hermod.DNS;
 using org.GraphDefined.Vanaheimr.Hermod.HTTP;
 
 using WWCP     = cloud.charging.open.protocols.WWCP;
+using OCPP     = cloud.charging.open.protocols.OCPP;
 using OCPPv1_6 = cloud.charging.open.protocols.OCPPv1_6;
 using OCPPv2_1 = cloud.charging.open.protocols.OCPPv2_1;
 using cloud.charging.open.protocols.WWCP.NetworkingNode;
-using cloud.charging.open.protocols.OCPPv2_1;
-//using com.GraphDefined.SMSApi.API.Response;
 
 #endregion
 
@@ -1146,19 +1145,21 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
 
             #region Setup Central System v1.6
 
-            //var testCentralSystemV1_6 = new OCPPv1_6.TestCentralSystem(
-            //                                CentralSystemId:         OCPPv1_6.CentralSystem_Id.Parse("OCPPv1.6-Test-01"),
-            //                                RequireAuthentication:   false,
-            //                                HTTPUploadPort:          IPPort.Parse(8801),
-            //                                DNSClient:               dnsClient
-            //                            );
+            var testCentralSystemV1_6 = new OCPPv1_6.TestCentralSystemNode(
+                                            Id:              NetworkingNode_Id.Parse("CentralSystem"),
+                                            VendorName:      "GraphDefined GmbH",
+                                            Model:           "OCPPv1.6 Test Central System",
+                                            HTTPUploadPort:  IPPort.Parse(8801),
+                                            DNSClient:       dnsClient
+                                        );
 
-            //testCentralSystemV1_6.AttachWebSocketService(
-            //    TCPPort:                     IPPort.Parse(8800),
-            //    DisableWebSocketPings:       false,
-            //    //SlowNetworkSimulationDelay:  TimeSpan.FromMilliseconds(10),
-            //    AutoStart:                   true
-            //);
+            testCentralSystemV1_6.AttachWebSocketServer(
+                TCPPort:                     IPPort.Parse(8800),
+                RequireAuthentication:       false,
+                DisableWebSocketPings:       false,
+                //SlowNetworkSimulationDelay:  TimeSpan.FromMilliseconds(10),
+                AutoStart:                   true
+            );
 
             //testCentralSystemV1_6.AttachSOAPService(
             //    TCPPort:                      IPPort.Parse(8800),
@@ -1948,11 +1949,11 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                             if (command.Equals("SetDefaultRegistrationStatus", StringComparison.OrdinalIgnoreCase) && commandArray.Length == 2)
                             {
 
-                                if (OCPPv2_1.RegistrationStatusExtensions.TryParse(commandArray[1], out var registrationStatus))
-                                    testCSMSv2_1.DefaultRegistrationStatus = registrationStatus;
+                                //if (OCPPv2_1.RegistrationStatusExtensions.TryParse(commandArray[1], out var registrationStatus))
+                                //    testCSMSv2_1.DefaultRegistrationStatus = registrationStatus;
 
-                                else
-                                    DebugX.Log($"Invalid default charging station registration status '{commandArray[1]}'!");
+                                //else
+                                //    DebugX.Log($"Invalid default charging station registration status '{commandArray[1]}'!");
 
                             }
 
@@ -1979,19 +1980,19 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                                         case ocppVersion1_6:
                                             {
 
-                                                //var response = await testCentralSystemV1_6.Reset(
-                                                //                   new OCPPv1_6.CS.ResetRequest(
-                                                //                       Destination:   SourceRouting.To(chargingStationId),
-                                                //                       ResetType:     resetType switch {
-                                                //                                          "hard" => OCPPv1_6.ResetType.Hard,
-                                                //                                          "soft" => OCPPv1_6.ResetType.Soft,
-                                                //                                          _      => throw new CommandException("reset hard|soft")
-                                                //                                      }
-                                                //                   )
-                                                //               );
+                                                var response = await testCentralSystemV1_6.OCPP.OUT.Reset(
+                                                                   new OCPPv1_6.CS.ResetRequest(
+                                                                       Destination:   SourceRouting.To(chargingStationId),
+                                                                       ResetType:     resetType switch {
+                                                                                          "hard" => OCPPv1_6.ResetType.Hard,
+                                                                                          "soft" => OCPPv1_6.ResetType.Soft,
+                                                                                          _      => throw new CommandException("reset hard|soft")
+                                                                                      }
+                                                                   )
+                                                               );
 
-                                                //DebugX.Log($"{commandArray.AggregateWith(" ")} => {response.Runtime.TotalMilliseconds} ms");
-                                                //DebugX.Log(response.ToJSON().ToString());
+                                                DebugX.Log($"{commandArray.AggregateWith(" ")} => {response.Runtime.TotalMilliseconds} ms");
+                                                DebugX.Log(response.ToJSON().ToString());
 
                                             }
                                             break;
@@ -2003,8 +2004,8 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                                                                    new OCPPv2_1.CSMS.ResetRequest(
                                                                        Destination:   SourceRouting.To(chargingStationId),
                                                                        ResetType:     resetType switch {
-                                                                                          "immediate"  => ResetType.Immediate,
-                                                                                          "onidle"     => ResetType.OnIdle,
+                                                                                          "immediate"  => OCPPv2_1.ResetType.Immediate,
+                                                                                          "onidle"     => OCPPv2_1.ResetType.OnIdle,
                                                                                           _            => throw new CommandException("reset Immediate|OnIdle")
                                                                                       }
                                                                    )
@@ -2133,8 +2134,8 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                                                            //                          OCPPv2_1.ComponentCriteria.Active
                                                            //                      },
                                                            ComponentVariables:   [
-                                                                                     new ComponentVariable(
-                                                                                         Component:   new Component(
+                                                                                     new OCPPv2_1.ComponentVariable(
+                                                                                         Component:   new OCPPv2_1.Component(
                                                                                                           Name:       commandArray[1],
                                                                                                           Instance:   null,
                                                                                                           EVSE:       null
@@ -2201,12 +2202,12 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                                                                   new OCPPv2_1.CSMS.GetLogRequest(
                                                                       Destination:        SourceRouting.To(chargingStationId),
                                                                       LogType:            commandArray[2].ToLower() switch {
-                                                                                               "security"       => LogType.SecurityLog,
-                                                                                               "datacollector"  => LogType.DataCollectorLog,
-                                                                                               _                => LogType.DiagnosticsLog
+                                                                                               "security"       => OCPPv2_1.LogType.SecurityLog,
+                                                                                               "datacollector"  => OCPPv2_1.LogType.DataCollectorLog,
+                                                                                               _                => OCPPv2_1.LogType.DiagnosticsLog
                                                                                           },
                                                                       LogRequestId:       1,
-                                                                      Log:                new LogParameters(
+                                                                      Log:                new OCPPv2_1.LogParameters(
                                                                                               RemoteLocation:    URL.Parse($"{commandArray[1]}/{fileUploadAuth.PathPrefix}/"),
                                                                                               OldestTimestamp:   null,
                                                                                               LatestTimestamp:   null
@@ -2237,13 +2238,13 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                                                        new OCPPv2_1.CSMS.SetVariablesRequest(
                                                            Destination:        SourceRouting.To(chargingStationId),
                                                            VariableData:       [
-                                                                                   new SetVariableData(
-                                                                                       new Component(
+                                                                                   new OCPPv2_1.SetVariableData(
+                                                                                       new OCPPv2_1.Component(
                                                                                            Name:       commandArray[1],
                                                                                            Instance:   null,
-                                                                                           EVSE:       new EVSE(EVSE_Id.Parse(1))
+                                                                                           EVSE:       new OCPPv2_1.EVSE(OCPPv2_1.EVSE_Id.Parse(1))
                                                                                        ),
-                                                                                       new Variable(
+                                                                                       new OCPPv2_1.Variable(
                                                                                            Name:       commandArray[2],
                                                                                            Instance:   null
                                                                                        ),
@@ -2303,13 +2304,13 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                                                        new OCPPv2_1.CSMS.SetVariablesRequest(
                                                            Destination:        SourceRouting.To(chargingStationId),
                                                            VariableData:       [
-                                                                                   new SetVariableData(
-                                                                                       new Component(
+                                                                                   new OCPPv2_1.SetVariableData(
+                                                                                       new OCPPv2_1.Component(
                                                                                            Name:       commandArray[1],
                                                                                            Instance:   null,
                                                                                            EVSE:       null
                                                                                        ),
-                                                                                       new Variable(
+                                                                                       new OCPPv2_1.Variable(
                                                                                            Name:       commandArray[2],
                                                                                            Instance:   null
                                                                                        ),
@@ -2333,13 +2334,13 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                                                        new OCPPv2_1.CSMS.SetVariablesRequest(
                                                            Destination:        SourceRouting.To(chargingStationId),
                                                            VariableData:       [
-                                                                                   new SetVariableData(
-                                                                                       new Component(
+                                                                                   new OCPPv2_1.SetVariableData(
+                                                                                       new OCPPv2_1.Component(
                                                                                            Name:       commandArray[1],
                                                                                            Instance:   null,
                                                                                            EVSE:       null
                                                                                        ),
-                                                                                       new Variable(
+                                                                                       new OCPPv2_1.Variable(
                                                                                            Name:       commandArray[2],
                                                                                            Instance:   "Default"
                                                                                        ),
@@ -2367,13 +2368,13 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                                                        new OCPPv2_1.CSMS.GetVariablesRequest(
                                                            Destination:        SourceRouting.To(chargingStationId),
                                                            VariableData:       [
-                                                                                   new GetVariableData(
-                                                                                       new Component(
+                                                                                   new OCPPv2_1.GetVariableData(
+                                                                                       new OCPPv2_1.Component(
                                                                                            Name:       commandArray[1],
                                                                                            Instance:   null,
                                                                                            EVSE:       null
                                                                                        ),
-                                                                                       new Variable(
+                                                                                       new OCPPv2_1.Variable(
                                                                                            Name:       commandArray[2],
                                                                                            Instance:   null
                                                                                        )
@@ -2502,13 +2503,13 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                                                        new OCPPv2_1.CSMS.SetVariableMonitoringRequest(
                                                            Destination:      SourceRouting.To(chargingStationId),
                                                            MonitoringData:   [
-                                                                                 new SetMonitoringData(
+                                                                                 new OCPPv2_1.SetMonitoringData(
                                                                                      Value:                  4.0M,
-                                                                                     MonitorType:            MonitorType.Delta,
-                                                                                     Severity:               Severities.HardwareFailure,
-                                                                                     Component:              new Component("OCPPCommCtrlr"),
-                                                                                     Variable:               new Variable("WebSocketPingInterval"),
-                                                                                     VariableMonitoringId:   VariableMonitoring_Id.Parse(1001),
+                                                                                     MonitorType:            OCPPv2_1.MonitorType.Delta,
+                                                                                     Severity:               OCPPv2_1.Severities.HardwareFailure,
+                                                                                     Component:              new OCPPv2_1.Component("OCPPCommCtrlr"),
+                                                                                     Variable:               new OCPPv2_1.Variable("WebSocketPingInterval"),
+                                                                                     VariableMonitoringId:   OCPPv2_1.VariableMonitoring_Id.Parse(1001),
                                                                                      Transaction:            false
                                                                                  )
                                                                              ]
@@ -2557,13 +2558,13 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                                                        new OCPPv2_1.CSMS.SetNetworkProfileRequest(
                                                            Destination:                SourceRouting.To(chargingStationId),
                                                            ConfigurationSlot:          2,
-                                                           NetworkConnectionProfile:   new NetworkConnectionProfile(
-                                                                                           Version:             OCPPVersion.OCPP20,
-                                                                                           Transport:           TransportProtocols.JSON,
+                                                           NetworkConnectionProfile:   new OCPPv2_1.NetworkConnectionProfile(
+                                                                                           Version:             OCPPv2_1.OCPPVersion.OCPP20,
+                                                                                           Transport:           OCPPv2_1.TransportProtocols.JSON,
                                                                                            CentralServiceURL:   URL.Parse("wss://172.21.20.222:8822/"),
                                                                                            MessageTimeout:      TimeSpan.FromSeconds(10),
-                                                                                           SecurityProfile:     SecurityProfiles.SecurityProfile2,
-                                                                                           NetworkInterface:    NetworkInterface.Wired0
+                                                                                           SecurityProfile:     OCPPv2_1.SecurityProfiles.SecurityProfile2,
+                                                                                           NetworkInterface:    OCPPv2_1.NetworkInterface.Wired0
                                                                                        )
                                                        )
                                                    );
@@ -3071,12 +3072,12 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                                         var response = await testCSMSv2_1.OCPP.OUT.CertificateSigned(
                                                            new OCPPv2_1.CSMS.CertificateSignedRequest(
                                                                Destination:        SourceRouting.To(chargingStationId),
-                                                               CertificateChain:   CertificateChain.Parse(
+                                                               CertificateChain:   cloud.charging.open.protocols.OCPP.CertificateChain.Parse(
                                                                                        File.ReadAllText(commandArray[1])
                                                                                    ),
                                                                CertificateType:    commandArray[2].ToLower() switch {
-                                                                                       "v2g"  => CertificateSigningUse.V2GCertificate,
-                                                                                       _      => CertificateSigningUse.ChargingStationCertificate
+                                                                                       "v2g"  => OCPPv2_1.CertificateSigningUse.V2GCertificate,
+                                                                                       _      => OCPPv2_1.CertificateSigningUse.ChargingStationCertificate
                                                                                    }
                                                            )
                                                        );
@@ -3124,13 +3125,13 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                                                            new OCPPv2_1.CSMS.InstallCertificateRequest(
                                                                Destination:        SourceRouting.To(chargingStationId),
                                                                CertificateType:    commandArray[2].ToLower() switch {
-                                                                                       "oem"   => InstallCertificateUse.OEMRootCertificate,
-                                                                                       "mo"    => InstallCertificateUse.MORootCertificate,
-                                                                                       "csms"  => InstallCertificateUse.CSMSRootCertificate,
-                                                                                       "manu"  => InstallCertificateUse.ManufacturerRootCertificate,
-                                                                                       _       => InstallCertificateUse.V2GRootCertificate
+                                                                                       "oem"   => OCPPv2_1.InstallCertificateUse.OEMRootCertificate,
+                                                                                       "mo"    => OCPPv2_1.InstallCertificateUse.MORootCertificate,
+                                                                                       "csms"  => OCPPv2_1.InstallCertificateUse.CSMSRootCertificate,
+                                                                                       "manu"  => OCPPv2_1.InstallCertificateUse.ManufacturerRootCertificate,
+                                                                                       _       => OCPPv2_1.InstallCertificateUse.V2GRootCertificate
                                                                },
-                                                               Certificate:        Certificate.Parse(
+                                                               Certificate:        cloud.charging.open.protocols.OCPP.Certificate.Parse(
                                                                                        File.ReadAllText(commandArray[1])
                                                                                    )
                                                            )
@@ -3219,12 +3220,12 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                                                                Destination:        SourceRouting.To(chargingStationId),
                                                                CertificateTypes:   [
                                                                                        commandArray[1].ToLower() switch {
-                                                                                           "v2g"   => GetCertificateIdUse.V2GRootCertificate,
-                                                                                           "mo"    => GetCertificateIdUse.MORootCertificate,
-                                                                                           "csms"  => GetCertificateIdUse.CSMSRootCertificate,
-                                                                                           "manu"  => GetCertificateIdUse.ManufacturerRootCertificate,
-                                                                                           "oem"   => GetCertificateIdUse.OEMRootCertificate,
-                                                                                           _       => GetCertificateIdUse.V2GCertificateChain
+                                                                                           "v2g"   => OCPPv2_1.GetCertificateIdUse.V2GRootCertificate,
+                                                                                           "mo"    => OCPPv2_1.GetCertificateIdUse.MORootCertificate,
+                                                                                           "csms"  => OCPPv2_1.GetCertificateIdUse.CSMSRootCertificate,
+                                                                                           "manu"  => OCPPv2_1.GetCertificateIdUse.ManufacturerRootCertificate,
+                                                                                           "oem"   => OCPPv2_1.GetCertificateIdUse.OEMRootCertificate,
+                                                                                           _       => OCPPv2_1.GetCertificateIdUse.V2GCertificateChain
                                                                                        }
                                                                                    ]
                                                            )
@@ -3663,13 +3664,13 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                                         var response = await testCSMSv2_1.OCPP.OUT.RequestStartTransaction(
                                                            new OCPPv2_1.CSMS.RequestStartTransactionRequest(
                                                                Destination:                        SourceRouting.To(chargingStationId),
-                                                               RequestStartTransactionRequestId:   RemoteStart_Id.NewRandom,
-                                                               IdToken:                            new IdToken(
+                                                               RequestStartTransactionRequestId:   OCPPv2_1.RemoteStart_Id.NewRandom,
+                                                               IdToken:                            new OCPPv2_1.IdToken(
                                                                                                        Value:             commandArray[2],
-                                                                                                       Type:              IdTokenType.Central,//ISO14443,
+                                                                                                       Type:              OCPPv2_1.IdTokenType.Central,//ISO14443,
                                                                                                        AdditionalInfos:   null
                                                                                                    ),
-                                                               EVSEId:                             EVSE_Id.Parse(commandArray[1]),
+                                                               EVSEId:                             OCPPv2_1.EVSE_Id.Parse(commandArray[1]),
                                                                ChargingProfile:                    null,
                                                                GroupIdToken:                       null
                                                             //   TransactionLimits:                  new TransactionLimits(
@@ -3821,31 +3822,31 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
 
                                         var response = await testCSMSv2_1.OCPP.OUT.SetChargingProfile(
                                                            new OCPPv2_1.CSMS.SetChargingProfileRequest(
-                                                               Destination:        SourceRouting.To(chargingStationId),
-                                                               EVSEId:             EVSE_Id.      Parse(commandArray[1]),
-                                                               ChargingProfile:    new ChargingProfile(
-                                                                                       ChargingProfile_Id.Parse("100"),
+                                                               Destination:        SourceRouting.   To    (chargingStationId),
+                                                               EVSEId:             OCPPv2_1.EVSE_Id.Parse(commandArray[1]),
+                                                               ChargingProfile:    new OCPPv2_1.ChargingProfile(
+                                                                                       OCPPv2_1.ChargingProfile_Id.Parse("100"),
                                                                                        0,
-                                                                                       ChargingProfilePurpose.TxDefaultProfile,
-                                                                                       ChargingProfileKinds.Recurring,
+                                                                                       OCPPv2_1.ChargingProfilePurpose.TxDefaultProfile,
+                                                                                       OCPPv2_1.ChargingProfileKinds.Recurring,
                                                                                        [
-                                                                                           new ChargingSchedule(
-                                                                                               Id:                       ChargingSchedule_Id.Parse("1"),
-                                                                                               ChargingRateUnit:         ChargingRateUnits.Amperes,
+                                                                                           new OCPPv2_1.ChargingSchedule(
+                                                                                               Id:                       OCPPv2_1.ChargingSchedule_Id.Parse("1"),
+                                                                                               ChargingRateUnit:         OCPPv2_1.ChargingRateUnits.Amperes,
                                                                                                ChargingSchedulePeriods:  [
-                                                                                                                             new ChargingSchedulePeriod(
+                                                                                                                             new OCPPv2_1.ChargingSchedulePeriod(
                                                                                                                                  StartPeriod:     TimeSpan.FromHours(0),  // == 00:00 Uhr
-                                                                                                                                 Limit:           ChargingRateValue.Parse(16, ChargingRateUnits.Amperes),
+                                                                                                                                 Limit:           OCPPv2_1.ChargingRateValue.Parse(16, OCPPv2_1.ChargingRateUnits.Amperes),
                                                                                                                                  NumberOfPhases:  3
                                                                                                                              ),
-                                                                                                                             new ChargingSchedulePeriod(
+                                                                                                                             new OCPPv2_1.ChargingSchedulePeriod(
                                                                                                                                  StartPeriod:     TimeSpan.FromHours(8),  // == 08:00 Uhr
-                                                                                                                                 Limit:           ChargingRateValue.Parse(6,  ChargingRateUnits.Amperes),
+                                                                                                                                 Limit:           OCPPv2_1.ChargingRateValue.Parse(6,  OCPPv2_1.ChargingRateUnits.Amperes),
                                                                                                                                  NumberOfPhases:  3
                                                                                                                              ),
-                                                                                                                             new ChargingSchedulePeriod(
+                                                                                                                             new OCPPv2_1.ChargingSchedulePeriod(
                                                                                                                                  StartPeriod:     TimeSpan.FromHours(20), // == 20:00 Uhr
-                                                                                                                                 Limit:           ChargingRateValue.Parse(12, ChargingRateUnits.Amperes),
+                                                                                                                                 Limit:           OCPPv2_1.ChargingRateValue.Parse(12, OCPPv2_1.ChargingRateUnits.Amperes),
                                                                                                                                  NumberOfPhases:  3
                                                                                                                              )
                                                                                                                          ],
@@ -3854,7 +3855,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                                                                                            )
                                                                                        ],
                                                                                        null, //Transaction_Id.TryParse(5678),
-                                                                                       RecurrencyKinds.Daily,
+                                                                                       OCPPv2_1.RecurrencyKinds.Daily,
                                                                                        DateTime.Parse("2022-11-01T00:00:00Z").ToUniversalTime(),
                                                                                        DateTime.Now.AddDays(7).ToUniversalTime()
                                                                                    )
@@ -3874,31 +3875,31 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
 
                                         var response = await testCSMSv2_1.OCPP.OUT.SetChargingProfile(
                                                            new OCPPv2_1.CSMS.SetChargingProfileRequest(
-                                                               Destination:        SourceRouting.To(chargingStationId),
-                                                               EVSEId:             EVSE_Id.     Parse(commandArray[1]),
-                                                               ChargingProfile:    new ChargingProfile(
-                                                                                       ChargingProfile_Id.Parse("50"),
+                                                               Destination:        SourceRouting.   To   (chargingStationId),
+                                                               EVSEId:             OCPPv2_1.EVSE_Id.Parse(commandArray[1]),
+                                                               ChargingProfile:    new OCPPv2_1.ChargingProfile(
+                                                                                       OCPPv2_1.ChargingProfile_Id.Parse("50"),
                                                                                        0,
-                                                                                       ChargingProfilePurpose.TxDefaultProfile,
-                                                                                       ChargingProfileKinds.Recurring,
+                                                                                       OCPPv2_1.ChargingProfilePurpose.TxDefaultProfile,
+                                                                                       OCPPv2_1.ChargingProfileKinds.Recurring,
                                                                                        [
-                                                                                           new ChargingSchedule(
-                                                                                               Id:                       ChargingSchedule_Id.Parse("1"),
-                                                                                               ChargingRateUnit:         ChargingRateUnits.Watts,
+                                                                                           new OCPPv2_1.ChargingSchedule(
+                                                                                               Id:                       OCPPv2_1.ChargingSchedule_Id.Parse("1"),
+                                                                                               ChargingRateUnit:         OCPPv2_1.ChargingRateUnits.Watts,
                                                                                                ChargingSchedulePeriods:  [
-                                                                                                                             new ChargingSchedulePeriod(
+                                                                                                                             new OCPPv2_1.ChargingSchedulePeriod(
                                                                                                                                  StartPeriod:     TimeSpan.FromHours(0),  // == 00:00 Uhr
-                                                                                                                                 Limit:           ChargingRateValue.Parse(16, ChargingRateUnits.Watts),
+                                                                                                                                 Limit:           OCPPv2_1.ChargingRateValue.Parse(16, OCPPv2_1.ChargingRateUnits.Watts),
                                                                                                                                  NumberOfPhases:  3
                                                                                                                              ),
-                                                                                                                             new ChargingSchedulePeriod(
+                                                                                                                             new OCPPv2_1.ChargingSchedulePeriod(
                                                                                                                                  StartPeriod:     TimeSpan.FromHours(8),  // == 08:00 Uhr
-                                                                                                                                 Limit:           ChargingRateValue.Parse(6,  ChargingRateUnits.Watts),
+                                                                                                                                 Limit:           OCPPv2_1.ChargingRateValue.Parse(6,  OCPPv2_1.ChargingRateUnits.Watts),
                                                                                                                                  NumberOfPhases:  3
                                                                                                                              ),
-                                                                                                                             new ChargingSchedulePeriod(
+                                                                                                                             new OCPPv2_1.ChargingSchedulePeriod(
                                                                                                                                  StartPeriod:     TimeSpan.FromHours(20), // == 20:00 Uhr
-                                                                                                                                 Limit:           ChargingRateValue.Parse(12, ChargingRateUnits.Watts),
+                                                                                                                                 Limit:           OCPPv2_1.ChargingRateValue.Parse(12, OCPPv2_1.ChargingRateUnits.Watts),
                                                                                                                                  NumberOfPhases:  3
                                                                                                                              )
                                                                                                                          ],
@@ -3907,7 +3908,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                                                                                            )
                                                                                        ],
                                                                                        null, //Transaction_Id.TryParse(5678),
-                                                                                       RecurrencyKinds.Daily,
+                                                                                       OCPPv2_1.RecurrencyKinds.Daily,
                                                                                        DateTime.Parse("2022-11-01T00:00:00Z").ToUniversalTime(),
                                                                                        DateTime.Now.AddDays(7).ToUniversalTime()
                                                                                    )
@@ -3983,8 +3984,8 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                                                        new OCPPv2_1.CSMS.GetChargingProfilesRequest(
                                                            Destination:                    SourceRouting.To(chargingStationId),
                                                            GetChargingProfilesRequestId:   RandomExtensions.RandomInt32(),
-                                                           ChargingProfile:                new ChargingProfileCriterion(
-                                                                                               ChargingProfilePurpose:   ChargingProfilePurpose.TxDefaultProfile,
+                                                           ChargingProfile:                new OCPPv2_1.ChargingProfileCriterion(
+                                                                                               ChargingProfilePurpose:   OCPPv2_1.ChargingProfilePurpose.TxDefaultProfile,
                                                                                                StackLevel:               null,
                                                                                                ChargingProfileIds:       null,
                                                                                                ChargingLimitSources:     null
@@ -4008,11 +4009,11 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                                                        new OCPPv2_1.CSMS.GetChargingProfilesRequest(
                                                            Destination:                    SourceRouting.To(chargingStationId),
                                                            GetChargingProfilesRequestId:   RandomExtensions.RandomInt32(),
-                                                           ChargingProfile:                new ChargingProfileCriterion(
+                                                           ChargingProfile:                new OCPPv2_1.ChargingProfileCriterion(
                                                                                                ChargingProfilePurpose:   null,
                                                                                                StackLevel:               null,
                                                                                                ChargingProfileIds:       [
-                                                                                                                             ChargingProfile_Id.Parse(commandArray[1])
+                                                                                                                             OCPPv2_1.ChargingProfile_Id.Parse(commandArray[1])
                                                                                                                          ],
                                                                                                ChargingLimitSources:     null
                                                                                            ),
@@ -4052,7 +4053,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                                         var response = await testCSMSv2_1.OCPP.OUT.ClearChargingProfile(
                                                            new OCPPv2_1.CSMS.ClearChargingProfileRequest(
                                                                Destination:         SourceRouting.To(chargingStationId),
-                                                               ChargingProfileId:   ChargingProfile_Id.Parse(1)
+                                                               ChargingProfileId:   OCPPv2_1.ChargingProfile_Id.Parse(1)
                                                            )
                                                        );
 
@@ -4206,15 +4207,15 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                                     if (ocppVersion == ocppVersion1_6)
                                     {
 
-                                        //var response = await testCentralSystemV1_6.UnlockConnector(
-                                        //                   new OCPPv1_6.CS.UnlockConnectorRequest(
-                                        //                       Destination:        NetworkingNode_Id.    Parse(chargingStationId),
-                                        //                       ConnectorId:        OCPPv1_6.Connector_Id.Parse(commandArray[1])
-                                        //                   )
-                                        //               );
+                                        var response = await testCentralSystemV1_6.OCPP.OUT.UnlockConnector(
+                                                           new OCPPv1_6.CS.UnlockConnectorRequest(
+                                                               Destination:   SourceRouting.To(chargingStationId),
+                                                               ConnectorId:   OCPPv1_6.Connector_Id.Parse(commandArray[1])
+                                                           )
+                                                       );
 
-                                        //DebugX.Log($"{commandArray.AggregateWith(" ")} => {response.Runtime.TotalMilliseconds} ms");
-                                        //DebugX.Log(response.ToJSON().ToString());
+                                        DebugX.Log($"{commandArray.AggregateWith(" ")} => {response.Runtime.TotalMilliseconds} ms");
+                                        DebugX.Log(response.ToJSON().ToString());
 
                                     }
                                     else
@@ -4239,9 +4240,9 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
 
                                         var response = await testCSMSv2_1.OCPP.OUT.UnlockConnector(
                                                            new OCPPv2_1.CSMS.UnlockConnectorRequest(
-                                                               Destination:        SourceRouting.To(chargingStationId),
-                                                               EVSEId:             OCPPv2_1.EVSE_Id.     Parse(commandArray[1]),
-                                                               ConnectorId:        OCPPv2_1.Connector_Id.Parse(commandArray[2])
+                                                               Destination:   SourceRouting.To(chargingStationId),
+                                                               EVSEId:        OCPPv2_1.EVSE_Id.     Parse(commandArray[1]),
+                                                               ConnectorId:   OCPPv2_1.Connector_Id.Parse(commandArray[2])
                                                            )
                                                        );
 
@@ -4266,22 +4267,22 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
 
                                     var response = await testCSMSv2_1.OCPP.OUT.SetDisplayMessage(
                                                        new OCPPv2_1.CSMS.SetDisplayMessageRequest(
-                                                           Destination:        SourceRouting.To(chargingStationId),
-                                                           Message:            new OCPPv2_1.MessageInfo(
-                                                                                   Id:               OCPPv2_1.DisplayMessage_Id.NewRandom,
-                                                                                   Priority:         OCPPv2_1.MessagePriority.NormalCycle,
-                                                                                   Message:          new OCPPv2_1.MessageContent(
-                                                                                                         Content:      commandArray[1],
-                                                                                                         Language:     OCPPv2_1.Language_Id.EN,
-                                                                                                         Format:       OCPPv2_1.MessageFormat.UTF8,
-                                                                                                         CustomData:   null
-                                                                                                     ),
-                                                                                   State:            OCPPv2_1.MessageState.Idle,
-                                                                                   StartTimestamp:   Timestamp.Now,
-                                                                                   EndTimestamp:     Timestamp.Now + TimeSpan.FromHours(1),
-                                                                                   TransactionId:    null,
-                                                                                   Display:          null
-                                                                               )
+                                                           Destination:   SourceRouting.To(chargingStationId),
+                                                           Message:       new OCPPv2_1.MessageInfo(
+                                                                              Id:               OCPPv2_1.DisplayMessage_Id.NewRandom,
+                                                                              Priority:         OCPPv2_1.MessagePriority.NormalCycle,
+                                                                              Message:          new OCPPv2_1.MessageContent(
+                                                                                                    Content:      commandArray[1],
+                                                                                                    Language:     OCPPv2_1.Language_Id.EN,
+                                                                                                    Format:       OCPPv2_1.MessageFormat.UTF8,
+                                                                                                    CustomData:   null
+                                                                                                ),
+                                                                              State:            OCPPv2_1.MessageState.Idle,
+                                                                              StartTimestamp:   Timestamp.Now,
+                                                                              EndTimestamp:     Timestamp.Now + TimeSpan.FromHours(1),
+                                                                              TransactionId:    null,
+                                                                              Display:          null
+                                                                          )
                                                        )
                                                    );
 
@@ -4296,22 +4297,22 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
 
                                     var response = await testCSMSv2_1.OCPP.OUT.SetDisplayMessage(
                                                        new OCPPv2_1.CSMS.SetDisplayMessageRequest(
-                                                           Destination:        SourceRouting.To(chargingStationId),
-                                                           Message:            new OCPPv2_1.MessageInfo(
-                                                                                   Id:               OCPPv2_1.DisplayMessage_Id.NewRandom,
-                                                                                   Priority:         OCPPv2_1.MessagePriority.AlwaysFront,
-                                                                                   Message:          new OCPPv2_1.MessageContent(
-                                                                                                         Content:      commandArray[1],
-                                                                                                         Language:     OCPPv2_1.Language_Id.EN,
-                                                                                                         Format:       OCPPv2_1.MessageFormat.UTF8,
-                                                                                                         CustomData:   null
-                                                                                                     ),
-                                                                                   State:            OCPPv2_1.MessageState.Charging,
-                                                                                   StartTimestamp:   Timestamp.Now,
-                                                                                   EndTimestamp:     Timestamp.Now + TimeSpan.FromHours(1),
-                                                                                   TransactionId:    null,
-                                                                                   Display:          null
-                                                                               )
+                                                           Destination:   SourceRouting.To(chargingStationId),
+                                                           Message:       new OCPPv2_1.MessageInfo(
+                                                                              Id:               OCPPv2_1.DisplayMessage_Id.NewRandom,
+                                                                              Priority:         OCPPv2_1.MessagePriority.AlwaysFront,
+                                                                              Message:          new OCPPv2_1.MessageContent(
+                                                                                                    Content:      commandArray[1],
+                                                                                                    Language:     OCPPv2_1.Language_Id.EN,
+                                                                                                    Format:       OCPPv2_1.MessageFormat.UTF8,
+                                                                                                    CustomData:   null
+                                                                                                ),
+                                                                              State:            OCPPv2_1.MessageState.Charging,
+                                                                              StartTimestamp:   Timestamp.Now,
+                                                                              EndTimestamp:     Timestamp.Now + TimeSpan.FromHours(1),
+                                                                              TransactionId:    null,
+                                                                              Display:          null
+                                                                          )
                                                        )
                                                    );
 
@@ -4354,7 +4355,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                                                            Destination:                   SourceRouting.To(chargingStationId),
                                                            GetDisplayMessagesRequestId:   RandomExtensions.RandomInt32(),
                                                            Ids:                           [
-                                                                                              DisplayMessage_Id.Parse(commandArray[1])
+                                                                                              OCPPv2_1.DisplayMessage_Id.Parse(commandArray[1])
                                                                                           ],
                                                            Priority:                      null,
                                                            State:                         null
@@ -4378,7 +4379,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                                                            GetDisplayMessagesRequestId:   RandomExtensions.RandomInt32(),
                                                            Ids:                           null,
                                                            Priority:                      null,
-                                                           State:                         MessageState.Parse(commandArray[1].ToLower())
+                                                           State:                         OCPPv2_1.MessageState.Parse(commandArray[1].ToLower())
                                                                                              // charging
                                                                                              // faulted
                                                                                              // idle
@@ -4401,7 +4402,7 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                                     var response = await testCSMSv2_1.OCPP.OUT.ClearDisplayMessage(
                                                        new OCPPv2_1.CSMS.ClearDisplayMessageRequest(
                                                            Destination:        SourceRouting.To(chargingStationId),
-                                                           DisplayMessageId:   DisplayMessage_Id.Parse(commandArray[1])
+                                                           DisplayMessageId:   OCPPv2_1.DisplayMessage_Id.Parse(commandArray[1])
                                                        )
                                                    );
 
@@ -4500,14 +4501,14 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                                 if (command.Equals("getconf", StringComparison.OrdinalIgnoreCase) && commandArray.Length == 2)
                                 {
 
-                                    //var response = await testCentralSystemV1_6.GetConfiguration(
-                                    //                   new OCPPv1_6.CS.GetConfigurationRequest(
-                                    //                       Destination:        SourceRouting.To(chargingStationId)
-                                    //                   )
-                                    //               );
+                                    var response = await testCentralSystemV1_6.OCPP.OUT.GetConfiguration(
+                                                       new OCPPv1_6.CS.GetConfigurationRequest(
+                                                           Destination:   SourceRouting.To(chargingStationId)
+                                                       )
+                                                   );
 
-                                    //DebugX.Log($"{commandArray.AggregateWith(" ")} => {response.Runtime.TotalMilliseconds} ms");
-                                    //DebugX.Log(response.ToJSON().ToString());
+                                    DebugX.Log($"{commandArray.AggregateWith(" ")} => {response.Runtime.TotalMilliseconds} ms");
+                                    DebugX.Log(response.ToJSON().ToString());
 
                                 }
 
@@ -4516,15 +4517,15 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                                 if (command.Equals("getconf", StringComparison.OrdinalIgnoreCase) && commandArray.Length > 2)
                                 {
 
-                                    //var response = await testCentralSystemV1_6.GetConfiguration(
-                                    //                   new OCPPv1_6.CS.GetConfigurationRequest(
-                                    //                       Destination:        SourceRouting.To(chargingStationId),
-                                    //                       Keys:               commandArray.Skip(2)
-                                    //                   )
-                                    //               );
+                                    var response = await testCentralSystemV1_6.OCPP.OUT.GetConfiguration(
+                                                       new OCPPv1_6.CS.GetConfigurationRequest(
+                                                           Destination:        SourceRouting.To(chargingStationId),
+                                                           Keys:               commandArray.Skip(2)
+                                                       )
+                                                   );
 
-                                    //DebugX.Log($"{commandArray.AggregateWith(" ")} => {response.Runtime.TotalMilliseconds} ms");
-                                    //DebugX.Log(response.ToJSON().ToString());
+                                    DebugX.Log($"{commandArray.AggregateWith(" ")} => {response.Runtime.TotalMilliseconds} ms");
+                                    DebugX.Log(response.ToJSON().ToString());
 
                                 }
 
@@ -4536,16 +4537,16 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                                 if (command.Equals("setconf", StringComparison.OrdinalIgnoreCase) && commandArray.Length == 4)
                                 {
 
-                                    //var response = await testCentralSystemV1_6.ChangeConfiguration(
-                                    //                   new OCPPv1_6.CS.ChangeConfigurationRequest(
-                                    //                       Destination:        SourceRouting.To(chargingStationId),
-                                    //                       Key:                commandArray[2],
-                                    //                       Value:              commandArray[3]
-                                    //                   )
-                                    //               );
+                                    var response = await testCentralSystemV1_6.OCPP.OUT.ChangeConfiguration(
+                                                       new OCPPv1_6.CS.ChangeConfigurationRequest(
+                                                           Destination:        SourceRouting.To(chargingStationId),
+                                                           Key:                commandArray[2],
+                                                           Value:              commandArray[3]
+                                                       )
+                                                   );
 
-                                    //DebugX.Log($"{commandArray.AggregateWith(" ")} => {response.Runtime.TotalMilliseconds} ms");
-                                    //DebugX.Log(response.ToJSON().ToString());
+                                    DebugX.Log($"{commandArray.AggregateWith(" ")} => {response.Runtime.TotalMilliseconds} ms");
+                                    DebugX.Log(response.ToJSON().ToString());
 
                                 }
 
@@ -4557,19 +4558,19 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                                 if (command.Equals("getdiag", StringComparison.OrdinalIgnoreCase) && commandArray.Length == 3)
                                 {
 
-                                    //var response = await testCentralSystemV1_6.GetDiagnostics(
-                                    //                   new OCPPv1_6.CS.GetDiagnosticsRequest(
-                                    //                       Destination:        SourceRouting.To(chargingStationId),
-                                    //                       Location:           commandArray[2],
-                                    //                       StartTime:          null,
-                                    //                       StopTime:           null,
-                                    //                       Retries:            null,
-                                    //                       RetryInterval:      null
-                                    //                   )
-                                    //               );
+                                    var response = await testCentralSystemV1_6.OCPP.OUT.GetDiagnostics(
+                                                       new OCPPv1_6.CS.GetDiagnosticsRequest(
+                                                           Destination:        SourceRouting.To(chargingStationId),
+                                                           Location:           commandArray[2],
+                                                           StartTime:          null,
+                                                           StopTime:           null,
+                                                           Retries:            null,
+                                                           RetryInterval:      null
+                                                       )
+                                                   );
 
-                                    //DebugX.Log($"{commandArray.AggregateWith(" ")} => {response.Runtime.TotalMilliseconds} ms");
-                                    //DebugX.Log(response.ToJSON().ToString());
+                                    DebugX.Log($"{commandArray.AggregateWith(" ")} => {response.Runtime.TotalMilliseconds} ms");
+                                    DebugX.Log(response.ToJSON().ToString());
 
                                 }
 
@@ -4577,19 +4578,19 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                                 if (command.Equals("getdiag", StringComparison.OrdinalIgnoreCase) && commandArray.Length == 7)
                                 {
 
-                                    //var response = await testCentralSystemV1_6.GetDiagnostics(
-                                    //                   new OCPPv1_6.CS.GetDiagnosticsRequest(
-                                    //                       Destination:        SourceRouting.To(chargingStationId),
-                                    //                       Location:           commandArray[2],
-                                    //                       StartTime:          DateTime.Parse(commandArray[3]).ToUniversalTime(),
-                                    //                       StopTime:           DateTime.Parse(commandArray[4]).ToUniversalTime(),
-                                    //                       Retries:            Byte.Parse(commandArray[5]),
-                                    //                       RetryInterval:      TimeSpan.FromSeconds(Byte.Parse(commandArray[6]))
-                                    //                   )
-                                    //               );
+                                    var response = await testCentralSystemV1_6.OCPP.OUT.GetDiagnostics(
+                                                       new OCPPv1_6.CS.GetDiagnosticsRequest(
+                                                           Destination:        SourceRouting.To(chargingStationId),
+                                                           Location:           commandArray[2],
+                                                           StartTime:          DateTime.Parse(commandArray[3]).ToUniversalTime(),
+                                                           StopTime:           DateTime.Parse(commandArray[4]).ToUniversalTime(),
+                                                           Retries:            Byte.Parse(commandArray[5]),
+                                                           RetryInterval:      TimeSpan.FromSeconds(Byte.Parse(commandArray[6]))
+                                                       )
+                                                   );
 
-                                    //DebugX.Log($"{commandArray.AggregateWith(" ")} => {response.Runtime.TotalMilliseconds} ms");
-                                    //DebugX.Log(response.ToJSON().ToString());
+                                    DebugX.Log($"{commandArray.AggregateWith(" ")} => {response.Runtime.TotalMilliseconds} ms");
+                                    DebugX.Log(response.ToJSON().ToString());
 
                                 }
 
@@ -4608,24 +4609,24 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                                 if (command.Equals("ExtendedTriggerMessage", StringComparison.OrdinalIgnoreCase) && commandArray.Length == 2)
                                 {
 
-                                    //var response = await testCentralSystemV1_6.ExtendedTriggerMessage(
-                                    //                   new OCPPv1_6.CS.ExtendedTriggerMessageRequest(
-                                    //                       Destination:        SourceRouting.To(chargingStationId),
-                                    //                       RequestedMessage:   commandArray[1].ToLower() switch {
-                                    //                                               "bootnotification"               => cloud.charging.open.protocols.OCPP.MessageTrigger.BootNotification,
-                                    //                                               "logstatusnotification"          => cloud.charging.open.protocols.OCPP.MessageTrigger.LogStatusNotification,
-                                    //                                               "diagnosticsstatusnotification"  => cloud.charging.open.protocols.OCPP.MessageTrigger.DiagnosticsStatusNotification,
-                                    //                                               "firmwarestatusnotification"     => cloud.charging.open.protocols.OCPP.MessageTrigger.FirmwareStatusNotification,
-                                    //                                               "metervalues"                    => cloud.charging.open.protocols.OCPP.MessageTrigger.MeterValues,
-                                    //                                               "signchargepointcertificate"     => cloud.charging.open.protocols.OCPP.MessageTrigger.SignChargePointCertificate,
-                                    //                                               "statusnotification"             => cloud.charging.open.protocols.OCPP.MessageTrigger.StatusNotification,
-                                    //                                               _                                => cloud.charging.open.protocols.OCPP.MessageTrigger.Heartbeat
-                                    //                                           }
-                                    //                   )
-                                    //               );
+                                    var response = await testCentralSystemV1_6.OCPP.OUT.ExtendedTriggerMessage(
+                                                       new OCPPv1_6.CS.ExtendedTriggerMessageRequest(
+                                                           Destination:        SourceRouting.To(chargingStationId),
+                                                           RequestedMessage:   commandArray[1].ToLower() switch {
+                                                                                   "bootnotification"               => OCPPv1_6.MessageTrigger.BootNotification,
+                                                                                   "logstatusnotification"          => OCPPv1_6.MessageTrigger.LogStatusNotification,
+                                                                                   "diagnosticsstatusnotification"  => OCPPv1_6.MessageTrigger.DiagnosticsStatusNotification,
+                                                                                   "firmwarestatusnotification"     => OCPPv1_6.MessageTrigger.FirmwareStatusNotification,
+                                                                                   "metervalues"                    => OCPPv1_6.MessageTrigger.MeterValues,
+                                                                                   "signchargepointcertificate"     => OCPPv1_6.MessageTrigger.SignChargePointCertificate,
+                                                                                   "statusnotification"             => OCPPv1_6.MessageTrigger.StatusNotification,
+                                                                                   _                                => OCPPv1_6.MessageTrigger.Heartbeat
+                                                                               }
+                                                       )
+                                                   );
 
-                                    //DebugX.Log($"{commandArray.AggregateWith(" ")} => {response.Runtime.TotalMilliseconds} ms");
-                                    //DebugX.Log(response.ToJSON().ToString());
+                                    DebugX.Log($"{commandArray.AggregateWith(" ")} => {response.Runtime.TotalMilliseconds} ms");
+                                    DebugX.Log(response.ToJSON().ToString());
 
                                 }
 
@@ -4643,25 +4644,25 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
                                 if (command.Equals("ExtendedTriggerMessage", StringComparison.OrdinalIgnoreCase) && commandArray.Length == 3)
                                 {
 
-                                    //var response = await testCentralSystemV1_6.ExtendedTriggerMessage(
-                                    //                   new OCPPv1_6.CS.ExtendedTriggerMessageRequest(
-                                    //                       Destination:        SourceRouting.To(chargingStationId),
-                                    //                       RequestedMessage:   commandArray[2].ToLower() switch {
-                                    //                                               "bootnotification"               => cloud.charging.open.protocols.OCPP.MessageTrigger.BootNotification,
-                                    //                                               "logstatusnotification"          => cloud.charging.open.protocols.OCPP.MessageTrigger.LogStatusNotification,
-                                    //                                               "diagnosticsstatusnotification"  => cloud.charging.open.protocols.OCPP.MessageTrigger.DiagnosticsStatusNotification,
-                                    //                                               "firmwarestatusnotification"     => cloud.charging.open.protocols.OCPP.MessageTrigger.FirmwareStatusNotification,
-                                    //                                               "metervalues"                    => cloud.charging.open.protocols.OCPP.MessageTrigger.MeterValues,
-                                    //                                               "signchargepointcertificate"     => cloud.charging.open.protocols.OCPP.MessageTrigger.SignChargePointCertificate,
-                                    //                                               "statusnotification"             => cloud.charging.open.protocols.OCPP.MessageTrigger.StatusNotification,
-                                    //                                               _                                => cloud.charging.open.protocols.OCPP.MessageTrigger.Heartbeat
-                                    //                                           },
-                                    //                       ConnectorId:        OCPPv1_6.Connector_Id.Parse(commandArray[1])
-                                    //                   )
-                                    //               );
+                                    var response = await testCentralSystemV1_6.OCPP.OUT.ExtendedTriggerMessage(
+                                                       new OCPPv1_6.CS.ExtendedTriggerMessageRequest(
+                                                           Destination:        SourceRouting.To(chargingStationId),
+                                                           RequestedMessage:   commandArray[2].ToLower() switch {
+                                                                                   "bootnotification"               => OCPPv1_6.MessageTrigger.BootNotification,
+                                                                                   "logstatusnotification"          => OCPPv1_6.MessageTrigger.LogStatusNotification,
+                                                                                   "diagnosticsstatusnotification"  => OCPPv1_6.MessageTrigger.DiagnosticsStatusNotification,
+                                                                                   "firmwarestatusnotification"     => OCPPv1_6.MessageTrigger.FirmwareStatusNotification,
+                                                                                   "metervalues"                    => OCPPv1_6.MessageTrigger.MeterValues,
+                                                                                   "signchargepointcertificate"     => OCPPv1_6.MessageTrigger.SignChargePointCertificate,
+                                                                                   "statusnotification"             => OCPPv1_6.MessageTrigger.StatusNotification,
+                                                                                   _                                => OCPPv1_6.MessageTrigger.Heartbeat
+                                                                               },
+                                                           ConnectorId:        OCPPv1_6.Connector_Id.Parse(commandArray[1])
+                                                       )
+                                                   );
 
-                                    //DebugX.Log($"{commandArray.AggregateWith(" ")} => {response.Runtime.TotalMilliseconds} ms");
-                                    //DebugX.Log(response.ToJSON().ToString());
+                                    DebugX.Log($"{commandArray.AggregateWith(" ")} => {response.Runtime.TotalMilliseconds} ms");
+                                    DebugX.Log(response.ToJSON().ToString());
 
                                 }
 
