@@ -26,7 +26,7 @@ namespace org.GraphDefined.OCPP.CSMS.TestApp.CommandLine
 {
 
     public class UseCommand(CLI CLI) : ACLICommand(CLI),
-                                       ICLICommands
+                                       ICLICommand
     {
 
         public static readonly String CommandName = nameof(UseCommand)[..^7].ToLowerFirstChar();
@@ -34,17 +34,19 @@ namespace org.GraphDefined.OCPP.CSMS.TestApp.CommandLine
         public override IEnumerable<SuggestionResponse> Suggest(String[] Arguments)
         {
 
-            if (Arguments.Length >= 1)
+            if (Arguments.Length == 1 &&
+                CommandName.StartsWith(Arguments[0], StringComparison.CurrentCultureIgnoreCase))
             {
 
-                if (Arguments.Length == 1 &&
-                    CommandName.StartsWith(Arguments[0], StringComparison.CurrentCultureIgnoreCase))
-                {
-                    return [ SuggestionResponse.Complete(CommandName) ];
-                }
+                return [ SuggestionResponse.CommandCompleted(CommandName) ];
 
-                if (Arguments.Length == 2)
-                    return [ SuggestionResponse.Prefix($"{Arguments[0]} {Arguments[1]}") ];
+            }
+
+            if (Arguments.Length >= 2 &&
+                CommandName.Equals(Arguments[0], StringComparison.CurrentCultureIgnoreCase))
+            {
+
+                return [ SuggestionResponse.ParameterPrefix($"{Arguments[0]} {Arguments[1]}") ];
 
             }
 
