@@ -45,10 +45,13 @@ using OCPP     = cloud.charging.open.protocols.OCPP;
 using OCPPv1_6 = cloud.charging.open.protocols.OCPPv1_6;
 using OCPPv2_1 = cloud.charging.open.protocols.OCPPv2_1;
 using cloud.charging.open.protocols.WWCP.NetworkingNode;
+using org.GraphDefined.Vanaheimr.CLI;
+using cloud.charging.open.protocols.OCPPv2_1.CSMS;
+using System.Reflection;
 
 #endregion
 
-namespace org.GraphDefined.WWCP.OCPP.Tests
+namespace org.GraphDefined.OCPP.CSMS.TestApp
 {
 
     /// <summary>
@@ -295,6 +298,22 @@ namespace org.GraphDefined.WWCP.OCPP.Tests
             Trace.Listeners.AddRange(debugTargets);
 
             #endregion
+
+
+
+
+            var cli = new CLI(
+                          Assembly.GetExecutingAssembly(),
+                          typeof(TestCSMSNode).Assembly
+                      );
+
+            await cli.Run();
+
+
+
+
+
+
 
 
             Directory.CreateDirectory(Path.Combine(AppContext.BaseDirectory, "HTTPSSEs"));
