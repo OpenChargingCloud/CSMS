@@ -40,14 +40,9 @@ using org.GraphDefined.Vanaheimr.Hermod;
 using org.GraphDefined.Vanaheimr.Hermod.DNS;
 using org.GraphDefined.Vanaheimr.Hermod.HTTP;
 
-using WWCP     = cloud.charging.open.protocols.WWCP;
-using OCPP     = cloud.charging.open.protocols.OCPP;
 using OCPPv1_6 = cloud.charging.open.protocols.OCPPv1_6;
 using OCPPv2_1 = cloud.charging.open.protocols.OCPPv2_1;
 using cloud.charging.open.protocols.WWCP.NetworkingNode;
-using org.GraphDefined.Vanaheimr.CLI;
-using cloud.charging.open.protocols.OCPPv2_1.CSMS;
-using System.Reflection;
 
 #endregion
 
@@ -299,15 +294,6 @@ namespace org.GraphDefined.OCPP.CSMS.TestApp
 
             #endregion
 
-
-
-
-            var cli = new CLI(
-                          Assembly.GetExecutingAssembly(),
-                          typeof(TestCSMSNode).Assembly
-                      );
-
-            await cli.Run();
 
 
 
@@ -1867,6 +1853,21 @@ namespace org.GraphDefined.OCPP.CSMS.TestApp
             // ERRORS!!!
 
             #endregion
+
+
+
+            var cli = new CSMSTestCLI(
+                          testCentralSystemV1_6,
+                          testCSMSv2_1
+                      );
+
+            cli.ChargingStations.Add("cs1a");
+            cli.ChargingStations.Add("cs2b");
+
+            await cli.Run();
+
+
+
 
 
             DebugX.Log();
