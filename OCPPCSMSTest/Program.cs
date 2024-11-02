@@ -1159,11 +1159,12 @@ namespace org.GraphDefined.OCPP.CSMS.TestApp
                                         );
 
             testCentralSystemV1_6.AttachWebSocketServer(
-                TCPPort:                     IPPort.Parse(8800),
-                RequireAuthentication:       false,
-                DisableWebSocketPings:       false,
-                //SlowNetworkSimulationDelay:  TimeSpan.FromMilliseconds(10),
-                AutoStart:                   true
+                TCPPort:                         IPPort.Parse(8800),
+                Description:                     I18NString.Create("OCPP v1.6 without internal security, but maybe with external TLS termination"),
+                RequireAuthentication:           false,
+                DisableWebSocketPings:           false,
+                //SlowNetworkSimulationDelay:      TimeSpan.FromMilliseconds(10),
+                AutoStart:                       true
             );
 
             //testCentralSystemV1_6.AttachSOAPService(
