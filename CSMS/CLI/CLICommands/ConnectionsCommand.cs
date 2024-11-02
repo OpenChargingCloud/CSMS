@@ -1,12 +1,12 @@
 ﻿/*
  * Copyright (c) 2014-2024 GraphDefined GmbH <achim.friedland@graphdefined.com>
- * This file is part of WWCP OCPP <https://github.com/OpenChargingCloud/WWCP_OCPP>
+ * This file is part of CSMS <https://github.com/OpenChargingCloud/CSMS>
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
+ * Licensed under the Affero GPL license, Version 3.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.gnu.org/licenses/agpl.html
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -123,7 +123,7 @@ namespace org.GraphDefined.OCPP.CSMS.TestApp.CommandLine
                                 sb.Append($" ({webSocketServerConnection.RemoteSocket}, ");
                                 sb.Append($"{webSocketServerConnection.TryGetCustomDataAs<NetworkingMode>(WebSocketKeys.X_WWCP_NetworkingMode) ?? NetworkingMode.Unknown}, ");
 
-                                sb.Append($"msg in/out: {webSocketServerConnection.InCount}/{webSocketServerConnection.OutCount}, ");
+                                sb.Append($"msg in/out: {webSocketServerConnection.FramesReceivedCounter}/{webSocketServerConnection.FramesSentCounter}, ");
 
                                 sb.Append($"last in/out: {(now - webSocketServerConnection.LastReceivedTimestamp)?.TotalSeconds.ToString("F2") ?? "-"}/");
                                 sb.Append($"{  (now - webSocketServerConnection.LastSentTimestamp)?.    TotalSeconds.ToString("F2") ?? "-"} sec");

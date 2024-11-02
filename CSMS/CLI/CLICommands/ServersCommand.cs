@@ -1,12 +1,12 @@
 ﻿/*
  * Copyright (c) 2014-2024 GraphDefined GmbH <achim.friedland@graphdefined.com>
- * This file is part of WWCP OCPP <https://github.com/OpenChargingCloud/WWCP_OCPP>
+ * This file is part of CSMS <https://github.com/OpenChargingCloud/CSMS>
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
+ * Licensed under the Affero GPL license, Version 3.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.gnu.org/licenses/agpl.html
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -316,8 +316,8 @@ namespace org.GraphDefined.OCPP.CSMS.TestApp.CommandLine
                         list.Add($"   RequireAuthentication:         {webSocketServer.RequireAuthentication}");
                         list.Add($"   DisableWebSocketPings:         {webSocketServer.DisableWebSocketPings}");
                         list.Add($"   WebSocketPingEvery:            {webSocketServer.WebSocketPingEvery.TotalSeconds:F2}");
-                        list.Add($"   MaxTextMessageSize:            {webSocketServer.MaxTextMessageSize?.ToString() ?? "-"}");
-                        list.Add($"   MaxBinaryMessageSize:          {webSocketServer.MaxBinaryMessageSize?.ToString() ?? "-"}");
+                        list.Add($"   MaxTextMessageSize:            {webSocketServer.MaxTextMessageSizeOut?.ToString() ?? "-"}");
+                        list.Add($"   MaxBinaryMessageSize:          {webSocketServer.MaxBinaryMessageSizeOut?.ToString() ?? "-"}");
                         list.Add($"   SecWebSocketProtocols:         {webSocketServer.SecWebSocketProtocols.AggregateWith(", ")}");
                         list.Add($"   SlowNetworkSimulationDelay:    {webSocketServer.SlowNetworkSimulationDelay?.TotalSeconds.ToString("F2") ?? "-"}");
                         //list.Add($"   TrustedClientCertificates:     {webSocketServer.TrustedClientCertificates}");
@@ -365,7 +365,7 @@ namespace org.GraphDefined.OCPP.CSMS.TestApp.CommandLine
                             {
                                 if (UInt64.TryParse(Arguments[3], out var maxBinaryMessageSize))
                                 {
-                                    GetServer(serverId).MaxBinaryMessageSize = maxBinaryMessageSize;
+                                    GetServer(serverId).MaxBinaryMessageSizeOut = maxBinaryMessageSize;
                                     return Task.FromResult<String[]>([$"success"]);
                                 }
                             }
@@ -381,7 +381,7 @@ namespace org.GraphDefined.OCPP.CSMS.TestApp.CommandLine
                             {
                                 if (UInt64.TryParse(Arguments[3], out var maxTextMessageSize))
                                 {
-                                    GetServer(serverId).MaxTextMessageSize = maxTextMessageSize;
+                                    GetServer(serverId).MaxTextMessageSizeOut = maxTextMessageSize;
                                     return Task.FromResult<String[]>([$"success"]);
                                 }
                             }
