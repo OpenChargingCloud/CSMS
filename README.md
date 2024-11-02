@@ -1,7 +1,7 @@
-# OCPP CSMS Runner
+# CSMS - Charging Station Management System
 
-This software implementes an example OCPP v1.6 central system and an OCPP v2.1
-(compatible to v2.0.1) charging station management system for testing purposes.
+This software implementes an example OCPP v1.6 Central System and an OCPP v2.1
+(compatible to v2.0.1) Charging Station Management System for testing purposes.
 
 
 ### Your participation
