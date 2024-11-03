@@ -50,7 +50,18 @@ namespace org.GraphDefined.OCPP.CSMS.TestApp.CommandLine
             {
 
                 if (CommandName.Equals    (Arguments[0], StringComparison.CurrentCultureIgnoreCase))
-                    return [ SuggestionResponse.CommandCompleted(CommandName) ];
+                {
+
+                    var list = new List<SuggestionResponse>();
+
+                    foreach (var connectedNetworkingNodeId in cli.ConnectedNetworkingNodeIds)
+                    {
+                        list.Add(SuggestionResponse.ParameterCompleted($"{Arguments[0]} {connectedNetworkingNodeId}"));
+                    }
+
+                    return list;
+
+                }
 
                 if (CommandName.StartsWith(Arguments[0], StringComparison.CurrentCultureIgnoreCase))
                     return [ SuggestionResponse.CommandPrefix   (CommandName) ];
@@ -71,7 +82,7 @@ namespace org.GraphDefined.OCPP.CSMS.TestApp.CommandLine
                     if (chargingStation.Equals    (Arguments[1], StringComparison.CurrentCultureIgnoreCase))
                         list.Add(SuggestionResponse.ParameterCompleted($"{Arguments[0]} {chargingStation}"));
 
-                    if (chargingStation.StartsWith(Arguments[1], StringComparison.CurrentCultureIgnoreCase))
+                    else if (chargingStation.StartsWith(Arguments[1], StringComparison.CurrentCultureIgnoreCase))
                         list.Add(SuggestionResponse.ParameterPrefix   ($"{Arguments[0]} {chargingStation}"));
 
                 }
