@@ -32,9 +32,9 @@ namespace org.GraphDefined.OCPP.CSMS.TestApp
     public static class DefaultStrings
     {
 
-        public const String OCPPv1_6    = "OCPP v1.6";
-        public const String OCPPv2_0_1  = "OCPP v2.0.1";
-        public const String OCPPv2_1    = "OCPP v2.1";
+        public const String OCPPv1_6    = "OCPPv1.6";
+        public const String OCPPv2_0_1  = "OCPPv2.0.1";
+        public const String OCPPv2_1    = "OCPPv2.1";
 
     }
 
