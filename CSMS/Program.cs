@@ -43,6 +43,7 @@ using org.GraphDefined.Vanaheimr.Hermod.HTTP;
 using OCPPv1_6 = cloud.charging.open.protocols.OCPPv1_6;
 using OCPPv2_1 = cloud.charging.open.protocols.OCPPv2_1;
 using cloud.charging.open.protocols.WWCP.NetworkingNode;
+using org.GraphDefined.Vanaheimr.Hermod.WebSocket;
 
 #endregion
 
@@ -1370,9 +1371,26 @@ namespace org.GraphDefined.OCPP.CSMS.TestApp
                                    SoftwareVersion:         "v0.1",
                                    DisableSendHeartbeats:   true,
 
+                                   HTTPAPI_Port:            IPPort.Parse(7000),
+                                   //HTTPAPI_Disabled:        false,
+
+                                   //WebAPI:                  csms => new OCPPv2_1.CSMS.WebAPI(
+                                   //                                     CSMS:   csms,
+                                   //                                     HTTPServer:  csms.HTTPAPI.DevelopmentServers
+                                   //                                 ),
+
                                    DNSClient :              dnsClient
 
                                );
+
+            testCSMSv2_1.AddLoggingWebServer(
+                new WebSocketServer(
+                    HTTPPort:     IPPort.Parse(7001),
+                    Description:  I18NString.Create(Languages.en, "Logging HTTP WebSocket Server"),
+                    HTTPServiceName:  "OCPP CSMS Logging WebSocket Server",
+                    AutoStart:    true
+                )
+            );
 
             #region 8820 - OCPP v2.1 without internal security, but maybe with external TLS termination
 
@@ -1529,6 +1547,8 @@ namespace org.GraphDefined.OCPP.CSMS.TestApp
 
             #endregion
 
+
+
             #region Connect to LocalController
 
             //var ocppGatewayConnectResult1    = await testCSMSv2_1.ConnectOCPPWebSocketClient(
@@ -1630,10 +1650,10 @@ namespace org.GraphDefined.OCPP.CSMS.TestApp
                 );
             };
 
-            testCSMSv2_1.OnNewWebSocketServerConnection         += async (timestamp, server, connection, sharedSubprotocols, eventTrackingId, cancellationToken) => {
+            testCSMSv2_1.OnNewWebSocketServerConnection         += async (timestamp, server, connection, sharedSubprotocols, selectedSubprotocol, eventTrackingId, cancellationToken) => {
 
                 await DebugLog(
-                    $"New HTTP web socket connection from '{connection.Login}' ({connection.RemoteSocket}) using '{sharedSubprotocols.AggregateWith(", ")}'",
+                    $"New HTTP web socket connection from '{connection.Login}' ({connection.RemoteSocket}) using '{selectedSubprotocol}' [{sharedSubprotocols.AggregateWith(", ")}]",
                     cancellationToken
                 );
 
