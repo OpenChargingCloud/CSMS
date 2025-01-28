@@ -44,6 +44,8 @@ using OCPPv1_6 = cloud.charging.open.protocols.OCPPv1_6;
 using OCPPv2_1 = cloud.charging.open.protocols.OCPPv2_1;
 using cloud.charging.open.protocols.WWCP.NetworkingNode;
 using org.GraphDefined.Vanaheimr.Hermod.WebSocket;
+using cloud.charging.open.protocols.WWCP.WebSockets;
+using Org.BouncyCastle.Asn1.Ocsp;
 
 #endregion
 
@@ -1383,12 +1385,13 @@ namespace org.GraphDefined.OCPP.CSMS.TestApp
 
                                );
 
-            testCSMSv2_1.AddLoggingWebServer(
+            testCSMSv2_1.AddControlWebSocketServer(
                 new WebSocketServer(
-                    HTTPPort:     IPPort.Parse(7001),
-                    Description:  I18NString.Create(Languages.en, "Logging HTTP WebSocket Server"),
-                    HTTPServiceName:  "OCPP CSMS Logging WebSocket Server",
-                    AutoStart:    true
+                    HTTPPort:               IPPort.Parse(7001),
+                    Description:            I18NString.Create(Languages.en, "Logging HTTP WebSocket Server"),
+                    HTTPServiceName:        "OCPP CSMS Logging WebSocket Server",
+                    RequireAuthentication:  false,
+                    AutoStart:              true
                 )
             );
 
@@ -1727,63 +1730,112 @@ namespace org.GraphDefined.OCPP.CSMS.TestApp
 
             #region JSON Messages
 
-            testCSMSv2_1.OnJSONMessageRequestReceived     += async (timestamp, server, connection, destinationId, networkPath, eventTrackingId, requestTimestamp, requestMessage,     cancellationToken) => {
+            //testCSMSv2_1.OnJSONMessageSent += async (timestamp, server, connection, messageTimestamp, eventTrackingId, message, sentStatus, ct) =>
+            //{
+            //    await WriteToLogfileV2_1(
+            //        $"{messageTimestamp.ToIso8601()}\tMSG OUT\t-\t{connection.RemoteSocket}\t{message.ToString(Formatting.None)}",
+            //        ct
+            //    );
+            //};
 
-                await DebugLog(
-                    $"Received a JSON web socket request from '{destinationId}': '{requestMessage.ToString(Formatting.None)}'!",
-                    cancellationToken
-                );
+            //testCSMSv2_1.OnJSONMessageReceived += async (timestamp, server, connection, messageTimestamp, eventTrackingId, sourceNodeId, message, ct) =>
+            //{
+            //    await WriteToLogfileV2_1(
+            //        $"{messageTimestamp.ToIso8601()}\tMSG IN\t{sourceNodeId}\t{connection.RemoteSocket}\t{message.ToString(Formatting.None)}",
+            //        ct
+            //    );
+            //};
 
+            testCSMSv2_1.OCPP.IN.OnJSONRequestMessageReceived += async (timestamp, server, connection, request, ct) =>
+            {
                 await WriteToLogfileV2_1(
-                    $"{requestTimestamp.ToIso8601()}\tREQ IN\t{destinationId}\t{connection.RemoteSocket}\t{requestMessage.ToString(Formatting.None)}",
-                    cancellationToken
+                    $"{request.RequestTimestamp.ToIso8601()}\tREQ IN\t{request.NetworkPath.Source}\t{connection?.RemoteSocket}\t{request.RequestId}\t{request.Action}\t{request.Payload.ToString(Formatting.None)}",
+                    ct
                 );
-
             };
 
-            testCSMSv2_1.OnJSONMessageResponseSent        += async (timestamp, server, connection, networkingNodeId, networkPath, eventTrackingId, requestTimestamp, jsonRequestMessage, binaryRequestMessage, responseTimestamp, jsonResponseMessage, cancellationToken)   => {
-
-                await DebugLog(
-                    $"Sent a JSON web socket response to '{networkingNodeId}': '{jsonResponseMessage.ToString(Formatting.None)}'!",
-                    cancellationToken
-                );
-
+            testCSMSv2_1.OCPP.OUT.OnJSONResponseMessageSent += async (timestamp, sender, connection, response, sentMessageResult, ct) =>
+            {
                 await WriteToLogfileV2_1(
-                    $"{responseTimestamp.ToIso8601()}\tRES OUT\t{networkingNodeId}\t{connection.RemoteSocket}\t{jsonResponseMessage.ToString(Formatting.None)}",
-                    cancellationToken
+                    $"{response.ResponseTimestamp.ToIso8601()}\tRES OUT\t{response.Destination}\t{connection?.RemoteSocket}\t{response.RequestId}\t-\t{response.Payload.ToString(Formatting.None)}",
+                    ct
                 );
-
             };
 
 
-
-            testCSMSv2_1.OnJSONMessageRequestSent         += async (timestamp, server, connection, destinationId, networkPath, eventTrackingId, requestTimestamp, requestMessage,     cancellationToken) => {
-
-                await DebugLog(
-                    $"Sent a JSON web socket request to '{destinationId}': '{requestMessage.ToString(Formatting.None)}'!",
-                    cancellationToken
-                );
-
+            testCSMSv2_1.OCPP.OUT.OnJSONRequestMessageSent += async (timestamp, sender, connection, request, sentMessageResult, ct) =>
+            {
                 await WriteToLogfileV2_1(
-                    $"{requestTimestamp.ToIso8601()}\tREQ OUT\t{destinationId}\t{connection.RemoteSocket}\t{requestMessage.ToString(Formatting.None)}",
-                    cancellationToken
+                    $"{request.RequestTimestamp.ToIso8601()}\tREQ OUT\t{request.Destination}\t{connection?.RemoteSocket}\t{request.RequestId}\t{request.Action}\t{request.Payload.ToString(Formatting.None)}",
+                    ct
                 );
-
             };
 
-            testCSMSv2_1.OnJSONMessageResponseReceived    += async (timestamp, server, connection, networkingNodeId, networkPath, eventTrackingId, requestTimestamp, jsonRequestMessage, binaryRequestMessage, responseTimestamp, jsonResponseMessage, cancellationToken)   => {
-
-                await DebugLog(
-                    $"Received a JSON web socket response from '{networkingNodeId}': '{jsonResponseMessage.ToString(Formatting.None)}'!",
-                    cancellationToken
-                );
-
+            testCSMSv2_1.OCPP.IN.OnJSONResponseMessageReceived += async (timestamp, server, connection, response, ct) =>
+            {
                 await WriteToLogfileV2_1(
-                    $"{responseTimestamp.ToIso8601()}\tRES IN\t{networkingNodeId}\t{connection.RemoteSocket}\t{jsonResponseMessage.ToString(Formatting.None)}",
-                    cancellationToken
+                    $"{response.ResponseTimestamp.ToIso8601()}\tRES IN\t{response.NetworkPath.Source}\t{connection?.RemoteSocket}\t{response.RequestId}\t-\t{response.Payload.ToString(Formatting.None)}",
+                    ct
                 );
-
             };
+
+            //testCSMSv2_1.OnJSONMessageRequestReceived     += async (timestamp, server, connection, destinationId, networkPath, eventTrackingId, requestTimestamp, requestMessage,     cancellationToken) => {
+
+            //    await DebugLog(
+            //        $"Received a JSON web socket request from '{destinationId}': '{requestMessage.ToString(Formatting.None)}'!",
+            //        cancellationToken
+            //    );
+
+            //    await WriteToLogfileV2_1(
+            //        $"{requestTimestamp.ToIso8601()}\tREQ IN\t{destinationId}\t{connection.RemoteSocket}\t{requestMessage.ToString(Formatting.None)}",
+            //        cancellationToken
+            //    );
+
+            //};
+
+            //testCSMSv2_1.OnJSONMessageResponseSent        += async (timestamp, server, connection, networkingNodeId, networkPath, eventTrackingId, requestTimestamp, jsonRequestMessage, binaryRequestMessage, responseTimestamp, jsonResponseMessage, cancellationToken)   => {
+
+            //    await DebugLog(
+            //        $"Sent a JSON web socket response to '{networkingNodeId}': '{jsonResponseMessage.ToString(Formatting.None)}'!",
+            //        cancellationToken
+            //    );
+
+            //    await WriteToLogfileV2_1(
+            //        $"{responseTimestamp.ToIso8601()}\tRES OUT\t{networkingNodeId}\t{connection.RemoteSocket}\t{jsonResponseMessage.ToString(Formatting.None)}",
+            //        cancellationToken
+            //    );
+
+            //};
+
+
+
+            //testCSMSv2_1.OnJSONMessageRequestSent         += async (timestamp, server, connection, destinationId, networkPath, eventTrackingId, requestTimestamp, requestMessage,     cancellationToken) => {
+
+            //    await DebugLog(
+            //        $"Sent a JSON web socket request to '{destinationId}': '{requestMessage.ToString(Formatting.None)}'!",
+            //        cancellationToken
+            //    );
+
+            //    await WriteToLogfileV2_1(
+            //        $"{requestTimestamp.ToIso8601()}\tREQ OUT\t{destinationId}\t{connection.RemoteSocket}\t{requestMessage.ToString(Formatting.None)}",
+            //        cancellationToken
+            //    );
+
+            //};
+
+            //testCSMSv2_1.OnJSONMessageResponseReceived    += async (timestamp, server, connection, networkingNodeId, networkPath, eventTrackingId, requestTimestamp, jsonRequestMessage, binaryRequestMessage, responseTimestamp, jsonResponseMessage, cancellationToken)   => {
+
+            //    await DebugLog(
+            //        $"Received a JSON web socket response from '{networkingNodeId}': '{jsonResponseMessage.ToString(Formatting.None)}'!",
+            //        cancellationToken
+            //    );
+
+            //    await WriteToLogfileV2_1(
+            //        $"{responseTimestamp.ToIso8601()}\tRES IN\t{networkingNodeId}\t{connection.RemoteSocket}\t{jsonResponseMessage.ToString(Formatting.None)}",
+            //        cancellationToken
+            //    );
+
+            //};
 
             //testCSMSv2_1.OnJSONErrorResponseReceived  += async (timestamp, server, connection,
             //                                                    //networkingNodeId, networkPath,
@@ -1813,61 +1865,61 @@ namespace org.GraphDefined.OCPP.CSMS.TestApp
 
             #region Binary Messages
 
-            testCSMSv2_1.OnBinaryMessageRequestReceived   += async (timestamp, server, connection, destinationId, networkPath, eventTrackingId, requestTimestamp, requestMessage,     cancellationToken) => {
+            //testCSMSv2_1.OnBinaryMessageRequestReceived   += async (timestamp, server, connection, destinationId, networkPath, eventTrackingId, requestTimestamp, requestMessage,     cancellationToken) => {
 
-                await DebugLog(
-                    $"Received a binary web socket request from '{destinationId}': '{requestMessage.ToBase64()}'!",
-                    cancellationToken
-                );
+            //    await DebugLog(
+            //        $"Received a binary web socket request from '{destinationId}': '{requestMessage.ToBase64()}'!",
+            //        cancellationToken
+            //    );
 
-                await WriteToLogfileV2_1(
-                    $"{requestTimestamp.ToIso8601()}\tREQ IN\t{destinationId}\t{connection.RemoteSocket}\t{requestMessage.ToBase64()}",
-                    cancellationToken
-                );
+            //    await WriteToLogfileV2_1(
+            //        $"{requestTimestamp.ToIso8601()}\tREQ IN\t{destinationId}\t{connection.RemoteSocket}\t{requestMessage.ToBase64()}",
+            //        cancellationToken
+            //    );
 
-            };
+            //};
 
-            testCSMSv2_1.OnBinaryMessageResponseSent      += async (timestamp, server, connection, destinationId, networkPath, eventTrackingId, requestTimestamp, jsonRequestMessage, binaryRequestMessage, responseTimestamp, binaryResponseMessage, cancellationToken) => {
+            //testCSMSv2_1.OnBinaryMessageResponseSent      += async (timestamp, server, connection, destinationId, networkPath, eventTrackingId, requestTimestamp, jsonRequestMessage, binaryRequestMessage, responseTimestamp, binaryResponseMessage, cancellationToken) => {
 
-                await DebugLog(
-                    $"Sent a binary web socket response to '{destinationId}': '{binaryResponseMessage.ToBase64()}'!",
-                    cancellationToken
-                );
+            //    await DebugLog(
+            //        $"Sent a binary web socket response to '{destinationId}': '{binaryResponseMessage.ToBase64()}'!",
+            //        cancellationToken
+            //    );
 
-                await WriteToLogfileV2_1(
-                    $"{responseTimestamp.ToIso8601()}\tRES OUT\t{destinationId}\t{connection.RemoteSocket}\t{binaryResponseMessage.ToBase64()}",
-                    cancellationToken
-                );
+            //    await WriteToLogfileV2_1(
+            //        $"{responseTimestamp.ToIso8601()}\tRES OUT\t{destinationId}\t{connection.RemoteSocket}\t{binaryResponseMessage.ToBase64()}",
+            //        cancellationToken
+            //    );
 
-            };
+            //};
 
-            testCSMSv2_1.OnBinaryMessageRequestSent       += async (timestamp, server, connection, destinationId, networkPath, eventTrackingId, requestTimestamp, requestMessage,     cancellationToken) => {
+            //testCSMSv2_1.OnBinaryMessageRequestSent       += async (timestamp, server, connection, destinationId, networkPath, eventTrackingId, requestTimestamp, requestMessage,     cancellationToken) => {
 
-                await DebugLog(
-                    $"Sent a binary web socket request to '{destinationId}': '{requestMessage.ToBase64()}'!",
-                    cancellationToken
-                );
+            //    await DebugLog(
+            //        $"Sent a binary web socket request to '{destinationId}': '{requestMessage.ToBase64()}'!",
+            //        cancellationToken
+            //    );
 
-                await WriteToLogfileV2_1(
-                    $"{requestTimestamp.ToIso8601()}\tREQ OUT\t{destinationId}\t{connection.RemoteSocket}\t{requestMessage.ToBase64()}",
-                    cancellationToken
-                );
+            //    await WriteToLogfileV2_1(
+            //        $"{requestTimestamp.ToIso8601()}\tREQ OUT\t{destinationId}\t{connection.RemoteSocket}\t{requestMessage.ToBase64()}",
+            //        cancellationToken
+            //    );
 
-            };
+            //};
 
-            testCSMSv2_1.OnBinaryMessageResponseReceived  += async (timestamp, server, connection, destinationId, networkPath, eventTrackingId, requestTimestamp, jsonRequestMessage, binaryRequestMessage, responseTimestamp, binaryResponseMessage, cancellationToken) => {
+            //testCSMSv2_1.OnBinaryMessageResponseReceived  += async (timestamp, server, connection, destinationId, networkPath, eventTrackingId, requestTimestamp, jsonRequestMessage, binaryRequestMessage, responseTimestamp, binaryResponseMessage, cancellationToken) => {
 
-                await DebugLog(
-                    $"Received a binary web socket response from '{destinationId}': '{binaryResponseMessage.ToBase64()}'!",
-                    cancellationToken
-                );
+            //    await DebugLog(
+            //        $"Received a binary web socket response from '{destinationId}': '{binaryResponseMessage.ToBase64()}'!",
+            //        cancellationToken
+            //    );
 
-                await WriteToLogfileV2_1(
-                    $"{responseTimestamp.ToIso8601()}\tRES IN\t{destinationId}\t{connection.RemoteSocket}\t{binaryResponseMessage.ToBase64()}",
-                    cancellationToken
-                );
+            //    await WriteToLogfileV2_1(
+            //        $"{responseTimestamp.ToIso8601()}\tRES IN\t{destinationId}\t{connection.RemoteSocket}\t{binaryResponseMessage.ToBase64()}",
+            //        cancellationToken
+            //    );
 
-            };
+            //};
 
             #endregion
 

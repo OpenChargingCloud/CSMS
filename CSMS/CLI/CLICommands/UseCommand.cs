@@ -138,13 +138,13 @@ namespace org.GraphDefined.OCPP.CSMS.TestApp.CommandLine
                     if (ocppVersion != "")
                     {
 
-                        if (!cli.Environment.TryAdd(EnvironmentKey.RemoteSystemOCPPVersion, new ConcurrentList<String>(DefaultStrings.OCPPv1_6)))
-                            cli.Environment[EnvironmentKey.RemoteSystemOCPPVersion].TrySet(DefaultStrings.OCPPv1_6);
+                        if (!cli.Environment.TryAdd(EnvironmentKey.RemoteSystemOCPPVersion, new ConcurrentList<String>(ocppVersion)))
+                            cli.Environment[EnvironmentKey.RemoteSystemOCPPVersion].TrySet(ocppVersion);
 
                         if (!cli.Environment.TryAdd(EnvironmentKey.RemoteSystemId,          new ConcurrentList<String>(newRemoteSystemId.ToString())))
                             cli.Environment[EnvironmentKey.RemoteSystemId         ].TrySet(newRemoteSystemId.ToString());
 
-                        return Task.FromResult<String[]>([$"Using networking node '{newRemoteSystemId}' ({DefaultStrings.OCPPv1_6})!"]);
+                        return Task.FromResult<String[]>([$"Using networking node '{newRemoteSystemId}' ({ocppVersion})!"]);
 
                     }
 
