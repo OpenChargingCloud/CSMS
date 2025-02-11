@@ -46,6 +46,7 @@ using cloud.charging.open.protocols.WWCP.NetworkingNode;
 using org.GraphDefined.Vanaheimr.Hermod.WebSocket;
 using cloud.charging.open.protocols.WWCP.WebSockets;
 using Org.BouncyCastle.Asn1.Ocsp;
+using org.GraphDefined.Vanaheimr.Hermod.NTP;
 
 #endregion
 
@@ -299,9 +300,51 @@ namespace org.GraphDefined.OCPP.CSMS.TestApp
 
 
 
+            //var b1 = NTPPacket.TryParse("230008200000000000000000000000000000000000000000000000000000000000000000000000005001ac7cd6000835010400242027e75e68914d89bdd2461d6c18a87914ae432326ae452516f1af36876c37e2020400689dad3e6fcd545c8fc9a6eb945be9e2a600760641ea6e3d89c47fc692135e9ba4ca075866699e30a46b4b31f195f6d7cf8c72a4556189029c19d3c2eedda04969441c47a62004307a62c9b57cae3dc4a4af2be69757c30bd5c917e3e25564dfa3a3e283a00404002800100010768f82009746999ea26472c70d9e49063b474cf41d387f62e78ae20224c53209".FromHEX(), out var p1, out var e1);
+            //var b2 = NTPPacket.TryParse("240308e7000001a00000003974cb60e3eb51b89a96d03cb65001ac7cd6000835eb51b99eb19a6fd1eb51b99eb19e575e010400242027e75e68914d89bdd2461d6c18a87914ae432326ae452516f1af36876c37e20404009000100078c562375b4cf5e6338cecf184f1c9b739ecc6daa3e27bbda9935a184f9089bc5ad6060a80afd71b5dcd421b332f4f26fdb53d9a1d092662595944696573fea2c1ae33761b04f5b399f504779bf4745caab96ac43c10595f0abe61aedbb6471b806e737cba62035e8bfd44279ed869996102168d9c68edf37cba02d3db49ca6aaf28923d67bb43e0ba".FromHEX(), out var p2, out var e2);
 
 
+            //var ntpServer = new NTPServer();
+            //await ntpServer.Start();
 
+
+            //var nts0 = new NTSClient("127.0.0.1");
+            ////var c0   = nts0.GetNTSKERecords_BC();
+            //var t0   = await nts0.QueryTime(TimeSpan.FromSeconds(5));
+            //DebugX.Log("---");
+
+            // Note: chrony uses /etc/apparmor.d/usr.sbin.chronyd
+            // cat /etc/letsencrypt/live/time3.charging.cloud/fullchain.pem > /etc/chrony/fullchain.pem
+            // cat /etc/letsencrypt/live/time3.charging.cloud/privkey.pem > /etc/chrony/privkey.pem
+            // chown _chrony:_chrony /etc/chrony/*.pem
+            // chmod 640 /etc/chrony/privkey.pem
+            // systemctl restart chrony
+            // 
+            // openssl s_client -connect time3.charging.cloud:4460 -servername time3.charging.cloud -alpn ntske/1 -showcerts
+            // ntsdumpdir /var/lib/chrony
+            // chronyc sources -v
+            // sudo chronyd -d -n -f /etc/chrony/chrony.conf
+            //var nts1 = new NTSClient("time3.charging.cloud");
+            //var c1   = nts1.GetNTSKERecords_BC();
+            //var t1   = await nts1.QueryTime(TimeSpan.FromSeconds(5), NTSKEResponse: c1);
+            //DebugX.Log("---");
+
+            //var nts5 = new NTSClient("time2.charging.cloud");
+            //var c5   = nts5.GetNTSKERecords_BC();
+            //var t5   = await nts5.QueryTime(TimeSpan.FromSeconds(5), NTSKEResponse: c1);
+            //DebugX.Log("---");
+
+            // openssl s_client   -connect ptbtime1.ptb.de:4460   -servername ptbtime1.ptb.de  -showcerts
+            // openssl s_client   -connect ptbtime1.ptb.de:4460   -servername ptbtime1.ptb.de  -alpn ntske/1   -showcerts
+            var nts2 = new NTSClient("ptbtime1.ptb.de");
+            var c2   = nts2.GetNTSKERecords();
+            var t2   = await nts2.QueryTime(NTSKEResponse: c2);
+            DebugX.Log("---");
+
+            var nts3 = new NTSClient("time.cloudflare.com");
+            var c3   = nts3.GetNTSKERecords();
+            var t3   = await nts3.QueryTime(NTSKEResponse: c3);
+            DebugX.Log("---");
 
 
 
