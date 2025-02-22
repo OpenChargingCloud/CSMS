@@ -28,3 +28,6 @@
 [submodule "libs/WWCP_ISO15118_20"]
 	path = libs/WWCP_ISO15118_20
 	url = ssh://git@git.graphdefined.com:5001/OpenChargingCloud/WWCP_ISO15118_20.git
+[submodule "libs/WWCP_DatexII"]
+	path = libs/WWCP_DatexII
+	url = ssh://git@git.graphdefined.com:5001/OpenChargingCloud/WWCP_DatexII.git
