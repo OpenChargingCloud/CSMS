@@ -304,8 +304,6 @@ namespace org.GraphDefined.OCPP.CSMS.TestApp
             //var b2 = NTPPacket.TryParse("240308e7000001a00000003974cb60e3eb51b89a96d03cb65001ac7cd6000835eb51b99eb19a6fd1eb51b99eb19e575e010400242027e75e68914d89bdd2461d6c18a87914ae432326ae452516f1af36876c37e20404009000100078c562375b4cf5e6338cecf184f1c9b739ecc6daa3e27bbda9935a184f9089bc5ad6060a80afd71b5dcd421b332f4f26fdb53d9a1d092662595944696573fea2c1ae33761b04f5b399f504779bf4745caab96ac43c10595f0abe61aedbb6471b806e737cba62035e8bfd44279ed869996102168d9c68edf37cba02d3db49ca6aaf28923d67bb43e0ba".FromHEX(), out var p2, out var e2);
 
 
-
-
             // Note: chrony uses /etc/apparmor.d/usr.sbin.chronyd
             // cat /etc/letsencrypt/live/time3.charging.cloud/fullchain.pem > /etc/chrony/fullchain.pem
             // cat /etc/letsencrypt/live/time3.charging.cloud/privkey.pem > /etc/chrony/privkey.pem
