@@ -31,3 +31,6 @@
 [submodule "libs/WWCP_DatexII"]
 	path = libs/WWCP_DatexII
 	url = ssh://git@git.graphdefined.com:5001/OpenChargingCloud/WWCP_DatexII.git
+[submodule "libs/Norn"]
+	path = libs/Norn
+	url = ssh://git@git.graphdefined.com:5001/Vanaheimr/Norn.git
