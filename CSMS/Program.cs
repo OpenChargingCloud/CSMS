@@ -38,16 +38,13 @@ using Org.BouncyCastle.Crypto.Operators;
 using org.GraphDefined.Vanaheimr.Illias;
 using org.GraphDefined.Vanaheimr.Hermod;
 using org.GraphDefined.Vanaheimr.Hermod.DNS;
-using org.GraphDefined.Vanaheimr.Hermod.HTTP;
+using org.GraphDefined.Vanaheimr.Hermod.WebSocket;
+using org.GraphDefined.Vanaheimr.Norn.NTS;
+
+using cloud.charging.open.protocols.WWCP.NetworkingNode;
 
 using OCPPv1_6 = cloud.charging.open.protocols.OCPPv1_6;
 using OCPPv2_1 = cloud.charging.open.protocols.OCPPv2_1;
-using cloud.charging.open.protocols.WWCP.NetworkingNode;
-using org.GraphDefined.Vanaheimr.Hermod.WebSocket;
-using cloud.charging.open.protocols.WWCP.WebSockets;
-using Org.BouncyCastle.Asn1.Ocsp;
-using org.GraphDefined.Vanaheimr.Norn.NTP;
-using static cloud.charging.open.protocols.OCPPv1_6.ConfigurationKey;
 
 #endregion
 
