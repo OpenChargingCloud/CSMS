@@ -37,3 +37,6 @@
 [submodule "libs/WWCP_OpenADR"]
 	path = libs/WWCP_OpenADR
 	url = ssh://git@git.graphdefined.com:5001/OpenChargingCloud/WWCP_OpenADR.git
+[submodule "libs/MCP"]
+	path = libs/MCP
+	url = ssh://git@git.graphdefined.com:5001/Vanaheimr/MCP.git
