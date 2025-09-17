@@ -554,8 +554,8 @@ namespace org.GraphDefined.OCPP.CSMS.TestApp
 
                 certificateGenerator.SetIssuerDN     (subjectDN); // self-signed
                 certificateGenerator.SetSubjectDN    (subjectDN);
-                certificateGenerator.SetNotBefore    (Timestamp.Now.AddDays (-3));
-                certificateGenerator.SetNotAfter     (Timestamp.Now.AddYears(23));
+                certificateGenerator.SetNotBefore    (Timestamp.Now.AddDays (-3).DateTime);
+                certificateGenerator.SetNotAfter     (Timestamp.Now.AddYears(23).DateTime);
                 certificateGenerator.SetPublicKey    (rootCA_ECC_KeyPair.Public);
                 certificateGenerator.SetSerialNumber (BigIntegers.CreateRandomInRange(BigInteger.One, BigInteger.ValueOf(long.MaxValue), secureRandom));
 
@@ -606,8 +606,8 @@ namespace org.GraphDefined.OCPP.CSMS.TestApp
 
                 certificateGenerator.SetIssuerDN     (subjectDN); // self-signed
                 certificateGenerator.SetSubjectDN    (subjectDN);
-                certificateGenerator.SetNotBefore    (Timestamp.Now.AddDays (-3));
-                certificateGenerator.SetNotAfter     (Timestamp.Now.AddYears(23));
+                certificateGenerator.SetNotBefore    (Timestamp.Now.AddDays (-3).DateTime);
+                certificateGenerator.SetNotAfter     (Timestamp.Now.AddYears(23).DateTime);
                 certificateGenerator.SetPublicKey    (rootCA_RSA_KeyPair.Public);
                 certificateGenerator.SetSerialNumber (BigIntegers.CreateRandomInRange(BigInteger.One, BigInteger.ValueOf(long.MaxValue), secureRandom));
 
@@ -658,8 +658,8 @@ namespace org.GraphDefined.OCPP.CSMS.TestApp
 
                 certificateGenerator.SetIssuerDN     (new X509Name(rootCA_ECC_Certificate.SubjectDN.ToString()));
                 certificateGenerator.SetSubjectDN    (new X509Name("CN=Open Charging Cloud - Server CA (ECC), O=GraphDefined GmbH, OU=TestCA, L=Jena, C=Germany"));
-                certificateGenerator.SetNotBefore    (Timestamp.Now.AddDays (-2));
-                certificateGenerator.SetNotAfter     (Timestamp.Now.AddYears(+5));
+                certificateGenerator.SetNotBefore    (Timestamp.Now.AddDays (-2).DateTime);
+                certificateGenerator.SetNotAfter     (Timestamp.Now.AddYears(+5).DateTime);
                 certificateGenerator.SetPublicKey    (serverCA_ECC_KeyPair.Public);
                 certificateGenerator.SetSerialNumber (BigIntegers.CreateRandomInRange(BigInteger.One, BigInteger.ValueOf(long.MaxValue), secureRandom));
 
@@ -711,8 +711,8 @@ namespace org.GraphDefined.OCPP.CSMS.TestApp
 
                 certificateGenerator.SetIssuerDN     (new X509Name(rootCA_RSA_Certificate.SubjectDN.ToString()));
                 certificateGenerator.SetSubjectDN    (new X509Name("CN=Open Charging Cloud - Server CA (RSA), O=GraphDefined GmbH, OU=TestCA, L=Jena, C=Germany"));
-                certificateGenerator.SetNotBefore    (Timestamp.Now.AddDays (-3));
-                certificateGenerator.SetNotAfter     (Timestamp.Now.AddYears(23));
+                certificateGenerator.SetNotBefore    (Timestamp.Now.AddDays (-3).DateTime);
+                certificateGenerator.SetNotAfter     (Timestamp.Now.AddYears(23).DateTime);
                 certificateGenerator.SetPublicKey    (serverCA_RSA_KeyPair.Public);
                 certificateGenerator.SetSerialNumber (BigIntegers.CreateRandomInRange(BigInteger.One, BigInteger.ValueOf(long.MaxValue), secureRandom));
 
@@ -765,8 +765,8 @@ namespace org.GraphDefined.OCPP.CSMS.TestApp
 
                 certificateGenerator.SetIssuerDN     (new X509Name(rootCA_ECC_Certificate.SubjectDN.ToString()));
                 certificateGenerator.SetSubjectDN    (new X509Name("CN=Open Charging Cloud - Client CA (ECC), O=GraphDefined GmbH, OU=TestCA, L=Jena, C=Germany"));
-                certificateGenerator.SetNotBefore    (Timestamp.Now.AddDays (-2));
-                certificateGenerator.SetNotAfter     (Timestamp.Now.AddYears(+5));
+                certificateGenerator.SetNotBefore    (Timestamp.Now.AddDays (-2).DateTime);
+                certificateGenerator.SetNotAfter     (Timestamp.Now.AddYears(+5).DateTime);
                 certificateGenerator.SetPublicKey    (clientCA_ECC_KeyPair.Public);
                 certificateGenerator.SetSerialNumber (BigIntegers.CreateRandomInRange(BigInteger.One, BigInteger.ValueOf(long.MaxValue), secureRandom));
 
@@ -818,8 +818,8 @@ namespace org.GraphDefined.OCPP.CSMS.TestApp
 
                 certificateGenerator.SetIssuerDN     (new X509Name(rootCA_ECC_Certificate.SubjectDN.ToString()));
                 certificateGenerator.SetSubjectDN    (new X509Name("CN=Open Charging Cloud - Client CA (RSA), O=GraphDefined GmbH, OU=TestCA, L=Jena, C=Germany"));
-                certificateGenerator.SetNotBefore    (Timestamp.Now.AddDays (-3));
-                certificateGenerator.SetNotAfter     (Timestamp.Now.AddYears(23));
+                certificateGenerator.SetNotBefore    (Timestamp.Now.AddDays (-3).DateTime);
+                certificateGenerator.SetNotAfter     (Timestamp.Now.AddYears(23).DateTime);
                 certificateGenerator.SetPublicKey    (clientCA_RSA_KeyPair.Public);
                 certificateGenerator.SetSerialNumber (BigIntegers.CreateRandomInRange(BigInteger.One, BigInteger.ValueOf(long.MaxValue), secureRandom));
 
@@ -872,8 +872,8 @@ namespace org.GraphDefined.OCPP.CSMS.TestApp
 
                 certificateGenerator.SetIssuerDN     (new X509Name(rootCA_ECC_Certificate.SubjectDN.ToString()));
                 certificateGenerator.SetSubjectDN    (new X509Name("CN=Open Charging Cloud - Firmware Signing CA (ECC), O=GraphDefined GmbH, OU=TestCA, L=Jena, C=Germany"));
-                certificateGenerator.SetNotBefore    (Timestamp.Now.AddDays (-2));
-                certificateGenerator.SetNotAfter     (Timestamp.Now.AddYears(+5));
+                certificateGenerator.SetNotBefore    (Timestamp.Now.AddDays (-2).DateTime);
+                certificateGenerator.SetNotAfter     (Timestamp.Now.AddYears(+5).DateTime);
                 certificateGenerator.SetPublicKey    (firmwareCA_ECC_KeyPair.Public);
                 certificateGenerator.SetSerialNumber (BigIntegers.CreateRandomInRange(BigInteger.One, BigInteger.ValueOf(long.MaxValue), secureRandom));
 
@@ -925,8 +925,8 @@ namespace org.GraphDefined.OCPP.CSMS.TestApp
 
                 certificateGenerator.SetIssuerDN     (new X509Name(rootCA_ECC_Certificate.SubjectDN.ToString()));
                 certificateGenerator.SetSubjectDN    (new X509Name("CN=Open Charging Cloud - Firmware Signing CA (RSA), O=GraphDefined GmbH, OU=TestCA, L=Jena, C=Germany"));
-                certificateGenerator.SetNotBefore    (Timestamp.Now.AddDays (-3));
-                certificateGenerator.SetNotAfter     (Timestamp.Now.AddYears(23));
+                certificateGenerator.SetNotBefore    (Timestamp.Now.AddDays (-3).DateTime);
+                certificateGenerator.SetNotAfter     (Timestamp.Now.AddYears(23).DateTime);
                 certificateGenerator.SetPublicKey    (firmwareCA_RSA_KeyPair.Public);
                 certificateGenerator.SetSerialNumber (BigIntegers.CreateRandomInRange(BigInteger.One, BigInteger.ValueOf(long.MaxValue), secureRandom));
 
@@ -982,8 +982,8 @@ namespace org.GraphDefined.OCPP.CSMS.TestApp
 
                 certificateGenerator.SetIssuerDN     (new X509Name(serverCA_ECC_Certificate.SubjectDN.ToString()));
                 certificateGenerator.SetSubjectDN    (new X509Name("CN=api1.charging.cloud, O=GraphDefined GmbH, OU=ECC, L=Jena, C=Germany"));
-                certificateGenerator.SetNotBefore    (Timestamp.Now.AddDays  (-1));
-                certificateGenerator.SetNotAfter     (Timestamp.Now.AddMonths(+3));
+                certificateGenerator.SetNotBefore    (Timestamp.Now.AddDays  (-1).DateTime);
+                certificateGenerator.SetNotAfter     (Timestamp.Now.AddMonths(+3).DateTime);
                 certificateGenerator.SetPublicKey    (server1_ECC_KeyPair.Public);
                 certificateGenerator.SetSerialNumber (BigIntegers.CreateRandomInRange(BigInteger.One, BigInteger.ValueOf(long.MaxValue), secureRandom));
 
@@ -1030,8 +1030,8 @@ namespace org.GraphDefined.OCPP.CSMS.TestApp
 
                 certificateGenerator.SetIssuerDN     (new X509Name(serverCA_RSA_Certificate.SubjectDN.ToString()));
                 certificateGenerator.SetSubjectDN    (new X509Name("CN=api1.charging.cloud, O=GraphDefined GmbH, OU=RSA, L=Jena, C=Germany"));
-                certificateGenerator.SetNotBefore    (Timestamp.Now.AddDays  (-1));
-                certificateGenerator.SetNotAfter     (Timestamp.Now.AddMonths(+3));
+                certificateGenerator.SetNotBefore    (Timestamp.Now.AddDays  (-1).DateTime);
+                certificateGenerator.SetNotAfter     (Timestamp.Now.AddMonths(+3).DateTime);
                 certificateGenerator.SetPublicKey    (server1_RSA_KeyPair.Public);
                 certificateGenerator.SetSerialNumber (BigIntegers.CreateRandomInRange(BigInteger.One, BigInteger.ValueOf(long.MaxValue), secureRandom));
 
@@ -1079,8 +1079,8 @@ namespace org.GraphDefined.OCPP.CSMS.TestApp
 
                 certificateGenerator.SetIssuerDN     (new X509Name(clientCA_ECC_Certificate.SubjectDN.ToString()));
                 certificateGenerator.SetSubjectDN    (new X509Name("CN=client1, O=GraphDefined GmbH, OU=ECC, L=Jena, C=Germany"));
-                certificateGenerator.SetNotBefore    (Timestamp.Now.AddDays  (-1));
-                certificateGenerator.SetNotAfter     (Timestamp.Now.AddMonths(+3));
+                certificateGenerator.SetNotBefore    (Timestamp.Now.AddDays  (-1).DateTime);
+                certificateGenerator.SetNotAfter     (Timestamp.Now.AddMonths(+3).DateTime);
                 certificateGenerator.SetPublicKey    (client1_ECC_KeyPair.Public);
                 certificateGenerator.SetSerialNumber (BigIntegers.CreateRandomInRange(BigInteger.One, BigInteger.ValueOf(long.MaxValue), secureRandom));
 
@@ -1121,8 +1121,8 @@ namespace org.GraphDefined.OCPP.CSMS.TestApp
 
                 certificateGenerator.SetIssuerDN     (new X509Name(clientCA_RSA_Certificate.SubjectDN.ToString()));
                 certificateGenerator.SetSubjectDN    (new X509Name("CN=client1, O=GraphDefined GmbH, OU=RSA, L=Jena, C=Germany"));
-                certificateGenerator.SetNotBefore    (Timestamp.Now.AddDays  (-1));
-                certificateGenerator.SetNotAfter     (Timestamp.Now.AddMonths(+3));
+                certificateGenerator.SetNotBefore    (Timestamp.Now.AddDays  (-1).DateTime);
+                certificateGenerator.SetNotAfter     (Timestamp.Now.AddMonths(+3).DateTime);
                 certificateGenerator.SetPublicKey    (client1_RSA_KeyPair.Public);
                 certificateGenerator.SetSerialNumber (BigIntegers.CreateRandomInRange(BigInteger.One, BigInteger.ValueOf(long.MaxValue), secureRandom));
 
