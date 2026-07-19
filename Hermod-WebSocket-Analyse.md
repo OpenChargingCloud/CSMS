@@ -181,18 +181,34 @@ Connect-Timeout — unabhängig vom Produktivcode).
   mit 1007 (Invalid Payload Data); 1009 (Message Too Big) bleibt den echten
   Größen-Limit-Verstößen vorbehalten (RFC 7692 § 8).
 
-## 6. Verbleibende Punkte (bewusst offen)
+## 6. Zweiter Härtungsdurchgang: N6 + Auto-Reconnect (umgesetzt, Commit `335f4ae6`)
 
-- **N6 — Subprotokoll-Strictness (Design, OCPP-relevant)**: Bietet der Client
-  Subprotokolle an, von denen keines unterstützt wird, antwortet der Server mit 101
-  *ohne* `Sec-WebSocket-Protocol` (RFC-konform; der Client muss dann schließen).
-  Für OCPP wäre ein optionaler Strict-Modus sinnvoll, der den Handshake ablehnt
-  (z. B. 400), statt eine Verbindung aufzubauen, die die Gegenstelle sofort schließen muss.
-- **Auto-Reconnect mit Backoff+Jitter im Client** — für Ladesäulen hinter Mobilfunk
-  wünschenswert (OCPP 2.0.1 `RetryBackOff*`); heute muss der Aufrufer das selbst bauen.
-- **PROXY protocol v2** (De-facto-Standard) — Client-IP-Erhalt hinter L4-Loadbalancern.
-- Handshake-Timeout/Max-Header-Größe/Per-IP-Limits (Slowloris), optionale
+- **N6 — Subprotokoll-Strictness (Server).** Neue settable Property
+  `RequireMatchingSubprotocol` (Default aus). Bietet der Client Subprotokolle an,
+  von denen keines in `SecWebSocketProtocols` ist, lehnt der Server den Handshake
+  mit `400 Bad Request` ab, statt (RFC 6455 § 4.1) mit 101 *ohne*
+  `Sec-WebSocket-Protocol` zu antworten. Greift nur, wenn der Server überhaupt
+  Subprotokolle deklariert; ein Client ohne Subprotokoll-Angebot wird nie abgelehnt.
+- **Auto-Reconnect im Client** (`WebSocketClientReconnectPolicy`, Opt-in).
+  Exponentieller Backoff mit Jitter, vollständig durch den Client-Ersteller
+  parametrisierbar: `InitialDelay`, `MaxDelay`, `BackoffFactor`, `JitterRatio`
+  (Thundering-Herd-Schutz), `MaxAttempts` (null = unbegrenzt). `ReconnectPolicy`
+  = null (Default) = kein Reconnect; das ersetzt das bisherige, nicht abschaltbare
+  Reconnect-Verhalten der Verbindungsschleife durch ein sauberes Opt-in. Ein
+  sauberes `Close()` und Protokollverletzungen (`ClientCloseMessage` gesetzt)
+  triggern nie einen Reconnect; der Backoff-Zähler (`ReconnectAttempts`) wird bei
+  jeder erfolgreichen (Wieder-)Verbindung auf 0 zurückgesetzt. Event `OnReconnecting`
+  für Observability. Abgesichert durch 5 Policy-Unit-Tests (Backoff-Werte,
+  Jitter-Grenzen, MaxDelay-Cap, Clamping) und 3 N6-Integrationstests (400/101).
+
+## 7. Verbleibende Punkte (bewusst offen)
+
+- **Handshake-Härtung** (nächster geplanter Schritt): Handshake-Timeout,
+  Max-Header-Größe, Per-IP-Verbindungslimits (Slowloris), optionale
   `Origin`-Allowlist (CSWSH; nur für browserzugängliche Endpunkte relevant).
+- **Backpressure-Limits à la uWebSockets** (danach geplant): Sende-Queue-Limit
+  mit Drop-/Close-Policy statt nur Write-Timeout.
+- **PROXY protocol v2** (De-facto-Standard) — Client-IP-Erhalt hinter L4-Loadbalancern.
 
 Bewusst außerhalb des Scopes: **WebSocket über HTTP/2 (RFC 8441)** und **HTTP/3
 (RFC 9220)** — für OCPP (HTTP/1.1 + TLS) ohne praktischen Nutzen; **WebTransport**
@@ -202,11 +218,17 @@ Embedded-OCPP-Stacks; `server_max_window_bits`/`client_max_window_bits` < 15
 
 Verhaltensänderung zur Kenntnis: Protokollverletzungen führen jetzt RFC-konform zum
 Verbindungsabbau (vorher tolerant). Für OCPP-Gegenstellen mit fehlerhaften Stacks
-ggf. relevant; `CloseConnectionOnUnexpectedFrames` hat kaum noch Bedeutung.
+ggf. relevant; `CloseConnectionOnUnexpectedFrames` hat kaum noch Bedeutung. Ebenso
+reconnectet der Client seit dem zweiten Härtungsdurchgang nur noch bei gesetzter
+`ReconnectPolicy` (vorher lief die Verbindungsschleife unbegrenzt weiter).
 
-## 7. Testabdeckung / Reproduktion
+## 8. Testabdeckung / Reproduktion
 
-Letzter Regressionslauf (2026-07-19, nach Pong-Timeout + N1–N5) — alle grün:
+Autobahn-Regressionslauf (2026-07-19, nach Pong-Timeout + N1–N5) — alle grün;
+für N6 + Auto-Reconnect nicht erneut gefahren, da beide keinen Wire-Framing-Pfad
+berühren (N6 ist handshake-only/Default aus; der Reconnect-Block läuft im normalen
+Fall nicht, da am Verbindungsende `ClientCloseMessage` gesetzt ist). Abgesichert
+über die NUnit-Suite (siehe unten):
 
 | Autobahn-Suite | Ergebnis |
 |---|---|
@@ -223,21 +245,28 @@ Letzter Regressionslauf (2026-07-19, nach Pong-Timeout + N1–N5) — alle grün
 - Spezialtests im Harness: `closetest` (TCP-Abbruch-Erkennung), `hangtest`
   (gestauter Peer, Write-/Close-Timeouts), `deflatetest`/`negtest` (RFC 7692).
 - HTML-Reports: `scratchpad/autobahn/reports/{server,client,server-deflate,client-deflate}/index.html`
-- Unit-Tests: `dotnet test --filter FullyQualifiedName~WebSocket` — 27/28 grün
-  (der eine Ausfall ist der vorbestehende TLS-Fixture-Bug, s. Abschnitt 5).
+- Unit-Tests: `dotnet test --filter FullyQualifiedName~WebSocket`. Nach N6 +
+  Auto-Reconnect zusätzlich 8 neue Tests (5 Reconnect-Policy, 3 N6-Integration);
+  WebSocket-Regression 33/33 grün (ohne den langsamen TLS-Fixture-Bug und
+  Load-Tests). Der TLS-Fixture-Ausfall besteht unverändert fort (s. Abschnitt 5).
 
 Geänderte/neue Dateien (in `libs/Hermod/Hermod/WebSocket/`, sofern nicht anders angegeben):
 `WebSocketFrame.cs` (Parser, ParseResult, IsValidCloseCode, AllowRsv1, TextRaw),
 `IncrementalUtf8Validator.cs` (neu),
 `WebSocketPerMessageDeflate.cs` (neu; N4-Negotiation-Härtung, N5-Fehlersignal),
 `Server/AWebSocketServer.cs` (async Empfangsschleife, Handshake-Validierung, Limits,
-Fragmentierung, UTF-8, Close-Echo, Masken-Pflicht, Deflate, Zombie-Erkennung, N5),
+Fragmentierung, UTF-8, Close-Echo, Masken-Pflicht, Deflate, Zombie-Erkennung, N5,
+N6-Subprotokoll-Strictness),
 `Server/WebSocketServerConnection.cs` (Send-/Close-Timeouts, ReadAsync, Deflate),
 `Client/WebSocketClient.cs` (Header-Lesen, QueryString, async Empfangsschleife,
 Abbruch-Erkennung, Limits, Deflate, N1/N2-Handshake-Validierung, N3-CSPRNG,
-Zombie-Erkennung, N5),
+Zombie-Erkennung, N5, Auto-Reconnect + `OnReconnecting`),
 `Client/WebSocketClientConnection.cs` (Poll-Erkennung, Send-/Close-Timeouts,
 Close-Maskierung, ReadAsync, Deflate, N3-CSPRNG),
-`README.md` (neu — Modul-Dokumentation).
+`Client/WebSocketClientReconnectPolicy.cs` (neu — Backoff/Jitter-Policy),
+`Client/IWebSocketClient.cs` (`OnWebSocketClientReconnectingDelegate`),
+`README.md` (Modul-Dokumentation; N6 + Reconnect ergänzt).
+Tests (in `libs/Hermod/HermodTests/WebSocket/`):
+`WebSocketClientReconnectPolicyTests.cs` (neu), `WebSocketSubprotocolStrictnessTests.cs` (neu).
 Außerhalb WebSocket: `libs/Styx/Styx/Illias/ExtensionMethods/RandomExtensions.cs`
 (vorhandenes `SecureRandomBytes` für N3 genutzt — keine Änderung nötig).
