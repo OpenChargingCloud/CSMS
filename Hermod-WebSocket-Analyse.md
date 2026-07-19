@@ -226,10 +226,29 @@ ressourcenschonend ohne HTTP-Antwort; die Origin-Ablehnung sendet ein sauberes
 403. Abgesichert durch 3 Integrationstests (403/101/101); die Default-Limits
 brechen normale Handshakes nicht (Regression 36/36 grün).
 
-## 8. Verbleibende Punkte (bewusst offen)
+## 8. Vierter Härtungsdurchgang: Backpressure-Limits (umgesetzt, Commit `583136ef`)
 
-- **Backpressure-Limits à la uWebSockets** (nächster geplanter Schritt):
-  Sende-Queue-Limit mit Drop-/Close-Policy statt nur Write-Timeout.
+Sende-Backpressure-Grenze nach dem uWebSockets-„maxBackpressure"-Modell,
+symmetrisch auf Server- und Client-Connection:
+
+- **`MaxBackpressure`** (UInt64, Default 0 = aus): Obergrenze für die ausstehenden
+  Sende-Bytes (in der Queue + in-flight). Bei Überschreitung greift
+  **`BackpressureBehaviour`**: `CloseConnection` (Default, schließt mit 1009) oder
+  `DropMessage` (verwirft die Nachricht, `SentStatus.Dropped`, Verbindung bleibt offen).
+- **`BufferedAmount`** (UInt64, read-only): aktuelle ausstehende Sende-Bytes,
+  analog zu `bufferedAmount` der Browser-WebSocket-API / uWebSockets.
+- Der Closing-Handshake ist von der Grenze ausgenommen (`isClosing`-Guard), sonst
+  würde ein durch Backpressure ausgelöstes Close rekursiv sein Close-Frame senden
+  (Stack-Overflow — im Test gefunden und behoben).
+- Hinweis: `MaxBackpressure` muss größer als die größte Einzelnachricht gewählt
+  werden (die Prüfung zählt die aktuelle Nachricht mit). Abgesichert durch 3
+  Integrationstests (Drop / Close / unter Limit).
+
+Damit ist die Roadmap (N6, Auto-Reconnect, Handshake-Härtung, Backpressure)
+vollständig umgesetzt.
+
+## 9. Verbleibende Punkte (bewusst offen)
+
 - **PROXY protocol v2** (De-facto-Standard) — Client-IP-Erhalt hinter L4-Loadbalancern.
 
 Bewusst außerhalb des Scopes: **WebSocket über HTTP/2 (RFC 8441)** und **HTTP/3
@@ -244,13 +263,14 @@ ggf. relevant; `CloseConnectionOnUnexpectedFrames` hat kaum noch Bedeutung. Eben
 reconnectet der Client seit dem zweiten Härtungsdurchgang nur noch bei gesetzter
 `ReconnectPolicy` (vorher lief die Verbindungsschleife unbegrenzt weiter).
 
-## 9. Testabdeckung / Reproduktion
+## 10. Testabdeckung / Reproduktion
 
 Autobahn-Regressionslauf (2026-07-19, nach Pong-Timeout + N1–N5) — alle grün;
-für N6, Auto-Reconnect und Handshake-Härtung nicht erneut gefahren, da keiner
-davon einen Wire-Framing-Pfad berührt (N6/Handshake-Härtung sind handshake-only;
-der Reconnect-Block läuft im Normalfall nicht, da am Verbindungsende
-`ClientCloseMessage` gesetzt ist). Abgesichert über die NUnit-Suite (siehe unten):
+für N6, Auto-Reconnect, Handshake-Härtung und Backpressure nicht erneut gefahren,
+da keiner davon den Wire-Framing-Pfad einer normalen Nachricht ändert
+(N6/Handshake-Härtung sind handshake-only; der Reconnect-Block läuft im Normalfall
+nicht; Backpressure ist per Default aus und greift nur bei überschrittenem Limit).
+Abgesichert über die NUnit-Suite (siehe unten):
 
 | Autobahn-Suite | Ergebnis |
 |---|---|
@@ -268,10 +288,10 @@ der Reconnect-Block läuft im Normalfall nicht, da am Verbindungsende
   (gestauter Peer, Write-/Close-Timeouts), `deflatetest`/`negtest` (RFC 7692).
 - HTML-Reports: `scratchpad/autobahn/reports/{server,client,server-deflate,client-deflate}/index.html`
 - Unit-Tests: `dotnet test --filter FullyQualifiedName~WebSocket`. Neu über die
-  drei Härtungsdurchgänge: 5 Reconnect-Policy, 3 N6-Integration, 3 Handshake-
-  Härtung (Origin-Allowlist). WebSocket-Regression 36/36 grün (ohne den langsamen
-  TLS-Fixture-Bug und Load-Tests). Der TLS-Fixture-Ausfall besteht unverändert
-  fort (s. Abschnitt 5).
+  vier Härtungsdurchgänge: 5 Reconnect-Policy, 3 N6-Integration, 3 Handshake-
+  Härtung (Origin-Allowlist), 3 Backpressure (Drop/Close/unter Limit).
+  WebSocket-Regression 39/39 grün (ohne den langsamen TLS-Fixture-Bug und
+  Load-Tests). Der TLS-Fixture-Ausfall besteht unverändert fort (s. Abschnitt 5).
 
 Geänderte/neue Dateien (in `libs/Hermod/Hermod/WebSocket/`, sofern nicht anders angegeben):
 `WebSocketFrame.cs` (Parser, ParseResult, IsValidCloseCode, AllowRsv1, TextRaw),
@@ -279,18 +299,19 @@ Geänderte/neue Dateien (in `libs/Hermod/Hermod/WebSocket/`, sofern nicht anders
 `WebSocketPerMessageDeflate.cs` (neu; N4-Negotiation-Härtung, N5-Fehlersignal),
 `Server/AWebSocketServer.cs` (async Empfangsschleife, Handshake-Validierung, Limits,
 Fragmentierung, UTF-8, Close-Echo, Masken-Pflicht, Deflate, Zombie-Erkennung, N5,
-N6-Subprotokoll-Strictness, Handshake-Härtung: Timeout/Max-Header/Per-IP/Origin),
-`Server/WebSocketServerConnection.cs` (Send-/Close-Timeouts, ReadAsync, Deflate),
+N6-Subprotokoll-Strictness, Handshake-Härtung: Timeout/Max-Header/Per-IP/Origin, Backpressure),
+`Server/WebSocketServerConnection.cs` (Send-/Close-Timeouts, ReadAsync, Deflate, Backpressure + isClosing),
 `Client/WebSocketClient.cs` (Header-Lesen, QueryString, async Empfangsschleife,
 Abbruch-Erkennung, Limits, Deflate, N1/N2-Handshake-Validierung, N3-CSPRNG,
-Zombie-Erkennung, N5, Auto-Reconnect + `OnReconnecting`),
+Zombie-Erkennung, N5, Auto-Reconnect + `OnReconnecting`, Backpressure),
 `Client/WebSocketClientConnection.cs` (Poll-Erkennung, Send-/Close-Timeouts,
-Close-Maskierung, ReadAsync, Deflate, N3-CSPRNG),
+Close-Maskierung, ReadAsync, Deflate, N3-CSPRNG, Backpressure + isClosing),
 `Client/WebSocketClientReconnectPolicy.cs` (neu — Backoff/Jitter-Policy),
 `Client/IWebSocketClient.cs` (`OnWebSocketClientReconnectingDelegate`),
-`README.md` (Modul-Dokumentation; N6 + Reconnect ergänzt).
+`SentStatus.cs` (`Dropped`), `WebSocketBackpressureBehaviour.cs` (neu — Enum),
+`README.md` (Modul-Dokumentation; N6 + Reconnect + Handshake-Härtung + Backpressure ergänzt).
 Tests (in `libs/Hermod/HermodTests/WebSocket/`):
-`WebSocketClientReconnectPolicyTests.cs` (neu), `WebSocketSubprotocolStrictnessTests.cs` (neu),
-`WebSocketHandshakeHardeningTests.cs` (neu).
+`WebSocketClientReconnectPolicyTests.cs`, `WebSocketSubprotocolStrictnessTests.cs`,
+`WebSocketHandshakeHardeningTests.cs`, `WebSocketBackpressureTests.cs` (alle neu).
 Außerhalb WebSocket: `libs/Styx/Styx/Illias/ExtensionMethods/RandomExtensions.cs`
 (vorhandenes `SecureRandomBytes` für N3 genutzt — keine Änderung nötig).
