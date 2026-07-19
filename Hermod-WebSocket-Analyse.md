@@ -201,13 +201,35 @@ Connect-Timeout — unabhängig vom Produktivcode).
   für Observability. Abgesichert durch 5 Policy-Unit-Tests (Backoff-Werte,
   Jitter-Grenzen, MaxDelay-Cap, Clamping) und 3 N6-Integrationstests (400/101).
 
-## 7. Verbleibende Punkte (bewusst offen)
+## 7. Dritter Härtungsdurchgang: Handshake-Härtung (umgesetzt, Commit `129fcfbd`)
 
-- **Handshake-Härtung** (nächster geplanter Schritt): Handshake-Timeout,
-  Max-Header-Größe, Per-IP-Verbindungslimits (Slowloris), optionale
-  `Origin`-Allowlist (CSWSH; nur für browserzugängliche Endpunkte relevant).
-- **Backpressure-Limits à la uWebSockets** (danach geplant): Sende-Queue-Limit
-  mit Drop-/Close-Policy statt nur Write-Timeout.
+Server-seitiger Schutz gegen Slowloris, Connection-Floods und CSWSH — alles
+settable Properties auf `AWebSocketServer`:
+
+- **`HandshakeTimeout`** (Default 10 s, `TimeSpan.Zero` = aus): Frist vom
+  TCP-Accept bis zum vollständigen Handshake-Request. In der HTTP-Phase wird der
+  Read-Timeout an diese Frist gekoppelt (unabhängig von der Ping-Kadenz); bei
+  Überschreitung wird die Verbindung verworfen.
+- **`MaxHandshakeRequestSize`** (Default 64 KB, 0 = aus): Obergrenze für den
+  gepufferten HTTP-Handshake-Request; ein unbeendeter/übergroßer Header-Block
+  führt zum Verbindungsabbruch.
+- **`MaxConnectionsPerIP`** (Default 0 = aus): max. gleichzeitige Verbindungen
+  pro Remote-IP; weitere werden vor dem Handshake verworfen. Default aus, da
+  Clients legitim hinter einer gemeinsamen NAT/Proxy-IP liegen können.
+- **`AllowedOrigins`** (Default leer = aus, case-insensitive): Allow-Liste für
+  den `Origin`-Header (CSWSH). Ein Request mit nicht gelistetem Origin wird mit
+  403 abgelehnt; ein Request **ohne** `Origin` wird akzeptiert (Nicht-Browser-
+  Clients wie OCPP-Ladepunkte senden keinen Origin).
+
+Die DoS-orientierten Fälle (Timeout/Größe/Per-IP) verwerfen die TCP-Verbindung
+ressourcenschonend ohne HTTP-Antwort; die Origin-Ablehnung sendet ein sauberes
+403. Abgesichert durch 3 Integrationstests (403/101/101); die Default-Limits
+brechen normale Handshakes nicht (Regression 36/36 grün).
+
+## 8. Verbleibende Punkte (bewusst offen)
+
+- **Backpressure-Limits à la uWebSockets** (nächster geplanter Schritt):
+  Sende-Queue-Limit mit Drop-/Close-Policy statt nur Write-Timeout.
 - **PROXY protocol v2** (De-facto-Standard) — Client-IP-Erhalt hinter L4-Loadbalancern.
 
 Bewusst außerhalb des Scopes: **WebSocket über HTTP/2 (RFC 8441)** und **HTTP/3
@@ -222,13 +244,13 @@ ggf. relevant; `CloseConnectionOnUnexpectedFrames` hat kaum noch Bedeutung. Eben
 reconnectet der Client seit dem zweiten Härtungsdurchgang nur noch bei gesetzter
 `ReconnectPolicy` (vorher lief die Verbindungsschleife unbegrenzt weiter).
 
-## 8. Testabdeckung / Reproduktion
+## 9. Testabdeckung / Reproduktion
 
 Autobahn-Regressionslauf (2026-07-19, nach Pong-Timeout + N1–N5) — alle grün;
-für N6 + Auto-Reconnect nicht erneut gefahren, da beide keinen Wire-Framing-Pfad
-berühren (N6 ist handshake-only/Default aus; der Reconnect-Block läuft im normalen
-Fall nicht, da am Verbindungsende `ClientCloseMessage` gesetzt ist). Abgesichert
-über die NUnit-Suite (siehe unten):
+für N6, Auto-Reconnect und Handshake-Härtung nicht erneut gefahren, da keiner
+davon einen Wire-Framing-Pfad berührt (N6/Handshake-Härtung sind handshake-only;
+der Reconnect-Block läuft im Normalfall nicht, da am Verbindungsende
+`ClientCloseMessage` gesetzt ist). Abgesichert über die NUnit-Suite (siehe unten):
 
 | Autobahn-Suite | Ergebnis |
 |---|---|
@@ -245,10 +267,11 @@ Fall nicht, da am Verbindungsende `ClientCloseMessage` gesetzt ist). Abgesichert
 - Spezialtests im Harness: `closetest` (TCP-Abbruch-Erkennung), `hangtest`
   (gestauter Peer, Write-/Close-Timeouts), `deflatetest`/`negtest` (RFC 7692).
 - HTML-Reports: `scratchpad/autobahn/reports/{server,client,server-deflate,client-deflate}/index.html`
-- Unit-Tests: `dotnet test --filter FullyQualifiedName~WebSocket`. Nach N6 +
-  Auto-Reconnect zusätzlich 8 neue Tests (5 Reconnect-Policy, 3 N6-Integration);
-  WebSocket-Regression 33/33 grün (ohne den langsamen TLS-Fixture-Bug und
-  Load-Tests). Der TLS-Fixture-Ausfall besteht unverändert fort (s. Abschnitt 5).
+- Unit-Tests: `dotnet test --filter FullyQualifiedName~WebSocket`. Neu über die
+  drei Härtungsdurchgänge: 5 Reconnect-Policy, 3 N6-Integration, 3 Handshake-
+  Härtung (Origin-Allowlist). WebSocket-Regression 36/36 grün (ohne den langsamen
+  TLS-Fixture-Bug und Load-Tests). Der TLS-Fixture-Ausfall besteht unverändert
+  fort (s. Abschnitt 5).
 
 Geänderte/neue Dateien (in `libs/Hermod/Hermod/WebSocket/`, sofern nicht anders angegeben):
 `WebSocketFrame.cs` (Parser, ParseResult, IsValidCloseCode, AllowRsv1, TextRaw),
@@ -256,7 +279,7 @@ Geänderte/neue Dateien (in `libs/Hermod/Hermod/WebSocket/`, sofern nicht anders
 `WebSocketPerMessageDeflate.cs` (neu; N4-Negotiation-Härtung, N5-Fehlersignal),
 `Server/AWebSocketServer.cs` (async Empfangsschleife, Handshake-Validierung, Limits,
 Fragmentierung, UTF-8, Close-Echo, Masken-Pflicht, Deflate, Zombie-Erkennung, N5,
-N6-Subprotokoll-Strictness),
+N6-Subprotokoll-Strictness, Handshake-Härtung: Timeout/Max-Header/Per-IP/Origin),
 `Server/WebSocketServerConnection.cs` (Send-/Close-Timeouts, ReadAsync, Deflate),
 `Client/WebSocketClient.cs` (Header-Lesen, QueryString, async Empfangsschleife,
 Abbruch-Erkennung, Limits, Deflate, N1/N2-Handshake-Validierung, N3-CSPRNG,
@@ -267,6 +290,7 @@ Close-Maskierung, ReadAsync, Deflate, N3-CSPRNG),
 `Client/IWebSocketClient.cs` (`OnWebSocketClientReconnectingDelegate`),
 `README.md` (Modul-Dokumentation; N6 + Reconnect ergänzt).
 Tests (in `libs/Hermod/HermodTests/WebSocket/`):
-`WebSocketClientReconnectPolicyTests.cs` (neu), `WebSocketSubprotocolStrictnessTests.cs` (neu).
+`WebSocketClientReconnectPolicyTests.cs` (neu), `WebSocketSubprotocolStrictnessTests.cs` (neu),
+`WebSocketHandshakeHardeningTests.cs` (neu).
 Außerhalb WebSocket: `libs/Styx/Styx/Illias/ExtensionMethods/RandomExtensions.cs`
 (vorhandenes `SecureRandomBytes` für N3 genutzt — keine Änderung nötig).
