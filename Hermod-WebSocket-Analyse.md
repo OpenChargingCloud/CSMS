@@ -1,6 +1,6 @@
 # Analyse & Härtung: Hermod HTTP/1.1 WebSocket Server & Client
 
-Datum: 2026-07-19 (aktualisiert) · Basis: `libs/Hermod` @ `8a1ae83` · RFC 6455 / 7692 / 8441
+Datum: 2026-07-19 (aktualisiert) · Basis: `libs/Hermod` @ `4c07a48c` (graphdefined-Merge `7fa61011`) · RFC 6455 / 7692 / 8441
 
 ## 1. Zusammenfassung
 
@@ -22,16 +22,28 @@ gilt als bestanden. INFORMATIONAL sind keine Fehler.
 ¹ = 13.3.\* `server_max_window_bits` < 15: bewusst abgelehnt, da .NETs `DeflateStream`
 die DEFLATE-Fenstergröße nicht konfigurieren kann; RFC 7692 erlaubt das Ablehnen.)
 
-Alle Änderungen sind im Hermod-Submodul **committet und gepusht**:
+Alle Änderungen sind im Hermod-Submodul **committet und gepusht** (GitHub `origin`
+sowie graphdefined `git1`/`git2`):
 
 - `9a27ae20` — RFC-6455-Konformitäts- und Robustheits-Fixes (C1–C9, S1–S5)
 - `fe4e943e` — Nachrichten-Limits (S6), Server-Handshake-Validierung (S7), asynchroner Empfangspfad (S8/C4)
 - `608b826e` — permessage-deflate (RFC 7692)
-- `8a1ae83` — Merge mit Remote (DNS-Underscore-Fix), enthält alle drei Commits
-- CSMS-Hauptrepo: Submodul-Zeiger `ca87cf9`
+- `4c07a48c` — Härtung: Pong-Timeout/Zombie-Erkennung + N1–N5 (siehe Abschnitt 5)
 
-Abgesichert durch die Autobahn-Suiten und die NUnit-Tests (23/23 WebSocket-Tests grün).
-Der Endstand wurde per Code-Review (2026-07-19) gegen den committeten Stand re-verifiziert.
+Einbettung in die Remote-Historie (zwei zeitweise divergente Linien, inzwischen
+zusammengeführt):
+
+- `8a1ae83` — Merge der ersten drei Commits mit dem DNS-Underscore-Fix (`9d3eb764`)
+- `7fa61011` — Merge von `4c07a48c` mit der graphdefined-Linie (DNSSEC-Fixes, neuer
+  SMTP-Stack `3d3e1a53`); `git1`/`git2` stehen auf `7fa61011`, GitHub `origin` auf `4c07a48c`
+  (Vorfahre von `7fa61011`) — der CSMS-Pointer löst von beiden Remotes auf.
+- CSMS-Hauptrepo: Submodul-Zeiger-Commit `1bb8eb5` (zeigt auf `4c07a48c`;
+  zuvor `ca87cf9` → `8a1ae83`), gepusht nach graphdefined SSH.
+
+Abgesichert durch die Autobahn-Suiten und die NUnit-Tests (23/23 WebSocket-Tests grün;
+27/28 im breiteren Filter — der eine Ausfall ist der vorbestehende TLS-Fixture-Bug,
+s. Abschnitt 5). Der Endstand wurde per Code-Review (2026-07-19) gegen den committeten
+Stand re-verifiziert.
 
 ## 2. Behobene Bugs (Familie „Funktionsfehler im Client")
 
