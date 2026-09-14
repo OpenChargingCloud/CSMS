@@ -16,9 +16,6 @@
 [submodule "libs/WWCP_OCPP"]
 	path = libs/WWCP_OCPP
 	url = https://github.com/OpenChargingCloud/WWCP_OCPP.git
-[submodule "libs/WWCP_ISO15118_20"]
-	path = libs/WWCP_ISO15118_20
-	url = https://github.com/OpenChargingCloud/WWCP_ISO15118_20.git
 [submodule "libs/WWCP_DatexII"]
 	path = libs/WWCP_DatexII
 	url = https://github.com/OpenChargingCloud/WWCP_DatexII.git
