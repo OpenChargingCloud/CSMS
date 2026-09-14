@@ -22,3 +22,6 @@
 [submodule "libs/WWCP_OpenADR"]
 	path = libs/WWCP_OpenADR
 	url = https://github.com/OpenChargingCloud/WWCP_OpenADR.git
+[submodule "libs/WWCP_ISO15118"]
+	path = libs/WWCP_ISO15118
+	url = https://github.com/OpenChargingCloud/WWCP_ISO15118.git

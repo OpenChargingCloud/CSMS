@@ -1380,7 +1380,7 @@ namespace org.GraphDefined.OCPP.CSMS.TestApp
                 new WebSocketServer(
                     HTTPPort:               IPPort.Parse(7001),
                     Description:            I18NString.Create(Languages.en, "Logging HTTP WebSocket Server"),
-                    HTTPServiceName:        "OCPP CSMS Logging WebSocket Server",
+                    HTTPServerName:         "OCPP CSMS Logging WebSocket Server",
                     RequireAuthentication:  false,
                     AutoStart:              true
                 )
@@ -1518,13 +1518,13 @@ namespace org.GraphDefined.OCPP.CSMS.TestApp
                                                    {
 
                                                        if (webSocketServer.TrustedClientCertificates.Contains(certificate))
-                                                           return (true, []);
+                                                           return TLSValidationResult.Success();
 
-                                                       return (false, ["Could not validate the received TLS client certificate!"]);
+                                                       return TLSValidationResult.Failed("Could not validate the received TLS client certificate!");
 
                                                    }
 
-                                                   return (false, ["Missing or invalid TLS client certificate!"]);
+                                                   return TLSValidationResult.Failed("Missing or invalid TLS client certificate!");
 
                                                },
 
@@ -1934,7 +1934,7 @@ namespace org.GraphDefined.OCPP.CSMS.TestApp
             #region Shutdown
 
             await testCentralSystemV1_6.Shutdown();
-            await testCSMSv2_1.         Shutdown();
+            await testCSMSv2_1.         Stop();
 
             foreach (var DebugListener in Trace.Listeners)
                 (DebugListener as TextWriterTraceListener)?.Flush();
