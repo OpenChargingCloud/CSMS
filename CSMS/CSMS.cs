@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Copyright (c) 2014-2026 GraphDefined GmbH <achim.friedland@graphdefined.com>
  * This file is part of CSMS <https://github.com/OpenChargingCloud/CSMS>
  *
@@ -17,1867 +17,923 @@
 
 #region Usings
 
-using System.Diagnostics;
-using System.Security.Cryptography;
-
-using Newtonsoft.Json;
-
-using Org.BouncyCastle.Crypto.Parameters;
-using Org.BouncyCastle.Security;
-using Org.BouncyCastle.Crypto.Generators;
-using Org.BouncyCastle.X509;
-using Org.BouncyCastle.Pkcs;
-using Org.BouncyCastle.Math;
-using Org.BouncyCastle.Crypto;
-using Org.BouncyCastle.OpenSsl;
-using Org.BouncyCastle.Asn1.X9;
-using Org.BouncyCastle.Asn1.X509;
-using Org.BouncyCastle.Utilities;
-using Org.BouncyCastle.Crypto.Operators;
+using Newtonsoft.Json.Linq;
 
 using org.GraphDefined.Vanaheimr.Illias;
 using org.GraphDefined.Vanaheimr.Hermod;
 using org.GraphDefined.Vanaheimr.Hermod.DNS;
-using org.GraphDefined.Vanaheimr.Hermod.WebSocket;
+using org.GraphDefined.Vanaheimr.Hermod.HTTP;
+using org.GraphDefined.Vanaheimr.Hermod.Mail;
 using org.GraphDefined.Vanaheimr.Norn.NTS;
 
 using cloud.charging.open.protocols.WWCP.NetworkingNode;
 
-using OCPPv1_6 = cloud.charging.open.protocols.OCPPv1_6;
-using OCPPv2_1 = cloud.charging.open.protocols.OCPPv2_1;
+using OCPPv2_1_CSMS = cloud.charging.open.protocols.OCPPv2_1.CSMS;
+
+// Only the mailer, not the namespace: Hermod.SMTP carries a LogLevel of its
+// own, and importing it would make every LogLevel in this file ambiguous with
+// the one the event log uses.
+using NullMailer = org.GraphDefined.Vanaheimr.Hermod.SMTP.NullMailer;
+
+using cloud.charging.open.CSMS.Configuration;
+using cloud.charging.open.CSMS.Logging;
+using cloud.charging.open.CSMS.Web;
 
 #endregion
 
-namespace org.GraphDefined.OCPP.CSMS
+namespace cloud.charging.open.CSMS
 {
-    public class CSMS
+
+    /// <summary>
+    /// One CSMS: the OCPP node it speaks through, the HTTP server
+    /// in front of it, the JSON API at "/api" and the web interface at "/".
+    /// </summary>
+    /// <remarks>
+    /// The web interface is a bundle of HTML, CSS and JavaScript built by
+    /// webpack from Frontend/ and embedded into this assembly, so that the
+    /// CSMS is one file to deploy and needs nothing installed beside it.
+    /// The browser and the CSMS talk over the JSON API and one
+    /// Server-Sent Events stream; nothing is rendered on the server.
+    ///
+    /// A CSMS sits above the charging stations and the local controllers
+    /// that dial into it, and is the thing they are all pointed at. That is
+    /// what this web interface is for: it is the one place where somebody can
+    /// see which of them got in, which were turned away and why, without
+    /// reading a log file over somebody else's shoulder.
+    /// </remarks>
+    public partial class CSMS : IAsyncDisposable
     {
 
-        private static readonly SemaphoreSlim  cliLock           = new (1, 1);
-        private static readonly SemaphoreSlim  logfileLock1_6    = new (1, 1);
-        private static readonly SemaphoreSlim  logfileLock2_6    = new (1, 1);
-
-        private readonly static String         logfileNameV1_6   = Path.Combine(AppContext.BaseDirectory, "OCPPv1.6_Messages.log");
-        private readonly static String         logfileNameV2_1   = Path.Combine(AppContext.BaseDirectory, "OCPPv2.1_Messages.log");
-
-
-
-        public OCPPv1_6.TestCentralSystemNode  TestCentralSystemV1_6    { get; }
-        public OCPPv2_1.CSMS.TestCSMSNode      TestCSMSv2_1             { get; }
-
-
-        public CSMS(IDNSClient dnsClient)
-        {
-
-            #region Setup PKI
-
-            #region Data
-
-            AsymmetricCipherKeyPair? rootCA_ECC_KeyPair           = null;
-            X509Certificate?         rootCA_ECC_Certificate       = null;
-            AsymmetricCipherKeyPair? rootCA_RSA_KeyPair           = null;
-            X509Certificate?         rootCA_RSA_Certificate       = null;
-
-            AsymmetricCipherKeyPair? serverCA_ECC_KeyPair         = null;
-            X509Certificate?         serverCA_ECC_Certificate     = null;
-            AsymmetricCipherKeyPair? serverCA_RSA_KeyPair         = null;
-            X509Certificate?         serverCA_RSA_Certificate     = null;
-
-            AsymmetricCipherKeyPair? clientCA_ECC_KeyPair         = null;
-            X509Certificate?         clientCA_ECC_Certificate     = null;
-            AsymmetricCipherKeyPair? clientCA_RSA_KeyPair         = null;
-            X509Certificate?         clientCA_RSA_Certificate     = null;
-
-            AsymmetricCipherKeyPair? firmwareCA_ECC_KeyPair       = null;
-            X509Certificate?         firmwareCA_ECC_Certificate   = null;
-            AsymmetricCipherKeyPair? firmwareCA_RSA_KeyPair       = null;
-            X509Certificate?         firmwareCA_RSA_Certificate   = null;
-
-
-            AsymmetricCipherKeyPair? server1_ECC_KeyPair          = null;
-            X509Certificate?         server1_ECC_Certificate      = null;
-            AsymmetricCipherKeyPair? server1_RSA_KeyPair          = null;
-            X509Certificate?         server1_RSA_Certificate      = null;
-
-
-            AsymmetricCipherKeyPair? client1_ECC_KeyPair          = null;
-            X509Certificate?         client1_ECC_Certificate      = null;
-            AsymmetricCipherKeyPair? client1_RSA_KeyPair          = null;
-            X509Certificate?         client1_RSA_Certificate      = null;
-
-            #endregion
-
-            #region Crypto defaults
-
-            var secureRandom                    = new SecureRandom();
-            var eccSignatureAlgorithm           = "SHA256withECDSA";
-            var rsaSignatureAlgorithm           = "SHA256WithRSA";
-
-            var eccCurve                        = ECNamedCurveTable.GetByName("secp256r1");
-            var eccDomainParameters             = new ECDomainParameters(eccCurve.Curve, eccCurve.G, eccCurve.N, eccCurve.H, eccCurve.GetSeed());
-            var eccKeyGenParams                 = new ECKeyGenerationParameters(eccDomainParameters, secureRandom);
-
-            Directory.CreateDirectory(Path.Combine(AppContext.BaseDirectory, "pki"));
-            var rootCA_ECC_privateKeyFile       = Path.Combine(AppContext.BaseDirectory, "pki", "rootCA_ECC.key");
-            var rootCA_ECC_certificateFile      = Path.Combine(AppContext.BaseDirectory, "pki", "rootCA_ECC.cert");
-            var rootCA_RSA_privateKeyFile       = Path.Combine(AppContext.BaseDirectory, "pki", "rootCA_RSA.key");
-            var rootCA_RSA_certificateFile      = Path.Combine(AppContext.BaseDirectory, "pki", "rootCA_RSA.cert");
-
-            var serverCA_ECC_privateKeyFile     = Path.Combine(AppContext.BaseDirectory, "pki", "serverCA_ECC.key");
-            var serverCA_ECC_certificateFile    = Path.Combine(AppContext.BaseDirectory, "pki", "serverCA_ECC.cert");
-            var serverCA_RSA_privateKeyFile     = Path.Combine(AppContext.BaseDirectory, "pki", "serverCA_RSA.key");
-            var serverCA_RSA_certificateFile    = Path.Combine(AppContext.BaseDirectory, "pki", "serverCA_RSA.cert");
-
-            var clientCA_ECC_privateKeyFile     = Path.Combine(AppContext.BaseDirectory, "pki", "clientCA_ECC.key");
-            var clientCA_ECC_certificateFile    = Path.Combine(AppContext.BaseDirectory, "pki", "clientCA_ECC.cert");
-            var clientCA_RSA_privateKeyFile     = Path.Combine(AppContext.BaseDirectory, "pki", "clientCA_RSA.key");
-            var clientCA_RSA_certificateFile    = Path.Combine(AppContext.BaseDirectory, "pki", "clientCA_RSA.cert");
-
-            var firmwareCA_ECC_privateKeyFile   = Path.Combine(AppContext.BaseDirectory, "pki", "firmwareCA_ECC.key");
-            var firmwareCA_ECC_certificateFile  = Path.Combine(AppContext.BaseDirectory, "pki", "firmwareCA_ECC.cert");
-            var firmwareCA_RSA_privateKeyFile   = Path.Combine(AppContext.BaseDirectory, "pki", "firmwareCA_RSA.key");
-            var firmwareCA_RSA_certificateFile  = Path.Combine(AppContext.BaseDirectory, "pki", "firmwareCA_RSA.cert");
-
-            // ----------------------------------------------------------------------------------------------------
-
-            var server1_ECC_privateKeyFile      = Path.Combine(AppContext.BaseDirectory, "pki", "server1_ECC.key");
-            var server1_ECC_certificateFile     = Path.Combine(AppContext.BaseDirectory, "pki", "server1_ECC.cert");
-            var server1_ECC_pfx                 = Path.Combine(AppContext.BaseDirectory, "pki", "server1_ECC.pfx");
-
-            var server1_RSA_privateKeyFile      = Path.Combine(AppContext.BaseDirectory, "pki", "server1_RSA.key");
-            var server1_RSA_certificateFile     = Path.Combine(AppContext.BaseDirectory, "pki", "server1_RSA.cert");
-            var server1_RSA_pfx                 = Path.Combine(AppContext.BaseDirectory, "pki", "server1_RSA.pfx");
-
-
-            var client1_ECC_privateKeyFile      = Path.Combine(AppContext.BaseDirectory, "pki", "client1_ECC.key");
-            var client1_ECC_certificateFile     = Path.Combine(AppContext.BaseDirectory, "pki", "client1_ECC.cert");
-
-            var client1_RSA_privateKeyFile      = Path.Combine(AppContext.BaseDirectory, "pki", "client1_RSA.key");
-            var client1_RSA_certificateFile     = Path.Combine(AppContext.BaseDirectory, "pki", "client1_RSA.cert");
-
-            #endregion
-
-            #region Try to reload crypto data from disc
-
-            try
-            {
-
-                // Root CA
-                using (var reader = File.OpenText(rootCA_ECC_privateKeyFile))
-                {
-                    rootCA_ECC_KeyPair          = (AsymmetricCipherKeyPair)   new PemReader(reader).ReadObject();
-                }
-
-                using (var reader = File.OpenText(rootCA_ECC_certificateFile))
-                {
-                    rootCA_ECC_Certificate      = (X509Certificate)           new PemReader(reader).ReadObject();
-                }
-
-                using (var reader = File.OpenText(rootCA_RSA_privateKeyFile))
-                {
-                    rootCA_RSA_KeyPair          = (AsymmetricCipherKeyPair)   new PemReader(reader).ReadObject();
-                }
-
-                using (var reader = File.OpenText(rootCA_RSA_certificateFile))
-                {
-                    rootCA_RSA_Certificate      = (X509Certificate)           new PemReader(reader).ReadObject();
-                }
-
-
-                // Server CA
-                using (var reader = File.OpenText(serverCA_ECC_privateKeyFile))
-                {
-                    serverCA_ECC_KeyPair        = (AsymmetricCipherKeyPair) new PemReader(reader).ReadObject();
-                }
-
-                using (var reader = File.OpenText(serverCA_ECC_certificateFile))
-                {
-                    serverCA_ECC_Certificate    = (X509Certificate)         new PemReader(reader).ReadObject();
-                }
-
-                using (var reader = File.OpenText(serverCA_RSA_privateKeyFile))
-                {
-                    serverCA_RSA_KeyPair        = (AsymmetricCipherKeyPair) new PemReader(reader).ReadObject();
-                }
-
-                using (var reader = File.OpenText(serverCA_RSA_certificateFile))
-                {
-                    serverCA_RSA_Certificate    = (X509Certificate)         new PemReader(reader).ReadObject();
-                }
-
-
-                // Client CA
-                using (var reader = File.OpenText(clientCA_ECC_privateKeyFile))
-                {
-                    clientCA_ECC_KeyPair        = (AsymmetricCipherKeyPair) new PemReader(reader).ReadObject();
-                }
-
-                using (var reader = File.OpenText(clientCA_ECC_certificateFile))
-                {
-                    clientCA_ECC_Certificate    = (X509Certificate)         new PemReader(reader).ReadObject();
-                }
-
-                using (var reader = File.OpenText(clientCA_RSA_privateKeyFile))
-                {
-                    clientCA_RSA_KeyPair        = (AsymmetricCipherKeyPair) new PemReader(reader).ReadObject();
-                }
-
-                using (var reader = File.OpenText(clientCA_RSA_certificateFile))
-                {
-                    clientCA_RSA_Certificate    = (X509Certificate)         new PemReader(reader).ReadObject();
-                }
-
-
-                // Firmware CA
-                using (var reader = File.OpenText(firmwareCA_ECC_privateKeyFile))
-                {
-                    firmwareCA_ECC_KeyPair      = (AsymmetricCipherKeyPair) new PemReader(reader).ReadObject();
-                }
-
-                using (var reader = File.OpenText(firmwareCA_ECC_certificateFile))
-                {
-                    firmwareCA_ECC_Certificate  = (X509Certificate)         new PemReader(reader).ReadObject();
-                }
-
-                using (var reader = File.OpenText(firmwareCA_RSA_privateKeyFile))
-                {
-                    firmwareCA_RSA_KeyPair      = (AsymmetricCipherKeyPair) new PemReader(reader).ReadObject();
-                }
-
-                using (var reader = File.OpenText(firmwareCA_RSA_certificateFile))
-                {
-                    firmwareCA_RSA_Certificate  = (X509Certificate)         new PemReader(reader).ReadObject();
-                }
-
-
-                // Server #1
-                using (var reader = File.OpenText(server1_ECC_privateKeyFile))
-                {
-                    server1_ECC_KeyPair         = (AsymmetricCipherKeyPair) new PemReader(reader).ReadObject();
-                }
-
-                using (var reader = File.OpenText(server1_ECC_certificateFile))
-                {
-                    server1_ECC_Certificate     = (X509Certificate)         new PemReader(reader).ReadObject();
-                }
-
-                using (var reader = File.OpenText(server1_RSA_privateKeyFile))
-                {
-                    server1_RSA_KeyPair         = (AsymmetricCipherKeyPair) new PemReader(reader).ReadObject();
-                }
-
-                using (var reader = File.OpenText(server1_RSA_certificateFile))
-                {
-                    server1_RSA_Certificate     = (X509Certificate)         new PemReader(reader).ReadObject();
-                }
-
-
-                // Client #1
-                using (var reader = File.OpenText(client1_ECC_privateKeyFile))
-                {
-                    client1_ECC_KeyPair         = (AsymmetricCipherKeyPair) new PemReader(reader).ReadObject();
-                }
-
-                using (var reader = File.OpenText(client1_ECC_certificateFile))
-                {
-                    client1_ECC_Certificate     = (X509Certificate)         new PemReader(reader).ReadObject();
-                }
-
-                using (var reader = File.OpenText(client1_RSA_privateKeyFile))
-                {
-                    client1_RSA_KeyPair         = (AsymmetricCipherKeyPair) new PemReader(reader).ReadObject();
-                }
-
-                using (var reader = File.OpenText(client1_RSA_certificateFile))
-                {
-                    client1_RSA_Certificate     = (X509Certificate)         new PemReader(reader).ReadObject();
-                }
-
-            }
-            catch
-            { }
-
-            #endregion
-
-
-            if (rootCA_ECC_KeyPair         is null)
-            {
-
-                var keyPairGenerator = new ECKeyPairGenerator();
-                keyPairGenerator.Init(eccKeyGenParams);
-                rootCA_ECC_KeyPair = keyPairGenerator.GenerateKeyPair();
-
-                using (var writer = new StreamWriter(rootCA_ECC_privateKeyFile))
-                {
-                    var pemWriter = new PemWriter(writer);
-                    pemWriter.WriteObject(rootCA_ECC_KeyPair.Private);
-                    pemWriter.Writer.Flush();
-                }
-
-            }
-
-            if (rootCA_ECC_Certificate     is null)
-            {
-
-                var certificateGenerator  = new X509V3CertificateGenerator();
-                var subjectDN             = new X509Name("CN=Open Charging Cloud - Root CA (ECC), O=GraphDefined GmbH, OU=TestCA, L=Jena, C=Germany");
-
-                certificateGenerator.SetIssuerDN     (subjectDN); // self-signed
-                certificateGenerator.SetSubjectDN    (subjectDN);
-                certificateGenerator.SetNotBefore    (Timestamp.Now.AddDays (-3).DateTime);
-                certificateGenerator.SetNotAfter     (Timestamp.Now.AddYears(23).DateTime);
-                certificateGenerator.SetPublicKey    (rootCA_ECC_KeyPair.Public);
-                certificateGenerator.SetSerialNumber (BigIntegers.CreateRandomInRange(BigInteger.One, BigInteger.ValueOf(long.MaxValue), secureRandom));
-
-                certificateGenerator.AddExtension    (X509Extensions.BasicConstraints,
-                                                      critical: true,
-                                                      new BasicConstraints(cA: true));
-
-                certificateGenerator.AddExtension    (X509Extensions.KeyUsage,
-                                                      critical: true,
-                                                      new KeyUsage(
-                                                          KeyUsage.DigitalSignature |
-                                                          KeyUsage.KeyCertSign |
-                                                          KeyUsage.CrlSign
-                                                      ));
-
-                rootCA_ECC_Certificate = certificateGenerator.Generate(new Asn1SignatureFactory(eccSignatureAlgorithm, rootCA_ECC_KeyPair.Private, secureRandom));
-
-                using (var writer = new StreamWriter(rootCA_ECC_certificateFile))
-                {
-                    var pemWriter = new PemWriter(writer);
-                    pemWriter.WriteObject(rootCA_ECC_Certificate);
-                    pemWriter.Writer.Flush();
-                }
-
-            }
-
-            if (rootCA_RSA_KeyPair         is null)
-            {
-
-                var rsaKeyPairGenerator = new RsaKeyPairGenerator();
-                rsaKeyPairGenerator.Init(new KeyGenerationParameters(secureRandom, 4096));
-                rootCA_RSA_KeyPair = rsaKeyPairGenerator.GenerateKeyPair();
-
-                using (var writer = new StreamWriter(rootCA_RSA_privateKeyFile))
-                {
-                    var pemWriter = new PemWriter(writer);
-                    pemWriter.WriteObject(rootCA_RSA_KeyPair.Private);
-                    pemWriter.Writer.Flush();
-                }
-
-            }
-
-            if (rootCA_RSA_Certificate     is null)
-            {
-
-                var certificateGenerator  = new X509V3CertificateGenerator();
-                var subjectDN             = new X509Name("CN=Open Charging Cloud - Root CA (RSA), O=GraphDefined GmbH, OU=TestCA, L=Jena, C=Germany");
-
-                certificateGenerator.SetIssuerDN     (subjectDN); // self-signed
-                certificateGenerator.SetSubjectDN    (subjectDN);
-                certificateGenerator.SetNotBefore    (Timestamp.Now.AddDays (-3).DateTime);
-                certificateGenerator.SetNotAfter     (Timestamp.Now.AddYears(23).DateTime);
-                certificateGenerator.SetPublicKey    (rootCA_RSA_KeyPair.Public);
-                certificateGenerator.SetSerialNumber (BigIntegers.CreateRandomInRange(BigInteger.One, BigInteger.ValueOf(long.MaxValue), secureRandom));
-
-                certificateGenerator.AddExtension    (X509Extensions.BasicConstraints,
-                                                      critical: true,
-                                                      new BasicConstraints(cA: true));
-
-                certificateGenerator.AddExtension    (X509Extensions.KeyUsage,
-                                                      critical: true,
-                                                      new KeyUsage(
-                                                          KeyUsage.DigitalSignature |
-                                                          KeyUsage.KeyCertSign |
-                                                          KeyUsage.CrlSign
-                                                      ));
-
-                rootCA_RSA_Certificate = certificateGenerator.Generate(new Asn1SignatureFactory(rsaSignatureAlgorithm, rootCA_RSA_KeyPair.Private, secureRandom));
-
-                using (var writer = new StreamWriter(rootCA_RSA_certificateFile))
-                {
-                    var pemWriter = new PemWriter(writer);
-                    pemWriter.WriteObject(rootCA_RSA_Certificate);
-                    pemWriter.Writer.Flush();
-                }
-
-            }
-
-
-            if (serverCA_ECC_KeyPair       is null)
-            {
-
-                var keyPairGenerator = new ECKeyPairGenerator();
-                keyPairGenerator.Init(eccKeyGenParams);
-                serverCA_ECC_KeyPair = keyPairGenerator.GenerateKeyPair();
-
-                using (var writer = new StreamWriter(serverCA_ECC_privateKeyFile))
-                {
-                    var pemWriter = new PemWriter(writer);
-                    pemWriter.WriteObject(serverCA_ECC_KeyPair.Private);
-                    pemWriter.Writer.Flush();
-                }
-
-            }
-
-            if (serverCA_ECC_Certificate   is null)
-            {
-
-                var certificateGenerator  = new X509V3CertificateGenerator();
-
-                certificateGenerator.SetIssuerDN     (new X509Name(rootCA_ECC_Certificate.SubjectDN.ToString()));
-                certificateGenerator.SetSubjectDN    (new X509Name("CN=Open Charging Cloud - Server CA (ECC), O=GraphDefined GmbH, OU=TestCA, L=Jena, C=Germany"));
-                certificateGenerator.SetNotBefore    (Timestamp.Now.AddDays (-2).DateTime);
-                certificateGenerator.SetNotAfter     (Timestamp.Now.AddYears(+5).DateTime);
-                certificateGenerator.SetPublicKey    (serverCA_ECC_KeyPair.Public);
-                certificateGenerator.SetSerialNumber (BigIntegers.CreateRandomInRange(BigInteger.One, BigInteger.ValueOf(long.MaxValue), secureRandom));
-
-                certificateGenerator.AddExtension    (X509Extensions.BasicConstraints,
-                                                      critical: true,
-                                                      // A CA certificate, but it cannot be used to sign other CA certificates,
-                                                      // only end-entity certificates.
-                                                      new BasicConstraints(0));
-
-                certificateGenerator.AddExtension    (X509Extensions.KeyUsage,
-                                                      critical: true,
-                                                      new KeyUsage(
-                                                          KeyUsage.DigitalSignature |
-                                                          KeyUsage.KeyCertSign |
-                                                          KeyUsage.CrlSign
-                                                      ));
-
-                serverCA_ECC_Certificate = certificateGenerator.Generate(new Asn1SignatureFactory(eccSignatureAlgorithm, rootCA_ECC_KeyPair.Private, secureRandom));
-
-                using (var writer = new StreamWriter(serverCA_ECC_certificateFile))
-                {
-                    var pemWriter = new PemWriter(writer);
-                    pemWriter.WriteObject(serverCA_ECC_Certificate);
-                    pemWriter.Writer.Flush();
-                }
-
-            }
-
-            if (serverCA_RSA_KeyPair       is null)
-            {
-
-                var rsaKeyPairGenerator = new RsaKeyPairGenerator();
-                rsaKeyPairGenerator.Init(new KeyGenerationParameters(secureRandom, 4096));
-                serverCA_RSA_KeyPair = rsaKeyPairGenerator.GenerateKeyPair();
-
-                using (var writer = new StreamWriter(serverCA_RSA_privateKeyFile))
-                {
-                    var pemWriter = new PemWriter(writer);
-                    pemWriter.WriteObject(serverCA_RSA_KeyPair.Private);
-                    pemWriter.Writer.Flush();
-                }
-
-            }
-
-            if (serverCA_RSA_Certificate   is null)
-            {
-
-                var certificateGenerator  = new X509V3CertificateGenerator();
-
-                certificateGenerator.SetIssuerDN     (new X509Name(rootCA_RSA_Certificate.SubjectDN.ToString()));
-                certificateGenerator.SetSubjectDN    (new X509Name("CN=Open Charging Cloud - Server CA (RSA), O=GraphDefined GmbH, OU=TestCA, L=Jena, C=Germany"));
-                certificateGenerator.SetNotBefore    (Timestamp.Now.AddDays (-3).DateTime);
-                certificateGenerator.SetNotAfter     (Timestamp.Now.AddYears(23).DateTime);
-                certificateGenerator.SetPublicKey    (serverCA_RSA_KeyPair.Public);
-                certificateGenerator.SetSerialNumber (BigIntegers.CreateRandomInRange(BigInteger.One, BigInteger.ValueOf(long.MaxValue), secureRandom));
-
-                certificateGenerator.AddExtension    (X509Extensions.BasicConstraints,
-                                                      critical: true,
-                                                      // A CA certificate, but it cannot be used to sign other CA certificates,
-                                                      // only end-entity certificates.
-                                                      new BasicConstraints(0));
-
-                certificateGenerator.AddExtension    (X509Extensions.KeyUsage,
-                                                      critical: true,
-                                                      new KeyUsage(
-                                                          KeyUsage.DigitalSignature |
-                                                          KeyUsage.KeyCertSign |
-                                                          KeyUsage.CrlSign
-                                                      ));
-
-                serverCA_RSA_Certificate = certificateGenerator.Generate(new Asn1SignatureFactory(rsaSignatureAlgorithm, rootCA_RSA_KeyPair.Private, secureRandom));
-
-                using (var writer = new StreamWriter(serverCA_RSA_certificateFile))
-                {
-                    var pemWriter = new PemWriter(writer);
-                    pemWriter.WriteObject(serverCA_RSA_Certificate);
-                    pemWriter.Writer.Flush();
-                }
-
-            }
-
-
-            if (clientCA_ECC_KeyPair       is null)
-            {
-
-                var keyPairGenerator = new ECKeyPairGenerator();
-                keyPairGenerator.Init(eccKeyGenParams);
-                clientCA_ECC_KeyPair = keyPairGenerator.GenerateKeyPair();
-
-                using (var writer = new StreamWriter(clientCA_ECC_privateKeyFile))
-                {
-                    var pemWriter = new PemWriter(writer);
-                    pemWriter.WriteObject(clientCA_ECC_KeyPair.Private);
-                    pemWriter.Writer.Flush();
-                }
-
-            }
-
-            if (clientCA_ECC_Certificate   is null)
-            {
-
-                var certificateGenerator  = new X509V3CertificateGenerator();
-
-                certificateGenerator.SetIssuerDN     (new X509Name(rootCA_ECC_Certificate.SubjectDN.ToString()));
-                certificateGenerator.SetSubjectDN    (new X509Name("CN=Open Charging Cloud - Client CA (ECC), O=GraphDefined GmbH, OU=TestCA, L=Jena, C=Germany"));
-                certificateGenerator.SetNotBefore    (Timestamp.Now.AddDays (-2).DateTime);
-                certificateGenerator.SetNotAfter     (Timestamp.Now.AddYears(+5).DateTime);
-                certificateGenerator.SetPublicKey    (clientCA_ECC_KeyPair.Public);
-                certificateGenerator.SetSerialNumber (BigIntegers.CreateRandomInRange(BigInteger.One, BigInteger.ValueOf(long.MaxValue), secureRandom));
-
-                certificateGenerator.AddExtension    (X509Extensions.BasicConstraints,
-                                                      critical: true,
-                                                      // A CA certificate, but it cannot be used to sign other CA certificates,
-                                                      // only end-entity certificates.
-                                                      new BasicConstraints(0));
-
-                certificateGenerator.AddExtension    (X509Extensions.KeyUsage,
-                                                      critical: true,
-                                                      new KeyUsage(
-                                                          KeyUsage.DigitalSignature |
-                                                          KeyUsage.KeyCertSign |
-                                                          KeyUsage.CrlSign
-                                                      ));
-
-                clientCA_ECC_Certificate = certificateGenerator.Generate(new Asn1SignatureFactory(eccSignatureAlgorithm, rootCA_ECC_KeyPair.Private, secureRandom));
-
-                using (var writer = new StreamWriter(clientCA_ECC_certificateFile))
-                {
-                    var pemWriter = new PemWriter(writer);
-                    pemWriter.WriteObject(clientCA_ECC_Certificate);
-                    pemWriter.Writer.Flush();
-                }
-
-            }
-
-            if (clientCA_RSA_KeyPair       is null)
-            {
-
-                var rsaKeyPairGenerator = new RsaKeyPairGenerator();
-                rsaKeyPairGenerator.Init(new KeyGenerationParameters(secureRandom, 4096));
-                clientCA_RSA_KeyPair = rsaKeyPairGenerator.GenerateKeyPair();
-
-                using (var writer = new StreamWriter(clientCA_RSA_privateKeyFile))
-                {
-                    var pemWriter = new PemWriter(writer);
-                    pemWriter.WriteObject(clientCA_RSA_KeyPair.Private);
-                    pemWriter.Writer.Flush();
-                }
-
-            }
-
-            if (clientCA_RSA_Certificate   is null)
-            {
-
-                var certificateGenerator  = new X509V3CertificateGenerator();
-
-                certificateGenerator.SetIssuerDN     (new X509Name(rootCA_ECC_Certificate.SubjectDN.ToString()));
-                certificateGenerator.SetSubjectDN    (new X509Name("CN=Open Charging Cloud - Client CA (RSA), O=GraphDefined GmbH, OU=TestCA, L=Jena, C=Germany"));
-                certificateGenerator.SetNotBefore    (Timestamp.Now.AddDays (-3).DateTime);
-                certificateGenerator.SetNotAfter     (Timestamp.Now.AddYears(23).DateTime);
-                certificateGenerator.SetPublicKey    (clientCA_RSA_KeyPair.Public);
-                certificateGenerator.SetSerialNumber (BigIntegers.CreateRandomInRange(BigInteger.One, BigInteger.ValueOf(long.MaxValue), secureRandom));
-
-                certificateGenerator.AddExtension    (X509Extensions.BasicConstraints,
-                                                      critical: true,
-                                                      // A CA certificate, but it cannot be used to sign other CA certificates,
-                                                      // only end-entity certificates.
-                                                      new BasicConstraints(0));
-
-                certificateGenerator.AddExtension    (X509Extensions.KeyUsage,
-                                                      critical: true,
-                                                      new KeyUsage(
-                                                          KeyUsage.DigitalSignature |
-                                                          KeyUsage.KeyCertSign |
-                                                          KeyUsage.CrlSign
-                                                      ));
-
-                clientCA_RSA_Certificate = certificateGenerator.Generate(new Asn1SignatureFactory(rsaSignatureAlgorithm, rootCA_RSA_KeyPair.Private, secureRandom));
-
-                using (var writer = new StreamWriter(clientCA_RSA_certificateFile))
-                {
-                    var pemWriter = new PemWriter(writer);
-                    pemWriter.WriteObject(clientCA_RSA_Certificate);
-                    pemWriter.Writer.Flush();
-                }
-
-            }
-
-
-            if (firmwareCA_ECC_KeyPair     is null)
-            {
-
-                var keyPairGenerator = new ECKeyPairGenerator();
-                keyPairGenerator.Init(eccKeyGenParams);
-                firmwareCA_ECC_KeyPair = keyPairGenerator.GenerateKeyPair();
-
-                using (var writer = new StreamWriter(firmwareCA_ECC_privateKeyFile))
-                {
-                    var pemWriter = new PemWriter(writer);
-                    pemWriter.WriteObject(firmwareCA_ECC_KeyPair.Private);
-                    pemWriter.Writer.Flush();
-                }
-
-            }
-
-            if (firmwareCA_ECC_Certificate is null)
-            {
-
-                var certificateGenerator  = new X509V3CertificateGenerator();
-
-                certificateGenerator.SetIssuerDN     (new X509Name(rootCA_ECC_Certificate.SubjectDN.ToString()));
-                certificateGenerator.SetSubjectDN    (new X509Name("CN=Open Charging Cloud - Firmware Signing CA (ECC), O=GraphDefined GmbH, OU=TestCA, L=Jena, C=Germany"));
-                certificateGenerator.SetNotBefore    (Timestamp.Now.AddDays (-2).DateTime);
-                certificateGenerator.SetNotAfter     (Timestamp.Now.AddYears(+5).DateTime);
-                certificateGenerator.SetPublicKey    (firmwareCA_ECC_KeyPair.Public);
-                certificateGenerator.SetSerialNumber (BigIntegers.CreateRandomInRange(BigInteger.One, BigInteger.ValueOf(long.MaxValue), secureRandom));
-
-                certificateGenerator.AddExtension    (X509Extensions.BasicConstraints,
-                                                      critical: true,
-                                                      // A CA certificate, but it cannot be used to sign other CA certificates,
-                                                      // only end-entity certificates.
-                                                      new BasicConstraints(0));
-
-                certificateGenerator.AddExtension    (X509Extensions.KeyUsage,
-                                                      critical: true,
-                                                      new KeyUsage(
-                                                          KeyUsage.DigitalSignature |
-                                                          KeyUsage.KeyCertSign |
-                                                          KeyUsage.CrlSign
-                                                      ));
-
-                firmwareCA_ECC_Certificate = certificateGenerator.Generate(new Asn1SignatureFactory(eccSignatureAlgorithm, rootCA_ECC_KeyPair.Private, secureRandom));
-
-                using (var writer = new StreamWriter(firmwareCA_ECC_certificateFile))
-                {
-                    var pemWriter = new PemWriter(writer);
-                    pemWriter.WriteObject(firmwareCA_ECC_Certificate);
-                    pemWriter.Writer.Flush();
-                }
-
-            }
-
-            if (firmwareCA_RSA_KeyPair     is null)
-            {
-
-                var rsaKeyPairGenerator = new RsaKeyPairGenerator();
-                rsaKeyPairGenerator.Init(new KeyGenerationParameters(secureRandom, 4096));
-                firmwareCA_RSA_KeyPair = rsaKeyPairGenerator.GenerateKeyPair();
-
-                using (var writer = new StreamWriter(firmwareCA_RSA_privateKeyFile))
-                {
-                    var pemWriter = new PemWriter(writer);
-                    pemWriter.WriteObject(firmwareCA_RSA_KeyPair.Private);
-                    pemWriter.Writer.Flush();
-                }
-
-            }
-
-            if (firmwareCA_RSA_Certificate is null)
-            {
-
-                var certificateGenerator  = new X509V3CertificateGenerator();
-
-                certificateGenerator.SetIssuerDN     (new X509Name(rootCA_ECC_Certificate.SubjectDN.ToString()));
-                certificateGenerator.SetSubjectDN    (new X509Name("CN=Open Charging Cloud - Firmware Signing CA (RSA), O=GraphDefined GmbH, OU=TestCA, L=Jena, C=Germany"));
-                certificateGenerator.SetNotBefore    (Timestamp.Now.AddDays (-3).DateTime);
-                certificateGenerator.SetNotAfter     (Timestamp.Now.AddYears(23).DateTime);
-                certificateGenerator.SetPublicKey    (firmwareCA_RSA_KeyPair.Public);
-                certificateGenerator.SetSerialNumber (BigIntegers.CreateRandomInRange(BigInteger.One, BigInteger.ValueOf(long.MaxValue), secureRandom));
-
-                certificateGenerator.AddExtension    (X509Extensions.BasicConstraints,
-                                                      critical: true,
-                                                      // A CA certificate, but it cannot be used to sign other CA certificates,
-                                                      // only end-entity certificates.
-                                                      new BasicConstraints(0));
-
-                certificateGenerator.AddExtension    (X509Extensions.KeyUsage,
-                                                      critical: true,
-                                                      new KeyUsage(
-                                                          KeyUsage.DigitalSignature |
-                                                          KeyUsage.KeyCertSign |
-                                                          KeyUsage.CrlSign
-                                                      ));
-
-                firmwareCA_RSA_Certificate = certificateGenerator.Generate(new Asn1SignatureFactory(rsaSignatureAlgorithm, rootCA_RSA_KeyPair.Private, secureRandom));
-
-                using (var writer = new StreamWriter(firmwareCA_RSA_certificateFile))
-                {
-                    var pemWriter = new PemWriter(writer);
-                    pemWriter.WriteObject(firmwareCA_RSA_Certificate);
-                    pemWriter.Writer.Flush();
-                }
-
-            }
-
-
-            // -------------------------------------------
-
-
-            if (server1_ECC_KeyPair        is null)
-            {
-
-                var keyPairGenerator = new ECKeyPairGenerator();
-                keyPairGenerator.Init(eccKeyGenParams);
-                server1_ECC_KeyPair = keyPairGenerator.GenerateKeyPair();
-
-                using (var writer = new StreamWriter(server1_ECC_privateKeyFile))
-                {
-                    var pemWriter = new PemWriter(writer);
-                    pemWriter.WriteObject(server1_ECC_KeyPair.Private);
-                    pemWriter.Writer.Flush();
-                }
-
-            }
-
-            if (server1_ECC_Certificate    is null)
-            {
-
-                var certificateGenerator  = new X509V3CertificateGenerator();
-
-                certificateGenerator.SetIssuerDN     (new X509Name(serverCA_ECC_Certificate.SubjectDN.ToString()));
-                certificateGenerator.SetSubjectDN    (new X509Name("CN=api1.charging.cloud, O=GraphDefined GmbH, OU=ECC, L=Jena, C=Germany"));
-                certificateGenerator.SetNotBefore    (Timestamp.Now.AddDays  (-1).DateTime);
-                certificateGenerator.SetNotAfter     (Timestamp.Now.AddMonths(+3).DateTime);
-                certificateGenerator.SetPublicKey    (server1_ECC_KeyPair.Public);
-                certificateGenerator.SetSerialNumber (BigIntegers.CreateRandomInRange(BigInteger.One, BigInteger.ValueOf(long.MaxValue), secureRandom));
-
-                certificateGenerator.AddExtension    (X509Extensions.KeyUsage,         critical: true, new KeyUsage        (KeyUsage.DigitalSignature | KeyUsage.KeyEncipherment));
-                certificateGenerator.AddExtension    (X509Extensions.ExtendedKeyUsage, critical: true, new ExtendedKeyUsage(KeyPurposeID.id_kp_serverAuth));
-
-                certificateGenerator.AddExtension    (X509Extensions.SubjectAlternativeName, critical: false, new GeneralNames([
-                                                                                                                                   new (GeneralName.DnsName,   "api1.charging.cloud"),
-                                                                                                                                   new (GeneralName.IPAddress, "127.0.0.1"),
-                                                                                                                                   new (GeneralName.IPAddress, "172.23.144.1")
-                                                                                                                               ]));
-
-                server1_ECC_Certificate = certificateGenerator.Generate(new Asn1SignatureFactory(eccSignatureAlgorithm, serverCA_ECC_KeyPair.Private, secureRandom));
-
-                using (var writer = new StreamWriter(server1_ECC_certificateFile))
-                {
-                    var pemWriter = new PemWriter(writer);
-                    pemWriter.WriteObject(server1_ECC_Certificate);
-                    pemWriter.Writer.Flush();
-                }
-
-            }
-
-            if (server1_RSA_KeyPair        is null)
-            {
-
-                var rsaKeyPairGenerator = new RsaKeyPairGenerator();
-                rsaKeyPairGenerator.Init(new KeyGenerationParameters(secureRandom, 2048));
-                server1_RSA_KeyPair = rsaKeyPairGenerator.GenerateKeyPair();
-
-                using (var writer = new StreamWriter(server1_RSA_privateKeyFile))
-                {
-                    var pemWriter = new PemWriter(writer);
-                    pemWriter.WriteObject(server1_RSA_KeyPair.Private);
-                    pemWriter.Writer.Flush();
-                }
-
-            }
-
-            if (server1_RSA_Certificate    is null)
-            {
-
-                var certificateGenerator  = new X509V3CertificateGenerator();
-
-                certificateGenerator.SetIssuerDN     (new X509Name(serverCA_RSA_Certificate.SubjectDN.ToString()));
-                certificateGenerator.SetSubjectDN    (new X509Name("CN=api1.charging.cloud, O=GraphDefined GmbH, OU=RSA, L=Jena, C=Germany"));
-                certificateGenerator.SetNotBefore    (Timestamp.Now.AddDays  (-1).DateTime);
-                certificateGenerator.SetNotAfter     (Timestamp.Now.AddMonths(+3).DateTime);
-                certificateGenerator.SetPublicKey    (server1_RSA_KeyPair.Public);
-                certificateGenerator.SetSerialNumber (BigIntegers.CreateRandomInRange(BigInteger.One, BigInteger.ValueOf(long.MaxValue), secureRandom));
-
-                certificateGenerator.AddExtension    (X509Extensions.KeyUsage,               critical: true,  new KeyUsage        (KeyUsage.DigitalSignature | KeyUsage.KeyEncipherment));
-                certificateGenerator.AddExtension    (X509Extensions.ExtendedKeyUsage,       critical: true,  new ExtendedKeyUsage(KeyPurposeID.id_kp_serverAuth));
-
-                certificateGenerator.AddExtension    (X509Extensions.SubjectAlternativeName, critical: false, new GeneralNames([
-                                                                                                                                   new (GeneralName.DnsName,   "api1.charging.cloud"),
-                                                                                                                                   new (GeneralName.IPAddress, "127.0.0.1"),
-                                                                                                                                   new (GeneralName.IPAddress, "172.23.144.1")
-                                                                                                                               ]));
-
-                server1_RSA_Certificate = certificateGenerator.Generate(new Asn1SignatureFactory(rsaSignatureAlgorithm, serverCA_RSA_KeyPair.Private, secureRandom));
-
-                using (var writer = new StreamWriter(server1_RSA_certificateFile))
-                {
-                    var pemWriter = new PemWriter(writer);
-                    pemWriter.WriteObject(server1_RSA_Certificate);
-                    pemWriter.Writer.Flush();
-                }
-
-            }
-
-
-            if (client1_ECC_KeyPair        is null)
-            {
-
-                var keyPairGenerator = new ECKeyPairGenerator();
-                keyPairGenerator.Init(eccKeyGenParams);
-                client1_ECC_KeyPair = keyPairGenerator.GenerateKeyPair();
-
-                using (var writer = new StreamWriter(client1_ECC_privateKeyFile))
-                {
-                    var pemWriter = new PemWriter(writer);
-                    pemWriter.WriteObject(client1_ECC_KeyPair.Private);
-                    pemWriter.Writer.Flush();
-                }
-
-            }
-
-            if (client1_ECC_Certificate    is null)
-            {
-
-                var certificateGenerator  = new X509V3CertificateGenerator();
-
-                certificateGenerator.SetIssuerDN     (new X509Name(clientCA_ECC_Certificate.SubjectDN.ToString()));
-                certificateGenerator.SetSubjectDN    (new X509Name("CN=client1, O=GraphDefined GmbH, OU=ECC, L=Jena, C=Germany"));
-                certificateGenerator.SetNotBefore    (Timestamp.Now.AddDays  (-1).DateTime);
-                certificateGenerator.SetNotAfter     (Timestamp.Now.AddMonths(+3).DateTime);
-                certificateGenerator.SetPublicKey    (client1_ECC_KeyPair.Public);
-                certificateGenerator.SetSerialNumber (BigIntegers.CreateRandomInRange(BigInteger.One, BigInteger.ValueOf(long.MaxValue), secureRandom));
-
-                certificateGenerator.AddExtension    (X509Extensions.KeyUsage,         critical: true, new KeyUsage        (KeyUsage.NonRepudiation | KeyUsage.DigitalSignature | KeyUsage.KeyEncipherment));
-                certificateGenerator.AddExtension    (X509Extensions.ExtendedKeyUsage, critical: true, new ExtendedKeyUsage(KeyPurposeID.id_kp_clientAuth));
-
-                client1_ECC_Certificate = certificateGenerator.Generate(new Asn1SignatureFactory(eccSignatureAlgorithm, clientCA_ECC_KeyPair.Private, secureRandom));
-
-                using (var writer = new StreamWriter(client1_ECC_certificateFile))
-                {
-                    var pemWriter = new PemWriter(writer);
-                    pemWriter.WriteObject(client1_ECC_Certificate);
-                    pemWriter.Writer.Flush();
-                }
-
-            }
-
-            if (client1_RSA_KeyPair        is null)
-            {
-
-                var rsaKeyPairGenerator = new RsaKeyPairGenerator();
-                rsaKeyPairGenerator.Init(new KeyGenerationParameters(secureRandom, 2048));
-                client1_RSA_KeyPair = rsaKeyPairGenerator.GenerateKeyPair();
-
-                using (var writer = new StreamWriter(client1_RSA_privateKeyFile))
-                {
-                    var pemWriter = new PemWriter(writer);
-                    pemWriter.WriteObject(client1_RSA_KeyPair.Private);
-                    pemWriter.Writer.Flush();
-                }
-
-            }
-
-            if (client1_RSA_Certificate    is null)
-            {
-
-                var certificateGenerator  = new X509V3CertificateGenerator();
-
-                certificateGenerator.SetIssuerDN     (new X509Name(clientCA_RSA_Certificate.SubjectDN.ToString()));
-                certificateGenerator.SetSubjectDN    (new X509Name("CN=client1, O=GraphDefined GmbH, OU=RSA, L=Jena, C=Germany"));
-                certificateGenerator.SetNotBefore    (Timestamp.Now.AddDays  (-1).DateTime);
-                certificateGenerator.SetNotAfter     (Timestamp.Now.AddMonths(+3).DateTime);
-                certificateGenerator.SetPublicKey    (client1_RSA_KeyPair.Public);
-                certificateGenerator.SetSerialNumber (BigIntegers.CreateRandomInRange(BigInteger.One, BigInteger.ValueOf(long.MaxValue), secureRandom));
-
-                certificateGenerator.AddExtension    (X509Extensions.KeyUsage,         critical: true, new KeyUsage        (KeyUsage.NonRepudiation | KeyUsage.DigitalSignature | KeyUsage.KeyEncipherment));
-                certificateGenerator.AddExtension    (X509Extensions.ExtendedKeyUsage, critical: true, new ExtendedKeyUsage(KeyPurposeID.id_kp_clientAuth));
-
-                client1_RSA_Certificate = certificateGenerator.Generate(new Asn1SignatureFactory(rsaSignatureAlgorithm, clientCA_RSA_KeyPair.Private, secureRandom));
-
-                using (var writer = new StreamWriter(client1_RSA_certificateFile))
-                {
-                    var pemWriter = new PemWriter(writer);
-                    pemWriter.WriteObject(client1_RSA_Certificate);
-                    pemWriter.Writer.Flush();
-                }
-
-            }
-
-            #endregion
-
-
-
-            #region Setup Central System v1.6
-
-            this.TestCentralSystemV1_6  = new OCPPv1_6.TestCentralSystemNode(
-                                              Id:              NetworkingNode_Id.Parse("CentralSystem"),
-                                              VendorName:      "GraphDefined GmbH",
-                                              Model:           "OCPPv1.6 Test Central System",
-                                              HTTPUploadPort:  IPPort.Parse(8801),
-                                              DNSClient:       dnsClient
-                                          );
-
-            this.TestCentralSystemV1_6.AttachWebSocketServer(
-                TCPPort:                         IPPort.Parse(8800),
-                Description:                     I18NString.Create("OCPP v1.6 without internal security, but maybe with external TLS termination"),
-                RequireAuthentication:           false,
-                DisableWebSocketPings:           false,
-                //SlowNetworkSimulationDelay:      TimeSpan.FromMilliseconds(10),
-                AutoStart:                       true
-            );
-
-            //this.TestCentralSystemV1_6.AttachSOAPService(
-            //    TCPPort:                      IPPort.Parse(8800),
-            //    DNSClient:                    dnsClient,
-            //    AutoStart:                    true
-            //);
-
-            //this.TestCentralSystemV1_6.AddHTTPBasicAuth(NetworkingNode_Id.Parse("CP001"), "test1234test1234");
-
-
-            #region HTTP Web Socket connections
-
-            //this.TestCentralSystemV1_6.OnNewTCPConnection             += async (timestamp, server, connection,              eventTrackingId,                     cancellationToken) => {
-
-            //    await DebugLog(
-            //        $"New TCP connection from {connection.RemoteSocket}",
-            //        cancellationToken
-            //    );
-
-            //    await WriteToLogfileV1_6(
-            //        $"{timestamp.ToISO8601()}\tNEW TCP\t-\t{connection.RemoteSocket}",
-            //        cancellationToken
-            //    );
-
-            //};
-
-            //this.TestCentralSystemV1_6.OnNewWebSocketConnection       += async (timestamp, server, connection, chargeBoxId, sharedSubprotocols, eventTrackingId, cancellationToken) => {
-
-            //    await DebugLog(
-            //        $"New HTTP web socket connection from '{chargeBoxId}' ({connection.RemoteSocket}) using '{sharedSubprotocols.AggregateWith(", ")}'",
-            //        cancellationToken
-            //    );
-
-            //    await WriteToLogfileV1_6(
-            //        $"{timestamp.ToISO8601()}\tNEW WS\t{chargeBoxId}\t{connection.RemoteSocket}",
-            //        cancellationToken
-            //    );
-
-            //};
-
-            //this.TestCentralSystemV1_6.OnCloseMessageReceived         += async (timestamp, server, connection, chargeBoxId, eventTrackingId, statusCode, reason, cancellationToken) => {
-
-            //    await DebugLog(
-            //        $"'{chargeBoxId}' wants to close its HTTP web socket connection ({connection.RemoteSocket}): {statusCode}{(reason is not null ? $", '{reason}'" : "")}",
-            //        cancellationToken
-            //    );
-
-            //    await WriteToLogfileV1_6(
-            //        $"{timestamp.ToISO8601()}\tCLOSE\t{chargeBoxId}\t{connection.RemoteSocket}",
-            //        cancellationToken
-            //    );
-
-            //};
-
-            //this.TestCentralSystemV1_6.OnTCPConnectionClosed          += async (timestamp, server, connection, chargeBoxId, eventTrackingId, reason,             cancellationToken) => {
-
-            //    await DebugLog(
-            //        $"'{chargeBoxId}' closed its HTTP web socket connection ({connection.RemoteSocket}){(reason is not null ? $": '{reason}'" : "")}",
-            //        cancellationToken
-            //    );
-
-            //    await WriteToLogfileV1_6(
-            //        $"{timestamp.ToISO8601()}\tCLOSED\t{chargeBoxId}\t{connection.RemoteSocket}",
-            //        cancellationToken
-            //    );
-
-            //};
-
-            #endregion
-
-            #region JSON Messages
-
-            //this.TestCentralSystemV1_6.CentralSystemServers.First().OnJSONMessageRequestReceived += async (timestamp,
-            //                                                                                          server,
-            //                                                                                          connection,
-            //                                                                                          destinationId,
-            //                                                                                          networkPath,
-            //                                                                                          eventTrackingId,
-            //                                                                                          requestTimestamp,
-            //                                                                                          requestMessage,
-            //                                                                                          cancellationToken) => {
-
-            //    DebugX.Log($"Received a web socket JSON message: '{requestMessage.ToString(Formatting.None)}'!");
-
-            //    var chargeBoxId = "xxx";
-
-            //    //await DebugLog(
-            //    //    $"Received a JSON web socket request from '{chargeBoxId}': '{requestMessage.ToString(Formatting.None)}'!",
-            //    //    cancellationToken
-            //    //);
-
-            //    //await WriteToLogfileV1_6(
-            //    //    $"{requestTimestamp.ToISO8601()}\tREQ IN\t{chargeBoxId}\t{connection.RemoteSocket}\t{requestMessage.ToString(Formatting.None)}",
-            //    //    cancellationToken
-            //    //);
-
-            //    //lock (testCSMSv1_6)
-            //    //{
-            //    //    File.AppendAllText(Path.Combine(AppContext.BaseDirectory, "TextMessages.log"),
-            //    //                       String.Concat(timestamp.ToISO8601(), "\tIN\t", connection.TryGetCustomData("chargingStationId"), "\t", connection.RemoteSocket, "\t", requestMessage, Environment.NewLine));
-            //    //}
-
-            //};
-
-            //this.TestCentralSystemV1_6.CentralSystemServers.First().OnJSONMessageRequestSent += async (timestamp,
-            //                                                                                      server,
-            //                                                                                      connection,
-            //                                                                                      destinationId,
-            //                                                                                      networkPath,
-            //                                                                                      eventTrackingId,
-            //                                                                                      requestTimestamp,
-            //                                                                                      requestMessage,
-            //                                                                                      cancellationToken) => {
-
-            //    DebugX.Log($"Sent     a web socket TEXT message: '{requestMessage.ToString(Formatting.None)}'!");
-
-            //    //lock (this.TestCentralSystemV1_6)
-            //    //{
-            //    //    File.AppendAllText(Path.Combine(AppContext.BaseDirectory, "TextMessages.log"),
-            //    //                       String.Concat(timestamp.ToISO8601(), "\tOUT\t", connection.TryGetCustomData("chargingStationId"), "\t", connection.RemoteSocket, "\t", requestMessage, Environment.NewLine));
-            //    //}
-
-            //};
-
-
-
-
-            //this.TestCentralSystemV1_6.OnJSONMessageRequestReceived   += async (timestamp, server, connection, eventTrackingId, requestTimestamp, requestMessage,     cancellationToken) => {
-
-            //    await DebugLog(
-            //        $"Received a JSON web socket request: '{requestMessage.ToString(Formatting.None)}'!",
-            //        cancellationToken
-            //    );
-
-            //    await WriteToLogfileV1_6(
-            //        $"{requestTimestamp.ToISO8601()}\tREQ IN\t{connection.TryGetCustomData("chargingStationId")}\t{connection.RemoteSocket}\t{requestMessage.ToString(Formatting.None)}",
-            //        cancellationToken
-            //    );
-
-            //};
-
-            //this.TestCentralSystemV1_6.OnJSONMessageResponseSent      += async (timestamp, server, connection, eventTrackingId, requestTimestamp, jsonRequestMessage, binaryRequestMessage, responseTimestamp, jsonResponseMessage)   => {
-
-            //    var cancellationToken = CancellationToken.None;
-
-            //    await DebugLog(
-            //        $"Sent a JSON web socket response: '{jsonResponseMessage.ToString(Formatting.None)}'!",
-            //        cancellationToken
-            //    );
-
-            //    await WriteToLogfileV1_6(
-            //        $"{responseTimestamp.ToISO8601()}\tRES OUT\t{connection.TryGetCustomData("chargingStationId")}\t{connection.RemoteSocket}\t{jsonResponseMessage.ToString(Formatting.None)}",
-            //        cancellationToken
-            //    );
-
-            //};
-
-
-            //this.TestCentralSystemV1_6.OnJSONMessageRequestSent       += async (timestamp, server, connection, eventTrackingId, requestTimestamp, requestMessage,     cancellationToken) => {
-
-            //    await DebugLog(
-            //        $"Sent a JSON web socket request: '{requestMessage.ToString(Formatting.None)}'!",
-            //        cancellationToken
-            //    );
-
-            //    await WriteToLogfileV1_6(
-            //        $"{requestTimestamp.ToISO8601()}\tREQ OUT\t{connection.TryGetCustomData("chargingStationId")}\t{connection.RemoteSocket}\t{requestMessage.ToString(Formatting.None)}",
-            //        cancellationToken
-            //    );
-
-            //};
-
-            //this.TestCentralSystemV1_6.OnJSONMessageResponseReceived  += async (timestamp, server, connection, eventTrackingId, requestTimestamp, jsonRequestMessage, binaryRequestMessage, responseTimestamp, jsonResponseMessage)   => {
-
-            //    var cancellationToken = CancellationToken.None;
-
-            //    await DebugLog(
-            //        $"Received a JSON web socket response: '{jsonResponseMessage.ToString(Formatting.None)}'!",
-            //        cancellationToken
-            //    );
-
-            //    await WriteToLogfileV1_6(
-            //        $"{responseTimestamp.ToISO8601()}\tRES IN\t{connection.TryGetCustomData("chargingStationId")}\t{connection.RemoteSocket}\t{jsonResponseMessage.ToString(Formatting.None)}",
-            //        cancellationToken
-            //    );
-
-            //};
-
-            #endregion
-
-            #endregion
-
-            #region Setup CSMS v2.1
-
-            this.TestCSMSv2_1 = new OCPPv2_1.CSMS.TestCSMSNode(
-
-                                    Id:                      NetworkingNode_Id.Parse("OCPPv2.1-CSMS-01"),
-                                    VendorName:              "GraphDefined GmbH",
-                                    Model:                   "vCSMS",
-                                    Description:             I18NString.Create(Languages.en, "Our first virtual CSMS!"),
-                                    SerialNumber:            "SN-CSMS0001",
-                                    SoftwareVersion:         "v0.1",
-                                    DisableSendHeartbeats:   true,
-
-                                    HTTPAPI_Port:            IPPort.Parse(7000),
-                                    //HTTPAPI_Disabled:        false,
-
-                                    //WebAPI:                  csms => new OCPPv2_1.CSMS.WebAPI(
-                                    //                                     CSMS:   csms,
-                                    //                                     HTTPServer:  csms.HTTPAPI.DevelopmentServers
-                                    //                                 ),
-
-                                    DNSClient :              dnsClient
-
-                                );
-
-            this.TestCSMSv2_1.AddControlWebSocketServer(
-                new WebSocketServer(
-                    HTTPPort:               IPPort.Parse(7001),
-                    Description:            I18NString.Create(Languages.en, "Logging HTTP WebSocket Server"),
-                    HTTPServerName:         "OCPP CSMS Logging WebSocket Server",
-                    RequireAuthentication:  false,
-                    AutoStart:              true
-                )
-            );
-
-            #region 8820 - OCPP v2.1 without internal security, but maybe with external TLS termination
-
-            this.TestCSMSv2_1.AttachWebSocketServer(
-                TCPPort:                         IPPort.Parse(8820),
-                Description:                     I18NString.Create("OCPP v2.1 without internal security, but maybe with external TLS termination"),
-                RequireAuthentication:           false,
-                DisableWebSocketPings:           false,
-                WebSocketPingEvery:              TimeSpan.FromMinutes(1),
-                //ClientCAKeyPair:             clientCA_RSA_KeyPair,
-                //ClientCACertificate:         clientCA_RSA_Certificate,
-                //SlowNetworkSimulationDelay:  TimeSpan.FromMilliseconds(10),
-                AutoStart:                       true
-            );
-
-            #endregion
-
-
-            #region 8821 - OCPP v2.1 with internal TLS termination using a private ECC PKI
-
-            // cat serverCA.cert rootCA.cert > caChain.cert
-            // openssl s_client -connect 127.0.0.1:9921 -CAfile caChain.cert -showcerts
-            // openssl ec   -in server1ECC.key  -pubout 2>/dev/null | openssl dgst -sha256
-            // openssl x509 -in server1ECC.cert -pubkey -noout      | openssl dgst -sha256
-            //
-            // openssl pkcs12 -export -out server1ECC.pfx -inkey server1ECC.key -in server1ECC.cert -certfile caChain.cert
-            // openssl pkcs12 -in server1ECC.pfx - nokeys - passin pass:
-            //
-            // openssl ecparam -name secp256r1 -genkey -out secp256r1key.pem
-            // MSYS_NO_PATHCONV=1 openssl req -new -key secp256r1key.pem -out secp256r1req.pem -subj '/C=US/ST=YourState/L=YourCity/O=YourOrganization/CN=yourname'
-            // openssl x509 -req -in secp256r1req.pem -CA serverCA.cert -CAkey serverCA.key -CAcreateserial -out secp256r1cert.pem -days 365 -sha256
-
-            // https://stackoverflow.com/questions/72096812/loading-x509certificate2-from-pem-file-results-in-no-credentials-are-available
-            // https://www.daimto.com/how-to-use-x509certificate2-with-pem-file/
-            // The TLS layer on Windows requires that the private key be written to disk (in a particular way).
-            // The PEM-based certificate loading doesn't do that, only PFX-loading does.
-            // The easiest way to make the TLS layer happy is to do:
-            //     cert = new X509Certificate2(cert.Export(X509ContentType.Pfx));
-            // That is, export the cert+key to a PFX, then import it again immediately (to get the side effect of the key being (temporarily)
-            // written to disk in a way that SChannel can find it). You shouldn't need to bother with changing the PFX load flags off of the defaults,
-            // though some complicatedly constrained users might need to use MachineKeySet.
-            this.TestCSMSv2_1.AttachWebSocketServer(
-                TCPPort:                     IPPort.Parse(8821),
-                Description:                 I18NString.Create("OCPP v2.1 with internal TLS termination using a private ECC PKI"),
-                RequireAuthentication:       true,
-                ServerCertificateSelector:   () => //new System.Security.Cryptography.X509Certificates.X509Certificate2(server1ECC_pfx, "", System.Security.Cryptography.X509Certificates.X509KeyStorageFlags.PersistKeySet),
-                                                   new System.Security.Cryptography.X509Certificates.X509Certificate2(
-                                                       System.Security.Cryptography.X509Certificates.X509Certificate2.CreateFromPemFile(
-                                                           server1_ECC_certificateFile,
-                                                           server1_ECC_privateKeyFile
-                                                       ).Export(System.Security.Cryptography.X509Certificates.X509ContentType.Pfx)
-                                                   ),
-
-                                                   /// Authentication failed because the platform does not support ephemeral keys.
-                                                   //System.Security.Cryptography.X509Certificates.X509Certificate2.CreateFromPemFile(
-                                                   //    Path.Combine(AppContext.BaseDirectory, "pki", "secp256r1cert.pem"),
-                                                   //    Path.Combine(AppContext.BaseDirectory, "pki", "secp256r1key.pem")
-                                                   //),
-                DisableWebSocketPings:       false,
-
-                //SlowNetworkSimulationDelay:  TimeSpan.FromMilliseconds(10),
-                AutoStart:                   true
-            );
-
-            #endregion
-
-            #region 8822 - OCPP v2.1 with internal TLS termination using a private RSA PKI
-
-            // cat serverCA_RSA.cert rootCA_RSA.cert > caChain_RSA.cert
-            // openssl s_client -connect 127.0.0.1:9922 -CAfile caChain_RSA.cert -showcerts
-            // CONNECTED(00000160)
-            // Can't use SSL_get_servername
-            // depth=2 CN = Open Charging Cloud - Root CA, O = GraphDefined GmbH, L = Jena, C = Germany
-            // verify return:1
-            // depth=1 CN = Open Charging Cloud - Server CA, O = GraphDefined GmbH, L = Jena, C = Germany
-            // verify return:1
-            // depth=0 CN = api1.charging.cloud, O = GraphDefined GmbH, L = Jena, C = Germany
-            // verify return:1
-            // ---
-            // Certificate chain
-            //  0 s:CN = api1.charging.cloud, O = GraphDefined GmbH, L = Jena, C = Germany
-            //    i:CN = Open Charging Cloud - Server CA, O = GraphDefined GmbH, L = Jena, C = Germany
-            //    a:PKEY: rsaEncryption, 2048 (bit); sigalg: RSA-SHA256
-            //    v:NotBefore: Mar  2 00:34:59 2024 GMT; NotAfter: Jun  3 00:34:59 2024 GMT
-            this.TestCSMSv2_1.AttachWebSocketServer(
-                TCPPort:                     IPPort.Parse(8822),
-                Description:                 I18NString.Create("OCPP v2.1 with internal TLS termination using a private RSA PKI"),
-                RequireAuthentication:       true,
-                ServerCertificateSelector:   () => ToDotNet(server1_RSA_Certificate, server1_RSA_KeyPair.Private)!,
-                                                   //NotWorking:  System.Security.Cryptography.X509Certificates.X509Certificate2.CreateFromPemFile(server1RSA_certificateFile, server1RSA_privateKeyFile),
-                                                   //NotWorking:  ConvertToX509Certificate2(server1RSA_Certificate, server1RSA_KeyPair.Private),
-                                                   //IsWorking:   new System.Security.Cryptography.X509Certificates.X509Certificate2(server1RSA_pfx, "", System.Security.Cryptography.X509Certificates.X509KeyStorageFlags.PersistKeySet),
-                AllowedTLSProtocols:         System.Security.Authentication.SslProtocols.Tls12,
-
-                DisableWebSocketPings:       false,
-                //SlowNetworkSimulationDelay:  TimeSpan.FromMilliseconds(10),
-                AutoStart:                   true
-            );
-
-            #endregion
-
-
-
-            #region 8823 - OCPP v2.1 with internal TLS termination using a private RSA PKI enforcing TLS client authentication
-
-            // Show client certificate details: openssl.exe x509 -in client1RSA.cert -text -noout
-            //
-            // cat serverCA_RSA.cert clientCA_RSA.cert rootCA_RSA.cert > caChain_RSA.cert
-            // openssl s_client -connect 127.0.0.1:9923 -cert client1_RSA.cert -key client1_RSA.key -CAfile caChain_RSA.cert -showcerts
-            this.TestCSMSv2_1.AttachWebSocketServer(
-
-                TCPPort:                      IPPort.Parse(8823),
-                Description:                  I18NString.Create("OCPP v2.1 with internal TLS termination using a private RSA PKI enforcing TLS client authentication"),
-                RequireAuthentication:        true,
-                ServerCertificateSelector:    () => ToDotNet(server1_RSA_Certificate, server1_RSA_KeyPair.Private)!,
-                                                    //NotWorking:  System.Security.Cryptography.X509Certificates.X509Certificate2.CreateFromPemFile(server1RSA_certificateFile, server1RSA_privateKeyFile),
-                                                    //NotWorking:  ConvertToX509Certificate2(server1RSA_Certificate, server1RSA_KeyPair.Private),
-                                                    //IsWorking:   new System.Security.Cryptography.X509Certificates.X509Certificate2(server1RSA_pfx, "", System.Security.Cryptography.X509Certificates.X509KeyStorageFlags.PersistKeySet),
-                AllowedTLSProtocols:          System.Security.Authentication.SslProtocols.Tls12 |
-                                              System.Security.Authentication.SslProtocols.Tls13,
-
-                ClientCertificateRequired:    true,
-                ClientCertificateValidator:   (sender,
-                                               certificate,
-                                               certificateChain,
-                                               webSocketServer,
-                                               policyErrors) => {
-
-                                                   if (certificate      is not null &&
-                                                       certificateChain is not null)
-                                                   {
-
-                                                       if (webSocketServer.TrustedClientCertificates.Contains(certificate))
-                                                           return TLSValidationResult.Success();
-
-                                                       return TLSValidationResult.Failed("Could not validate the received TLS client certificate!");
-
-                                                   }
-
-                                                   return TLSValidationResult.Failed("Missing or invalid TLS client certificate!");
-
-                                               },
-
-                LocalCertificateSelector:     (sender,
-                                               targetHost,
-                                               localCertificates,
-                                               remoteCertificate,
-                                               acceptableIssuers) => {
-                                                   return localCertificates.First();
-                                               },
-
-                DisableWebSocketPings:        false,
-                //SlowNetworkSimulationDelay:  TimeSpan.FromMilliseconds(10),
-                AutoStart:                    true
-
-            );
-
-            #endregion
-
-
-
-            #region Connect to LocalController
-
-            //var ocppGatewayConnectResult1    = await testCSMSv2_1.ConnectOCPPWebSocketClient(
-
-            //                                       RemoteURL:                    URL.Parse($"ws://127.0.0.1:9920"),
-            //                                       VirtualHostname:              null,
-            //                                       Description:                  I18NString.Create("CSMS to LC"),
-            //                                       PreferIPv4:                   null,
-            //                                       RemoteCertificateValidator:   null,
-            //                                       LocalCertificateSelector:     null,
-            //                                       ClientCert:                   null,
-            //                                       TLSProtocol:                  null,
-            //                                       HTTPUserAgent:                null,
-            //                                       HTTPAuthentication:           HTTPBasicAuthentication.Create(
-            //                                                                         "csms1",
-            //                                                                         "csms2lc_12345678!"
-            //                                                                     ),
-            //                                       RequestTimeout:               null,
-            //                                       TransmissionRetryDelay:       null,
-            //                                       MaxNumberOfRetries:           3,
-            //                                       InternalBufferSize:           null,
-
-            //                                       SecWebSocketProtocols:        null,
-            //                                       NetworkingMode:               NetworkingMode.OverlayNetwork,
-            //                                       NextHopNetworkingNodeId:      NetworkingNode_Id.Parse("lc1"),
-
-            //                                       DisableWebSocketPings:        false,
-            //                                       WebSocketPingEvery:           null,
-            //                                       SlowNetworkSimulationDelay:   null,
-
-            //                                       DisableMaintenanceTasks:      false,
-            //                                       MaintenanceEvery:             null,
-
-            //                                       LoggingPath:                  null,
-            //                                       LoggingContext:               String.Empty,
-            //                                       LogfileCreator:               null,
-            //                                       HTTPLogger:                   null,
-            //                                       DNSClient:                    null
-
-            //                                   );
-
-            #endregion
-
-
-            #region HowTo test using Win11 + WSL
-
-            // Win11:
-            //  - Import RootCA to "Trusted Root Certification Authorities" for the entire computer
-            //  - Import ServerCA to "Intermediate Certification Authorities" for the entire computer
-            //  - Verify via "certmgr"
-
-            // Win11 WSL (Debian):
-            //  - sudo wget -qO /usr/local/bin/websocat https://github.com/vi/websocat/releases/latest/download/websocat.x86_64-unknown-linux-musl
-            //  - chmod +x /usr/local/bin/websocat
-            //
-            // Note: The IPv4 address of your host (here: 172.23.144.1) might be different!
-
-            // $ websocat --protocol ocpp2.1 --basic-auth a:b -v ws://172.23.144.1:9920
-            // [INFO  websocat::lints] Auto-inserting the line mode
-            // [INFO  websocat::stdio_threaded_peer] get_stdio_peer (threaded)
-            // [INFO  websocat::ws_client_peer] get_ws_client_peer
-            // [INFO  websocat::ws_client_peer] Connected to ws
-            //
-            // Paste the following line:
-            // [2,"100000","BootNotification",{"chargingStation":{"model":"aa","vendorName":"bb"},"reason":"ApplicationReset"}]
-            //
-            // [3,"100000",{"status":"Rejected","currentTime":"2024-03-03T11:46:59.076Z","interval":30}]
-            // [INFO  websocat::ws_peer] Received WebSocket ping
-
-            // $ cat serverCA_RSA.cert rootCA_RSA.cert > caChain_RSA.cert
-            // $ export SSL_CERT_FILE=/home/ahzf/OCPPTests/caChain_RSA.cert
-            // $ websocat --protocol ocpp2.1 --basic-auth a:b -v wss://172.23.144.1:9922
-            // [INFO  websocat::lints] Auto-inserting the line mode
-            // [INFO  websocat::stdio_threaded_peer] get_stdio_peer (threaded)
-            // [INFO  websocat::ws_client_peer] get_ws_client_peer
-            // [INFO  websocat::ws_client_peer] Connected to ws
-            //
-            // Paste the following line:
-            // [2,"100000","BootNotification",{"chargingStation":{"model":"aa","vendorName":"bb"},"reason":"ApplicationReset"}]
-            //
-            // [3,"100000",{"status":"Rejected","currentTime":"2024-03-03T11:43:54.364Z","interval":30}]
-            // [INFO  websocat::ws_peer] Received WebSocket ping
-
-            #endregion
-
-
-            #region HTTP Web Socket connections
-
-            this.TestCSMSv2_1.OnNewWebSocketTCPConnection            += async (timestamp, server, connection,                   eventTrackingId,                     cancellationToken) => {
-
-                await DebugLog(
-                    $"New TCP connection from {connection.RemoteSocket}",
-                    cancellationToken
-                );
-
-                await WriteToLogfileV2_1(
-                    $"{timestamp.ToISO8601()}\tNEW TCP\t-\t{connection.RemoteSocket}",
-                    cancellationToken
-                );
-            };
-
-            this.TestCSMSv2_1.OnNewWebSocketServerConnection         += async (timestamp, server, connection, sharedSubprotocols, selectedSubprotocol, eventTrackingId, cancellationToken) => {
-
-                await DebugLog(
-                    $"New HTTP web socket connection from '{connection.Login}' ({connection.RemoteSocket}) using '{selectedSubprotocol}' [{sharedSubprotocols.AggregateWith(", ")}]",
-                    cancellationToken
-                );
-
-                await WriteToLogfileV2_1(
-                    $"{timestamp.ToISO8601()}\tNEW WS\t{connection.Login}\t{connection.RemoteSocket}",
-                    cancellationToken
-                );
-
-            };
-
-            this.TestCSMSv2_1.OnWebSocketServerCloseMessageReceived  += async (timestamp, server, connection, frame, eventTrackingId, statusCode, reason, cancellationToken) => {
-
-                await DebugLog(
-                    $"'{connection.Login}' wants to close its HTTP web socket connection ({connection.RemoteSocket}): {statusCode}{(reason is not null ? $", '{reason}'" : "")}",
-                    cancellationToken
-                );
-
-                await WriteToLogfileV2_1(
-                    $"{timestamp.ToISO8601()}\tCLOSE\t{connection.Login}\t{connection.RemoteSocket}",
-                    cancellationToken
-                );
-
-            };
-
-            this.TestCSMSv2_1.OnWebSocketServerTCPConnectionClosed   += async (timestamp, server, connection, eventTrackingId, reason, cancellationToken) => {
-
-                await DebugLog(
-                    $"'{connection.Login}' closed its HTTP web socket connection ({connection.RemoteSocket}){(reason is not null ? $": '{reason}'" : "")}",
-                    cancellationToken
-                );
-
-                await WriteToLogfileV2_1(
-                    $"{timestamp.ToISO8601()}\tCLOSED\t{connection.Login}\t{connection.RemoteSocket}",
-                    cancellationToken
-                );
-
-            };
-
-            #endregion
-
-            #region HTTP Web Socket Pings/Pongs
-
-            //(testCSMSv2_1.CSMSServers.First() as WebSocketServer).OnPingMessageReceived += async (timestamp, server, connection, eventTrackingId, frame) => {
-            //    DebugX.Log(nameof(WebSocketServer) + ": Ping received: '" + frame.Payload.ToUTF8String() + "' (" + connection.TryGetCustomData("chargingStationId") + ", " + connection.RemoteSocket + ")");
-            //    lock (testCSMSv2_1)
-            //    {
-            //        File.AppendAllText(Path.Combine(AppContext.BaseDirectory, "TextMessages.log"),
-            //                           String.Concat(timestamp.ToISO8601(), "\tPING IN\t", connection.TryGetCustomData("chargingStationId"), "\t", connection.RemoteSocket, Environment.NewLine));
-            //    }
-            //};
-
-            //(testCSMSv2_1.CSMSServers.First() as WebSocketServer).OnPingMessageSent += async (timestamp, server, connection, eventTrackingId, frame) => {
-            //    DebugX.Log(nameof(WebSocketServer) + ": Ping sent:     '" + frame.Payload.ToUTF8String() + "' (" + connection.TryGetCustomData("chargingStationId") + ", " + connection.RemoteSocket + ")");
-            //    lock (testCSMSv2_1)
-            //    {
-            //        File.AppendAllText(Path.Combine(AppContext.BaseDirectory, "TextMessages.log"),
-            //                           String.Concat(timestamp.ToISO8601(), "\tPING OUT\t", connection.TryGetCustomData("chargingStationId"), "\t", connection.RemoteSocket, Environment.NewLine));
-            //    }
-            //};
-
-            //(testCSMSv2_1.CSMSServers.First() as WebSocketServer).OnPongMessageReceived += async (timestamp, server, connection, eventTrackingId, frame) => {
-            //    DebugX.Log(nameof(WebSocketServer) + ": Pong received: '" + frame.Payload.ToUTF8String() + "' (" + connection.TryGetCustomData("chargingStationId") + ", " + connection.RemoteSocket + ")");
-            //    lock (testCSMSv2_1)
-            //    {
-            //        File.AppendAllText(Path.Combine(AppContext.BaseDirectory, "TextMessages.log"),
-            //                           String.Concat(timestamp.ToISO8601(), "\tPONG IN\t", connection.TryGetCustomData("chargingStationId"), "\t", connection.RemoteSocket, Environment.NewLine));
-            //    }
-            //};
-
-            #endregion
-
-            #region JSON Messages
-
-            //testCSMSv2_1.OnJSONMessageSent += async (timestamp, server, connection, messageTimestamp, eventTrackingId, message, sentStatus, ct) =>
-            //{
-            //    await WriteToLogfileV2_1(
-            //        $"{messageTimestamp.ToISO8601()}\tMSG OUT\t-\t{connection.RemoteSocket}\t{message.ToString(Formatting.None)}",
-            //        ct
-            //    );
-            //};
-
-            //testCSMSv2_1.OnJSONMessageReceived += async (timestamp, server, connection, messageTimestamp, eventTrackingId, sourceNodeId, message, ct) =>
-            //{
-            //    await WriteToLogfileV2_1(
-            //        $"{messageTimestamp.ToISO8601()}\tMSG IN\t{sourceNodeId}\t{connection.RemoteSocket}\t{message.ToString(Formatting.None)}",
-            //        ct
-            //    );
-            //};
-
-            this.TestCSMSv2_1.OCPP.IN.OnJSONRequestMessageReceived += async (timestamp, server, connection, request, ct) =>
-            {
-                await WriteToLogfileV2_1(
-                    $"{request.RequestTimestamp.ToISO8601()}\tREQ IN\t{request.NetworkPath.Source}\t{connection?.RemoteSocket}\t{request.RequestId}\t{request.Action}\t{request.Payload.ToString(Formatting.None)}",
-                    ct
-                );
-            };
-
-            this.TestCSMSv2_1.OCPP.OUT.OnJSONResponseMessageSent += async (timestamp, sender, connection, response, sentMessageResult, ct) =>
-            {
-                await WriteToLogfileV2_1(
-                    $"{response.ResponseTimestamp.ToISO8601()}\tRES OUT\t{response.Destination}\t{connection?.RemoteSocket}\t{response.RequestId}\t-\t{response.Payload.ToString(Formatting.None)}",
-                    ct
-                );
-            };
-
-
-            this.TestCSMSv2_1.OCPP.OUT.OnJSONRequestMessageSent += async (timestamp, sender, connection, request, sentMessageResult, ct) =>
-            {
-                await WriteToLogfileV2_1(
-                    $"{request.RequestTimestamp.ToISO8601()}\tREQ OUT\t{request.Destination}\t{connection?.RemoteSocket}\t{request.RequestId}\t{request.Action}\t{request.Payload.ToString(Formatting.None)}",
-                    ct
-                );
-            };
-
-            this.TestCSMSv2_1.OCPP.IN.OnJSONResponseMessageReceived += async (timestamp, server, connection, response, ct) =>
-            {
-                await WriteToLogfileV2_1(
-                    $"{response.ResponseTimestamp.ToISO8601()}\tRES IN\t{response.NetworkPath.Source}\t{connection?.RemoteSocket}\t{response.RequestId}\t-\t{response.Payload.ToString(Formatting.None)}",
-                    ct
-                );
-            };
-
-            //testCSMSv2_1.OnJSONMessageRequestReceived     += async (timestamp, server, connection, destinationId, networkPath, eventTrackingId, requestTimestamp, requestMessage,     cancellationToken) => {
-
-            //    await DebugLog(
-            //        $"Received a JSON web socket request from '{destinationId}': '{requestMessage.ToString(Formatting.None)}'!",
-            //        cancellationToken
-            //    );
-
-            //    await WriteToLogfileV2_1(
-            //        $"{requestTimestamp.ToISO8601()}\tREQ IN\t{destinationId}\t{connection.RemoteSocket}\t{requestMessage.ToString(Formatting.None)}",
-            //        cancellationToken
-            //    );
-
-            //};
-
-            //testCSMSv2_1.OnJSONMessageResponseSent        += async (timestamp, server, connection, networkingNodeId, networkPath, eventTrackingId, requestTimestamp, jsonRequestMessage, binaryRequestMessage, responseTimestamp, jsonResponseMessage, cancellationToken)   => {
-
-            //    await DebugLog(
-            //        $"Sent a JSON web socket response to '{networkingNodeId}': '{jsonResponseMessage.ToString(Formatting.None)}'!",
-            //        cancellationToken
-            //    );
-
-            //    await WriteToLogfileV2_1(
-            //        $"{responseTimestamp.ToISO8601()}\tRES OUT\t{networkingNodeId}\t{connection.RemoteSocket}\t{jsonResponseMessage.ToString(Formatting.None)}",
-            //        cancellationToken
-            //    );
-
-            //};
-
-
-
-            //testCSMSv2_1.OnJSONMessageRequestSent         += async (timestamp, server, connection, destinationId, networkPath, eventTrackingId, requestTimestamp, requestMessage,     cancellationToken) => {
-
-            //    await DebugLog(
-            //        $"Sent a JSON web socket request to '{destinationId}': '{requestMessage.ToString(Formatting.None)}'!",
-            //        cancellationToken
-            //    );
-
-            //    await WriteToLogfileV2_1(
-            //        $"{requestTimestamp.ToISO8601()}\tREQ OUT\t{destinationId}\t{connection.RemoteSocket}\t{requestMessage.ToString(Formatting.None)}",
-            //        cancellationToken
-            //    );
-
-            //};
-
-            //testCSMSv2_1.OnJSONMessageResponseReceived    += async (timestamp, server, connection, networkingNodeId, networkPath, eventTrackingId, requestTimestamp, jsonRequestMessage, binaryRequestMessage, responseTimestamp, jsonResponseMessage, cancellationToken)   => {
-
-            //    await DebugLog(
-            //        $"Received a JSON web socket response from '{networkingNodeId}': '{jsonResponseMessage.ToString(Formatting.None)}'!",
-            //        cancellationToken
-            //    );
-
-            //    await WriteToLogfileV2_1(
-            //        $"{responseTimestamp.ToISO8601()}\tRES IN\t{networkingNodeId}\t{connection.RemoteSocket}\t{jsonResponseMessage.ToString(Formatting.None)}",
-            //        cancellationToken
-            //    );
-
-            //};
-
-            //testCSMSv2_1.OnJSONErrorResponseReceived  += async (timestamp, server, connection,
-            //                                                    //networkingNodeId, networkPath,
-            //                                                    eventTrackingId,
-            //                                                    requestTimestamp,
-            //                                                    textRequestMessage, //ToDo: Just be JSON!
-            //                                                    binaryRequestMessage,
-            //                                                    responseTimestamp,
-            //                                                    textResponseMessage, //ToDo: Just be JSON!
-            //                                                    cancellationToken)   => {
-
-            //    var networkingNodeId = "-";
-
-            //    await DebugLog(
-            //        $"Received a JSON web socket response from '{networkingNodeId}': '{textResponseMessage}'!",
-            //        cancellationToken
-            //    );
-
-            //    await WriteToLogfileV2_1(
-            //        $"{responseTimestamp.ToISO8601()}\tERR IN\t{networkingNodeId}\t{connection.RemoteSocket}\t{textResponseMessage}",
-            //        cancellationToken
-            //    );
-
-            //};
-
-            #endregion
-
-            #region Binary Messages
-
-            //testCSMSv2_1.OnBinaryMessageRequestReceived   += async (timestamp, server, connection, destinationId, networkPath, eventTrackingId, requestTimestamp, requestMessage,     cancellationToken) => {
-
-            //    await DebugLog(
-            //        $"Received a binary web socket request from '{destinationId}': '{requestMessage.ToBase64()}'!",
-            //        cancellationToken
-            //    );
-
-            //    await WriteToLogfileV2_1(
-            //        $"{requestTimestamp.ToISO8601()}\tREQ IN\t{destinationId}\t{connection.RemoteSocket}\t{requestMessage.ToBase64()}",
-            //        cancellationToken
-            //    );
-
-            //};
-
-            //testCSMSv2_1.OnBinaryMessageResponseSent      += async (timestamp, server, connection, destinationId, networkPath, eventTrackingId, requestTimestamp, jsonRequestMessage, binaryRequestMessage, responseTimestamp, binaryResponseMessage, cancellationToken) => {
-
-            //    await DebugLog(
-            //        $"Sent a binary web socket response to '{destinationId}': '{binaryResponseMessage.ToBase64()}'!",
-            //        cancellationToken
-            //    );
-
-            //    await WriteToLogfileV2_1(
-            //        $"{responseTimestamp.ToISO8601()}\tRES OUT\t{destinationId}\t{connection.RemoteSocket}\t{binaryResponseMessage.ToBase64()}",
-            //        cancellationToken
-            //    );
-
-            //};
-
-            //testCSMSv2_1.OnBinaryMessageRequestSent       += async (timestamp, server, connection, destinationId, networkPath, eventTrackingId, requestTimestamp, requestMessage,     cancellationToken) => {
-
-            //    await DebugLog(
-            //        $"Sent a binary web socket request to '{destinationId}': '{requestMessage.ToBase64()}'!",
-            //        cancellationToken
-            //    );
-
-            //    await WriteToLogfileV2_1(
-            //        $"{requestTimestamp.ToISO8601()}\tREQ OUT\t{destinationId}\t{connection.RemoteSocket}\t{requestMessage.ToBase64()}",
-            //        cancellationToken
-            //    );
-
-            //};
-
-            //testCSMSv2_1.OnBinaryMessageResponseReceived  += async (timestamp, server, connection, destinationId, networkPath, eventTrackingId, requestTimestamp, jsonRequestMessage, binaryRequestMessage, responseTimestamp, binaryResponseMessage, cancellationToken) => {
-
-            //    await DebugLog(
-            //        $"Received a binary web socket response from '{destinationId}': '{binaryResponseMessage.ToBase64()}'!",
-            //        cancellationToken
-            //    );
-
-            //    await WriteToLogfileV2_1(
-            //        $"{responseTimestamp.ToISO8601()}\tRES IN\t{destinationId}\t{connection.RemoteSocket}\t{binaryResponseMessage.ToBase64()}",
-            //        cancellationToken
-            //    );
-
-            //};
-
-            #endregion
-
-            // ERRORS!!!
-
-            #endregion
-
-
-        }
-
-
-                private static async Task DebugLog(String             Message,
-                                           CancellationToken  CancellationToken)
-        {
-
-            try
-            {
-                await cliLock.WaitAsync(CancellationToken);
-                DebugX.Log(Message);
-            }
-            catch (Exception e)
-            {
-                //DebugX.LogException(e, $"{nameof(testCSMSv2_1)}.{nameof(testCSMSv2_1.OnNewTCPConnection)}");
-                DebugX.LogException(e, $"{nameof(DebugLog)}");
-            }
-            finally
-            {
-                cliLock.Release();
-            }
-
-        }
-
-
-        private static async Task Log(String             LogFileName,
-                                      String             Message,
-                                      SemaphoreSlim      LogFileLock,
-                                      CancellationToken  CancellationToken)
-        {
-
-            var retry = 0;
-
-            do
-            {
-                try
-                {
-
-                    retry++;
-
-                    await LogFileLock.WaitAsync(CancellationToken);
-
-                    await File.AppendAllTextAsync(
-                             LogFileName,
-                             Message + Environment.NewLine,
-                             CancellationToken
-                         );
-
-                }
-                catch (Exception e)
-                {
-                    DebugX.LogException(e, $"{nameof(WriteToLogfileV2_1)}");
-                }
-                finally
-                {
-                    LogFileLock.Release();
-                }
-
-
-            }
-            while (retry > 3);
-
-        }
-
-        private static Task WriteToLogfileV1_6(String             Message,
-                                               CancellationToken  CancellationToken)
-
-            => Log(logfileNameV1_6,
-                   Message,
-                   logfileLock1_6,
-                   CancellationToken);
-
-
-        private static Task WriteToLogfileV2_1(String             Message,
-                                               CancellationToken  CancellationToken)
-
-            => Log(logfileNameV2_1,
-                   Message,
-                   logfileLock2_6,
-                   CancellationToken);
-
-
-        static System.Security.Cryptography.ECDsa ConvertFromPkcs8(byte[] pkcs8)
-        {
-            using (var ms     = new MemoryStream(pkcs8))
-            using (var reader = new BinaryReader(ms))
-            {
-                var ecdsa = System.Security.Cryptography.ECDsa.Create();
-                ecdsa.ImportPkcs8PrivateKey(reader.ReadBytes((int) ms.Length), out _);
-                return ecdsa;
-            }
-        }
-
-        #region ToDotNet(this Certificate, PrivateKey = null)
-
-        static ECDsa ToDotNetECDsa(ECPrivateKeyParameters privateKeyParameters)
-        {
-
-            var domainParameters  = privateKeyParameters.Parameters;
-            var curveParams       = domainParameters.Curve;
-            var q                 = domainParameters.G.Multiply(privateKeyParameters.D).Normalize();
-
-            var ecdsa             = ECDsa.Create(new ECParameters() {
-                                        Curve = ECCurve.CreateFromOid(new Oid(curveParams.ToString())),
-                                        D     = privateKeyParameters.D.ToByteArrayUnsigned(),
-                                        Q     = new ECPoint {
-                                                    X = q.AffineXCoord.GetEncoded(),
-                                                    Y = q.AffineYCoord.GetEncoded()
-                                                }
-                                    });
-
-            return ecdsa;
-
-        }
-
+        #region Data
 
         /// <summary>
-        /// Convert the Bouncy Castle certificate to a .NET certificate.
+        /// The manifest resource prefix of the embedded frontend bundle
+        /// (see the EmbedFrontend target of CSMS.csproj).
         /// </summary>
-        /// <param name="Certificate">A Bouncy Castle certificate.</param>
-        /// <param name="PrivateKey">An optional private key to be included.</param>
-        static System.Security.Cryptography.X509Certificates.X509Certificate2? ToDotNet(X509Certificate                Certificate,
-                                                                                        AsymmetricKeyParameter?        PrivateKey       = null,
-                                                                                        IEnumerable<X509Certificate>?  CACertificates   = null)
+        public const String  HTTPRoot            = "cloud.charging.open.CSMS.HTTPRoot.";
+
+        /// <summary>
+        /// The TCP port the web interface listens on, unless another is given.
+        /// </summary>
+        /// <remarks>
+        /// Next to the ports the other OpenChargingCloud boxes use - a charging
+        /// station 2348 and 2349, a local controller 2350 - and not one of them:
+        /// a CSMS, a controller and a station are routinely tried out on the
+        /// same bench, and two web interfaces fighting over one socket is a
+        /// confusing way to find that out.
+        /// </remarks>
+        public static readonly IPPort DefaultHTTPPort = IPPort.Parse(2351);
+
+        /// <summary>
+        /// Where the HTTPExt API - users, organizations, API keys - lives,
+        /// unless another path is given.
+        /// </summary>
+        /// <remarks>
+        /// Below a path of its own rather than at "/", because three things
+        /// share this server: the JSON API of this CSMS at "/api", the web
+        /// interface at "/", and this. The web interface is the catch-all of
+        /// the three, so everything that is not it needs a prefix that says
+        /// so before the stub gets the request.
+        /// </remarks>
+        public static readonly HTTPPath DefaultHTTPExtAPIPath = HTTPPath.Parse("/ext");
+
+        /// <summary>
+        /// The directory the HTTPExt API keeps its accounts in, unless another
+        /// is given.
+        /// </summary>
+        /// <remarks>
+        /// A directory and not a file, because the HTTPExt API writes more than
+        /// one: the accounts themselves, the passwords, the sessions and the
+        /// password resets all live below it, and it names them itself. What is
+        /// chosen here is only where that tree starts.
+        /// </remarks>
+        public const String  DefaultHTTPExtAPIDataPath     = "CSMS-accounts";
+
+        /// <summary>
+        /// The file inside that directory that holds the accounts.
+        /// </summary>
+        public const String  DefaultHTTPExtAPIDatabaseFile = "CSMS-accounts.db";
+
+        /// <summary>
+        /// The file of the bundle that is the web interface; its presence is
+        /// what says there is one to serve at all.
+        /// </summary>
+        public const String  IndexFile           = "index.html";
+
+        /// <summary>
+        /// The icon of the bundle, which /favicon.ico is pointed at.
+        /// </summary>
+        public const String  FaviconSVG          = "favicon.svg";
+
+        private readonly  DNSClient                       dnsClient;
+        private           NTSClient                       ntsClient;
+
+        /// <summary>
+        /// The name servers this CSMS would ask, whether or not
+        /// name resolution is switched on at the moment.
+        /// </summary>
+        /// <remarks>
+        /// Kept beside the DNS client because switching name resolution off is
+        /// done by taking its servers away - which is what being switched off
+        /// actually means, for everything holding that client and not only for
+        /// the parts of this CSMS that remember to ask first. Switching
+        /// it back on needs the list back, and this is where it waited.
+        /// </remarks>
+        private           IReadOnlyList<DNSServerConfig>  configuredDNSServers;
+
+        /// <summary>
+        /// Serialises changes to what this CSMS is made of, so that
+        /// two browsers saving at the same moment do not build half a
+        /// CSMS each.
+        /// </summary>
+        private readonly  SemaphoreSlim                   reconfigureLock = new (1, 1);
+
+        private readonly  HTTPServer                      httpServer;
+        private readonly  HTTPPath                        httpRootPath;
+
+        /// <summary>
+        /// When this CSMS last managed to check its clock, what it
+        /// found, and against whom.
+        /// </summary>
+        /// <remarks>
+        /// Three fields rather than one object because they are written from
+        /// one place and read from another, and the alternative - digging them
+        /// back out of the JSON of the last check - would make every reader
+        /// depend on the shape of a diagnostic.
+        /// </remarks>
+        private           DateTimeOffset?                 lastTimeCheck;
+        private           TimeSpan?                       lastTimeCheckOffset;
+        private           String?                         lastTimeCheckServer;
+
+        /// <summary>
+        /// The clock that makes this CSMS check its own, when NTS
+        /// is on.
+        /// </summary>
+        private           ITimer?                         timeCheckTimer;
+
+        /// <summary>
+        /// What the file said about the time client, kept because the parts of
+        /// it that are not the client itself - how often to check, and what the
+        /// operator claims about the server - are read long afterwards.
+        /// </summary>
+        private           NTSConfiguration?               ntsSettings;
+
+        private readonly  ConsoleLog?                     consoleLog;
+        private readonly  TraceBridge?                    traceBridge;
+
+        private readonly  OCPPv2_1_CSMS.TestCSMSNode  csms01;
+
+        private           Boolean                         started;
+
+        #endregion
+
+        #region Properties
+
+        /// <summary>
+        /// Everything that happens inside this CSMS.
+        /// </summary>
+        public EventLog               Log                    { get; }
+
+        /// <summary>
+        /// Who may open the web interface, and which browsers currently may.
+        /// </summary>
+        public WebSessions            Sessions               { get; }
+
+        /// <summary>
+        /// Where the web login lives between starts.
+        /// </summary>
+        public WebLoginFile           LoginFile              { get; }
+
+        /// <summary>
+        /// Where everything this CSMS can be told in writing lives
+        /// between starts: its name resolution, its time source, its OCPP
+        /// identification.
+        /// </summary>
+        public CSMSConfigFile   ConfigFile             { get; }
+
+        /// <summary>
+        /// Who this CSMS says it is when it speaks OCPP.
+        /// </summary>
+        /// <remarks>
+        /// As it was read at the start. Unlike the name servers and the time
+        /// server this is not changeable while running - see
+        /// <see cref="OCPPConfiguration"/> for why an identification is a
+        /// different kind of setting from an address.
+        /// </remarks>
+        public OCPPConfiguration      OCPP                   { get; }
+
+        /// <summary>
+        /// The OCPP 2.1 CSMS node this CSMS speaks through.
+        /// </summary>
+        public OCPPv2_1_CSMS.TestCSMSNode  Node
+            => csms01;
+
+        /// <summary>
+        /// How this CSMS resolves names.
+        /// </summary>
+        public DNSClient              DNSClient
+            => dnsClient;
+
+        /// <summary>
+        /// Where this CSMS reads the time.
+        /// </summary>
+        /// <remarks>
+        /// Replaced rather than reconfigured when it is pointed at another
+        /// server: an NTS client is bound to its host at construction, and the
+        /// cookies and keys it holds belong to that host and to no other.
+        /// </remarks>
+        public NTSClient              NTSClient
+            => ntsClient;
+
+        /// <summary>
+        /// Whether this CSMS resolves names at all.
+        /// </summary>
+        /// <remarks>
+        /// Switched off by taking the name servers away from the DNS client, so
+        /// that it is off for everything that was handed that client - not only
+        /// for the parts of this CSMS that would have remembered to check
+        /// a flag first. A query then fails at once and says why.
+        /// </remarks>
+        public Boolean                DNSEnabled             { get; private set; } = true;
+
+        /// <summary>
+        /// Whether this CSMS may ask its time server.
+        /// </summary>
+        public Boolean                NTSEnabled             { get; private set; } = true;
+
+        /// <summary>
+        /// The password this CSMS made up because there was no
+        /// login file, or null when the login came from the file. It is shown
+        /// once, on the console, and kept nowhere but in its hash.
+        /// </summary>
+        public String?                GeneratedPassword      { get; }
+
+        /// <summary>
+        /// Where the web interface comes from: this assembly, or a directory
+        /// on disk.
+        /// </summary>
+        public IStaticContentSource   Frontend               { get; }
+
+        /// <summary>
+        /// The HTTP server everything below is registered within.
+        /// </summary>
+        public HTTPServer             HTTPServer
+            => httpServer;
+
+        /// <summary>
+        /// The HTTPExt API at "/ext/": the users, organizations and API keys
+        /// this CSMS is administered with.
+        /// </summary>
+        /// <remarks>
+        /// This is where a CSMS parts company with a charging station or a
+        /// local controller, which carry one web login each and are done with
+        /// it. A CSMS is the back end of an estate: the people who read it are
+        /// not the people who configure it, the machines that call it are not
+        /// people at all, and both outlive any one of its operators. That is
+        /// what Hermod's HTTPExt API is - accounts, groups, organizations and
+        /// API keys, kept in its own database file - and building a second,
+        /// smaller version of it here would only mean having two.
+        /// </remarks>
+        public HTTPExtAPI             ExtAPI                 { get; }
+
+        /// <summary>
+        /// The JSON API at "/api/".
+        /// </summary>
+        public CSMSHTTPAPI            API                    { get; }
+
+        /// <summary>
+        /// The web interface at "/", or null when no bundle was found to serve.
+        /// </summary>
+        public HTTPAPI?               WebInterface           { get; }
+
+        /// <summary>
+        /// The URL to open in a browser.
+        /// </summary>
+        public URL                    WebInterfaceURL        { get; }
+
+        /// <summary>
+        /// The version of this CSMS.
+        /// </summary>
+        public String                 Version                { get; }
+
+        /// <summary>
+        /// Where this CSMS reads the time.
+        /// </summary>
+        /// <remarks>
+        /// A CSMS is the clock of everything below it: it is what
+        /// a charging station without a time source of its own is told the time
+        /// by, and what the records passing through it are stamped against. So
+        /// the clock is something to be handed in rather than reached for. The
+        /// system clock by default; an NTS-disciplined or a fake one where a
+        /// test or a calibration says so.
+        /// </remarks>
+        public TimeProvider           TimeProvider           { get; }
+
+        /// <summary>
+        /// When this CSMS was created, by its own clock.
+        /// </summary>
+        public DateTimeOffset         CreatedAt              { get; }
+
+        #endregion
+
+        #region Constructor(s)
+
+        /// <summary>
+        /// Create a CSMS with a web interface in front of it.
+        /// Nothing listens yet: <see cref="Start"/> does.
+        /// </summary>
+        /// <param name="DNSClient">The DNS client used by everything below.</param>
+        /// <param name="NTSClient">The time client.</param>
+        /// <param name="HTTPServer">An HTTP server to register within, or null to make one.</param>
+        /// <param name="HTTPRootPath">The root path of the JSON API, "/api" by default.</param>
+        /// <param name="HTTPExtAPIPath">The root path of the HTTPExt API, "/ext" by default.</param>
+        /// <param name="HTTPExtAPIDataPath">The directory the HTTPExt API keeps its users, organizations and API keys in.</param>
+        /// <param name="HTTPHostname">The address to listen on; the loopback address by default.</param>
+        /// <param name="HTTPPort">The TCP port to listen on.</param>
+        /// <param name="LoginFile">Where the web login lives; "web-login.json" beside the process by default.</param>
+        /// <param name="ConfigFile">Where everything this CSMS can be told in writing lives; "configuration.json" beside the process by default.</param>
+        /// <param name="OCPP">Who this CSMS says it is in OCPP, unless the configuration file says otherwise.</param>
+        /// <param name="Frontend">Where the web interface comes from; the bundle embedded in this assembly by default.</param>
+        /// <param name="Log">The event log; a new one by default.</param>
+        /// <param name="LogToConsole">Whether the event log is also written to the console.</param>
+        /// <param name="ConsoleLogLevel">What the console shows of it.</param>
+        /// <param name="BridgeDebugLog">Whether what the libraries below write with DebugX ends up in the log.</param>
+        /// <param name="TimeProvider">Where this CSMS reads the time; the system clock by default.</param>
+        public CSMS(DNSClient?             DNSClient               = null,
+                    NTSClient?             NTSClient               = null,
+                    HTTPServer?            HTTPServer              = null,
+                    HTTPPath?              HTTPRootPath            = null,
+                    HTTPPath?              HTTPExtAPIPath          = null,
+                    String?                HTTPExtAPIDataPath      = null,
+                    IIPAddress?            HTTPHostname            = null,
+                    IPPort?                HTTPPort                = null,
+                    WebLoginFile?          LoginFile               = null,
+                    CSMSConfigFile?        ConfigFile              = null,
+                    OCPPConfiguration?     OCPP                    = null,
+                    IStaticContentSource?  Frontend                = null,
+                    EventLog?              Log                     = null,
+                    Boolean                LogToConsole            = true,
+                    LogLevel               ConsoleLogLevel         = LogLevel.Info,
+                    Boolean                BridgeDebugLog          = true,
+                    TimeProvider?          TimeProvider            = null)
         {
 
-            if (PrivateKey is null)
-                return new (Certificate.GetEncoded());
+            #region The clock, before anything that wants to know the time
 
-            if (PrivateKey is RsaPrivateCrtKeyParameters rsaPrivateKey)
+            // First of all, and not for tidiness: the event log below stamps
+            // every entry with this, so a clock set afterwards would leave the
+            // log reading the system one - and a log on a different clock than
+            // the CSMS it belongs to cannot be held against anything.
+            this.TimeProvider  = TimeProvider ?? System.TimeProvider.System;
+            this.CreatedAt     = this.TimeProvider.GetUtcNow();
+
+            #endregion
+
+            #region The log, next - everything below it may want to say something
+
+            this.Version      = typeof(CSMS).Assembly.GetName().Version?.ToString(3) ?? "0.0.0";
+            this.Log          = Log ?? new EventLog(TimeProvider: this.TimeProvider);
+
+            this.consoleLog   = LogToConsole
+                                    ? new ConsoleLog(this.Log, ConsoleLogLevel)
+                                    : null;
+
+            // Attached before anything else is built, so that what the DNS
+            // client, the HTTP server and the OCPP node say while they are
+            // being made is already in the log a browser will see later.
+            this.traceBridge  = BridgeDebugLog
+                                    ? TraceBridge.Attach(this.Log)
+                                    : null;
+
+            this.Log.Notice($"CSMS v{this.Version} starting up.", "csms");
+
+            #endregion
+
+            #region Who may open the web interface
+
+            this.LoginFile = LoginFile ?? new WebLoginFile(WebLoginFile.DefaultFileName);
+
+            if (this.LoginFile.TryLoad(out var loadedLogin, out var loginError) && loadedLogin is not null)
+                this.Sessions = new WebSessions(loadedLogin,   TimeProvider: this.TimeProvider);
+
+            else
             {
 
-                var store             = new Pkcs12StoreBuilder().Build();
-                var certificateEntry  = new X509CertificateEntry(Certificate);
+                // A login file that is there but unreadable is not something to
+                // paper over with a new password: that would lock out whoever
+                // owns the old one without saying why.
+                if (loginError is not null)
+                    throw new InvalidOperationException($"{loginError} Repair or remove '{this.LoginFile.Path}' and start again.");
 
-                store.SetCertificateEntry(Certificate.SubjectDN.ToString(),
-                                          certificateEntry);
+                // A first start: nobody can sign in to a web interface whose
+                // login is not set yet, and an unauthenticated setup page would
+                // be a door of its own. So the password is made up here and
+                // shown once, on the console, to whoever started the process.
+                var (generated, password) = WebLoginSettings.Generate();
 
-                store.SetKeyEntry        (Certificate.SubjectDN.ToString(),
-                                          new AsymmetricKeyEntry(rsaPrivateKey),
-                                          [ certificateEntry ]);
+                this.LoginFile.Save(generated);
 
-                foreach (var caCertificate in (CACertificates ?? []))
-                {
-                    store.SetCertificateEntry(caCertificate.SubjectDN.ToString(),
-                                              new X509CertificateEntry(caCertificate));
-                }
+                this.Sessions           = new WebSessions(generated, TimeProvider: this.TimeProvider);
+                this.GeneratedPassword  = password;
 
-                using (var pfxStream = new MemoryStream())
-                {
-
-                    var password = RandomExtensions.RandomString(10);
-
-                    store.Save(pfxStream,
-                               password.ToCharArray(),
-                               new SecureRandom());
-
-                    return new System.Security.Cryptography.X509Certificates.X509Certificate2(
-                               pfxStream.ToArray(),
-                               password,
-                               System.Security.Cryptography.X509Certificates.X509KeyStorageFlags.Exportable
-                           );
-
-                }
+                this.Log.Notice($"No web login found, so one was made up and written to '{this.LoginFile.Path}'.", "web", "auth");
 
             }
 
-            if (PrivateKey is ECPrivateKeyParameters eccPrivateKey)
+            #endregion
+
+            #region What the configuration file says
+
+            this.ConfigFile = ConfigFile ?? new CSMSConfigFile(CSMSConfigFile.DefaultFileName);
+
+            CSMSConfiguration? configuration = null;
+
+            if (this.ConfigFile.Exists)
             {
 
-                //var dotNetCertificate = new System.Security.Cryptography.X509Certificates.X509Certificate2(Certificate.GetEncoded());
-                //var ecdsa             = ToDotNetECDsa(eccPrivateKey);
+                // A file that is there but cannot be read is not something to
+                // paper over with defaults: somebody wrote down what their
+                // CSMS is and got it wrong, and quietly running as
+                // something else instead would be worse than stopping.
+                if (!this.ConfigFile.TryLoad(out configuration, out var configError))
+                    throw new InvalidOperationException($"{configError} Repair or remove '{this.ConfigFile.Path}' and start again.");
 
-                //return dotNetCertificate.CopyWithPrivateKey(ecdsa);
+                this.Log.Info($"Configuration from '{this.ConfigFile.Path}': {configuration}.", "config");
 
             }
 
-            return null;
+            #endregion
+
+            #region The clients everything below shares
+
+            this.dnsClient             = DNSClient ?? new DNSClient();
+            this.configuredDNSServers  = [.. dnsClient.DNSServers];
+
+            // The clock goes to the time client too: a CSMS that reads
+            // one clock itself and disciplines another would have two, which is
+            // one more than anything below it can be told the time by.
+            this.ntsClient     = NTSClient    ?? new NTSClient(
+                                                     DomainName.Parse(NTSConfiguration.DefaultHostname),
+                                                     Timeout:         TimeSpan.FromSeconds(10),
+                                                     DNSClient:       dnsClient,
+                                                     TimeProvider:    this.TimeProvider
+                                                 );
+
+            // Last, and that is the whole precedence rule: what this
+            // constructor was handed holds until the file says otherwise, and
+            // what the file does not mention is left exactly as it was.
+            if (configuration?.DNS is not null)
+                ApplyDNSConfiguration(configuration.DNS);
+
+            if (configuration?.NTS is not null)
+                ApplyNTSConfiguration(configuration.NTS);
+
+            this.ntsSettings = configuration?.NTS;
+
+            #endregion
+
+            #region Who this CSMS says it is
+
+            this.OCPP = configuration?.OCPP
+                            ?? OCPP
+                            ?? new OCPPConfiguration();
+
+            #endregion
+
+            #region The HTTP server, the JSON API and the web interface
+
+            var address        = HTTPHostname ?? IPv4Address.Localhost;
+            var port           = HTTPPort     ?? DefaultHTTPPort;
+
+            this.httpServer    = HTTPServer   ?? new HTTPServer(
+                                                     IPAddress:       address,
+                                                     TCPPort:         port,
+                                                     HTTPServerName:  $"OpenChargingCloud CSMS v{Version}",
+                                                     DNSClient:       dnsClient
+                                                 );
+
+            this.httpRootPath  = HTTPRootPath ?? CSMSHTTPAPI.DefaultAPIPath;
+
+            this.WebInterfaceURL = URL.Parse($"http://{address}:{port}/");
+
+            // The HTTPExt API builds the paths of its files by putting strings
+            // together rather than with Path.Combine, so a directory that does
+            // not end in a separator would give it "...accountsUsersAPI" and
+            // not "...accounts/UsersAPI". Ending it here is cheaper than
+            // finding that out from the name of a file nobody meant to write.
+            var extAPIDataPath = HTTPExtAPIDataPath ?? Path.Combine(AppContext.BaseDirectory, DefaultHTTPExtAPIDataPath);
+
+            if (!extAPIDataPath.EndsWith(Path.DirectorySeparatorChar))
+                extAPIDataPath += Path.DirectorySeparatorChar;
+
+            // 1) The HTTPExt API at "/ext". First of the three, because it is
+            //    the one with a database behind it: whatever it finds wrong
+            //    with its files, it should say so before a port is opened and
+            //    before a charging station is let in against accounts that
+            //    were not read.
+            this.ExtAPI        = new HTTPExtAPI(
+                                     HTTPServer:             httpServer,
+                                     RootPath:               HTTPExtAPIPath ?? DefaultHTTPExtAPIPath,
+                                     HTTPServerName:         $"OpenChargingCloud CSMS v{Version}",
+                                     HTTPServiceName:        $"OpenChargingCloud CSMS v{Version}",
+                                     APIRobotEMailAddress:   EMailAddress.Parse("OpenChargingCloud CSMS Robot <robot@charging.cloud>"),
+                                     APIRobotGPGPassphrase:  "",
+
+                                     // Nothing here sends mail. A CSMS that
+                                     // notifies by e-mail is told so by its
+                                     // operator, with a submission client of
+                                     // their own; until then a mailer that
+                                     // swallows what it is given is better
+                                     // than one that quietly retries against
+                                     // a host nobody configured.
+                                     SMTPSubmissionClient:   new NullMailer(),
+                                     DisableNotifications:   true,
+
+                                     LoggingPath:            extAPIDataPath,
+                                     DatabaseFileName:       DefaultHTTPExtAPIDatabaseFile,
+
+                                     // Left on, and that is what makes the
+                                     // directory above: switching it off skips
+                                     // the CreateDirectory that the accounts
+                                     // file is written into, and the first
+                                     // account created would fail on a path
+                                     // that was never made.
+                                     DisableLogging:         false
+                                 );
+
+            this.Log.Info($"The HTTPExt API is at '{(HTTPExtAPIPath ?? DefaultHTTPExtAPIPath)}', its accounts in '{ExtAPI.DatabaseFileName}'.", "web", "http");
+
+            // 2) The JSON API at "/api". Before the web interface, so that it
+            //    is the more specific API and an unknown /api path never
+            //    reaches the single-page-application stub below.
+            this.API           = new CSMSHTTPAPI(
+                                     HTTPServer:  httpServer,
+                                     CSMS:        this,
+                                     Sessions:    Sessions,
+                                     Log:         this.Log,
+                                     APIPath:     httpRootPath,
+                                     Version:     Version
+                                 );
+
+            // 3) The web interface at "/": the files of the bundle, and the
+            //    single-page-application stub for every other page URL, so
+            //    that a reload on /logs and a bookmark to it both work.
+            this.Frontend      = Frontend ?? new EmbeddedContentSource(HTTPRoot, typeof(CSMS).Assembly);
+
+            if (this.Frontend.TryGet(IndexFile, out _))
+            {
+
+                this.WebInterface = httpServer.AddHTTPAPI();
+
+                this.WebInterface.MapSinglePageApplication(
+                    this.Frontend,
+                    new SinglePageAppOptions {
+                        IndexTransform = html => html.Replace("{{ServerVersion}}", $"v{Version}", StringComparison.Ordinal)
+                    }
+                );
+
+                // Browsers ask for /favicon.ico whatever the page says, and a
+                // bundle built by webpack carries an SVG. A literal route wins
+                // over the catch-all, so this answers before the stub would -
+                // and beats a 404 on every visit, which is a line in the log
+                // and a broken icon in the tab.
+                if (this.Frontend.TryGet(FaviconSVG, out _))
+                    this.WebInterface.AddHandler(
+                        HTTPPath.Parse("/favicon.ico"),
+                        request => Task.FromResult(
+                                       new HTTPResponse.Builder(request) {
+                                           HTTPStatusCode  = HTTPStatusCode.TemporaryRedirect,
+                                           Location        = Location.From(HTTPPath.Parse("/" + FaviconSVG)),
+                                           CacheControl    = "public, max-age=3600"
+                                       }.AsImmutable
+                                   ),
+                        HTTPMethod.GET
+                    );
+
+            }
+
+            else
+                this.Log.Error(
+                    $"No web interface to serve ({this.Frontend.Description}): the JSON API answers, the browser gets nothing. " +
+                    "Build the frontend (npm run build in Frontend/) or point the CSMS at a directory with --frontend.",
+                    "web"
+                );
+
+            #region Every request, into the log
+
+            httpServer.OnHTTPRequest  += (server, request, cancellationToken) => {
+
+                // The event stream is one request that stays open for as long
+                // as a browser has the page open; logging it would say nothing
+                // and logging its response would say it at the wrong moment.
+                if (!IsEventStream(request))
+                    this.Log.Debug($"{request.HTTPMethod} {request.Path} from {request.RemoteSocket}", "http");
+
+                return Task.CompletedTask;
+
+            };
+
+            // Only OnHTTPResponse, and not OnHTTPError beside it: Hermod raises
+            // both for the same response, and one line per request is what a
+            // log is for.
+            httpServer.OnHTTPResponse += (server, request, response, cancellationToken) => {
+
+                if (IsEventStream(request))
+                    return Task.CompletedTask;
+
+                var code = response.HTTPStatusCode.Code;
+
+                this.Log.Log(
+                    code >= 500 ? LogLevel.Error
+                        // A 401 is how the web interface asks whether anybody
+                        // is signed in, and the answer "nobody" is not a fault.
+                        : code == 401 ? LogLevel.Debug
+                        : code >= 400 ? LogLevel.Warning
+                        : LogLevel.Debug,
+                    $"{code} {response.HTTPStatusCode.Name} for {request.HTTPMethod} {request.Path}",
+                    "http"
+                );
+
+                return Task.CompletedTask;
+
+            };
+
+            #endregion
+
+            #endregion
+
+            #region The OCPP node
+
+            csms01 = BuildOCPPNode(this.OCPP);
+
+            // "this." and not for tidiness: the parameters of this constructor
+            // shadow the properties of the same name, and the "Log" parameter
+            // is null whenever the caller did not bring an event log of its own.
+            this.Log.Info($"OCPP 2.1 CSMS '{csms01.Id}' is set up as {csms01.VendorName} {csms01.Model}.", "ocpp");
+
+            #endregion
+
+            #region The server the charging stations connect to
+
+            // After the node, because it is attached to it, and after the
+            // configuration file, because what it listens on is written there.
+            // Nothing listens yet: Start() does.
+            BuildOCPPServer(configuration?.OCPPServer);
+
+            #endregion
 
         }
 
         #endregion
 
 
+        #region Start()
+
+        /// <summary>
+        /// Start listening.
+        /// </summary>
+        public async Task Start()
+        {
+
+            if (started)
+                return;
+
+            await httpServer.Start();
+
+            await StartOCPPServer();
+
+            StartCheckingTheClock();
+
+            started = true;
+
+            Log.Notice($"The web interface is listening on {WebInterfaceURL}", "web", "http");
+            Log.Info   ($"The JSON API is at {WebInterfaceURL}{httpRootPath.ToString().Trim('/')}/v1/status", "web", "http");
+
+        }
+
+        #endregion
+
+        #region Stop()
+
+        /// <summary>
+        /// Stop listening.
+        /// </summary>
+        public async Task Stop()
+        {
+
+            if (!started)
+                return;
+
+            Log.Notice("The CSMS is shutting down.", "csms");
+
+            timeCheckTimer?.Dispose();
+            timeCheckTimer = null;
+
+            // Before the server, and that order is the whole point: every
+            // browser with the Logs page open holds a request that is waiting
+            // for the next log entry rather than for its socket, and the HTTP
+            // server waits for every request it started. Closing the sockets
+            // does not wake those, so they are ended here first.
+            API.CloseEventStreams();
+
+            await StopOCPPServer();
+
+            await httpServer.Stop();
+
+            started = false;
+
+        }
+
+        #endregion
+
+        #region ConfigurationJSON()
+
+        /// <summary>
+        /// What this CSMS is made of, as the Configuration page of
+        /// the web interface reads it.
+        /// </summary>
+        /// <remarks>
+        /// Read-only: it answers "what am I running", not "change it". Nothing
+        /// here is a secret - the web login appears with its username and the
+        /// path of its file, and never with anything about its password.
+        /// </remarks>
+        public JObject ConfigurationJSON()
+
+            => new (
+
+                   new JProperty("CSMS", new JObject(
+                       new JProperty("version",        Version),
+                       new JProperty("createdAt",      CreatedAt.ToString("o")),
+                       new JProperty("machine",        Environment.MachineName),
+                       new JProperty("runtime",        Environment.Version.ToString()),
+                       new JProperty("os",             Environment.OSVersion.ToString())
+                   )),
+
+                   new JProperty("http",       new JObject(
+                       new JProperty("serverName",     httpServer.HTTPServerName),
+                       new JProperty("url",            WebInterfaceURL.ToString()),
+                       new JProperty("apiPath",        httpRootPath.ToString()),
+                       new JProperty("running",        started),
+                       new JProperty("frontend",       Frontend.Description),
+                       new JProperty("webInterface",   WebInterface is not null)
+                   )),
+
+                   new JProperty("web",        new JObject(
+                       new JProperty("username",       Sessions.Username),
+                       new JProperty("loginFile",      LoginFile.Path),
+                       new JProperty("cookie",         Sessions.CookieName.ToString()),
+                       new JProperty("secureCookies",  Sessions.SecureCookies),
+                       new JProperty("idleTimeout",    Sessions.IdleTimeout.    ToString()),
+                       new JProperty("maxLifetime",    Sessions.MaximumLifetime.ToString()),
+                       new JProperty("sessions",       Sessions.Count)
+                   )),
+
+                   new JProperty("log",        new JObject(
+                       new JProperty("capacity",       Log.Capacity),
+                       new JProperty("entries",        Log.Count),
+                       new JProperty("lastId",         Log.LastId),
+                       new JProperty("debugBridge",    traceBridge is not null),
+                       new JProperty("console",        consoleLog is not null),
+                       new JProperty("tags",           new JArray(Log.KnownTags))
+                   )),
+
+                   new JProperty("time",       new JObject(
+                       new JProperty("nts",            ntsClient.Hostname.ToString()),
+                       new JProperty("now",            TimeProvider.GetUtcNow().ToString("o"))
+                   )),
+
+                   new JProperty("ocpp",       new JObject(
+                       new JProperty("version",          "2.1"),
+                       new JProperty("role",             "CSMS"),
+                       new JProperty("id",               csms01.Id.ToString()),
+                       new JProperty("vendor",           csms01.VendorName),
+                       new JProperty("model",            csms01.Model),
+                       new JProperty("serialNumber",     csms01.SerialNumber),
+                       new JProperty("softwareVersion",  csms01.SoftwareVersion),
+                       new JProperty("file",             ConfigFile.Path)
+                   )),
+
+                   new JProperty("stationServer", new JObject(
+                       new JProperty("enabled",          OCPPServerEnabled),
+                       new JProperty("running",          ocppServerStarted),
+                       new JProperty("tls",              ocppServerTLS),
+                       new JProperty("url",              OCPPServerURL),
+                       new JProperty("securityProfiles", new JArray((ocppServerSettings.SecurityProfiles ?? []).Select(profile => (Int32) profile))),
+                       new JProperty("stationLogins",    StationLogins.EnabledCount),
+                       new JProperty("trustedChains",    ClientTrust.EnabledCount),
+                       new JProperty("certificates",     ServerCertificates.Entries.Count)
+                   )),
+
+                   new JProperty("assemblies", new JArray(
+                       AssemblyJSON<HTTPServer>                              ("Hermod"),
+                       AssemblyJSON<NTSClient>                               ("Norn"),
+                       AssemblyJSON<OCPPv2_1_CSMS.TestCSMSNode>     ("OCPP 2.1")
+                   ))
+
+               );
+
+        #endregion
+
+
+        #region (private) BuildOCPPNode(Configuration)
+
+        /// <summary>
+        /// The OCPP 2.1 node this CSMS speaks through.
+        /// </summary>
+        /// <remarks>
+        /// Every HTTP API the node brings of its own is switched off, and that
+        /// is the one place where this differs from letting an
+        /// <c>ACSMSNode</c> look after itself: left alone it would build a
+        /// second HTTP server and a second HTTPExt API, on a port it picked,
+        /// beside the ones this class already made. One CSMS is one address to
+        /// point a browser at - so the server and the HTTPExt API are made
+        /// above, where the listening address, the port and the moment of
+        /// starting are decided, and the node is handed a role rather than a
+        /// socket.
+        ///
+        /// Nothing listens here either. Building the node and opening the port
+        /// the charging stations come through are two different things, and the
+        /// second one is not something a constructor should do on the way past.
+        /// </remarks>
+        private OCPPv2_1_CSMS.TestCSMSNode BuildOCPPNode(OCPPConfiguration Configuration)
+
+            => new (
+
+                   Id:                             NetworkingNode_Id.Parse(Configuration.NodeId     ?? OCPPConfiguration.DefaultNodeId),
+                   VendorName:                     Configuration.VendorName                         ?? OCPPConfiguration.DefaultVendorName,
+                   Model:                          Configuration.Model                              ?? OCPPConfiguration.DefaultModel,
+                   SerialNumber:                   Configuration.SerialNumber,
+                   SoftwareVersion:                Configuration.SoftwareVersion                    ?? Version,
+                   Description:                    I18NString.Empty,
+
+                   HTTPAPI_Disabled:               true,
+                   HTTPAPI_EventLoggingDisabled:   true,
+                   HTTPDownloadAPI_Disabled:       true,
+                   HTTPUploadAPI_Disabled:         true,
+                   WebAPI_Disabled:                true,
+                   NTSServer_Disabled:             true,
+
+                   ControlWebSocketServer:         null,
+
+                   DisableSendHeartbeats:          true,
+                   DisableMaintenanceTasks:        true,
+
+                   DNSClient:                      dnsClient
+
+               );
+
+        #endregion
+
+        #region (private static) AssemblyJSON<T>(Name)
+
+        private static JObject AssemblyJSON<T>(String Name)
+        {
+
+            var assembly = typeof(T).Assembly.GetName();
+
+            return new JObject(
+                       new JProperty("name",      Name),
+                       new JProperty("assembly",  assembly.Name),
+                       new JProperty("version",   assembly.Version?.ToString(3))
+                   );
+
+        }
+
+        #endregion
+
+        #region (private static) IsEventStream(Request)
+
+        /// <summary>
+        /// Whether this request is a browser hanging on the event stream.
+        /// </summary>
+        private static Boolean IsEventStream(HTTPRequest Request)
+            => Request.Path.ToString().EndsWith("/events", StringComparison.Ordinal);
+
+        #endregion
+
+        #region DisposeAsync()
+
+        /// <summary>
+        /// Stop listening and let go of the console and the debug bridge.
+        /// </summary>
+        public async ValueTask DisposeAsync()
+        {
+
+            await Stop();
+
+            traceBridge?.Dispose();
+            consoleLog? .Dispose();
+
+            ServerCertificates?.Dispose();
+            ClientTrust?       .Dispose();
+
+            reconfigureLock.Dispose();
+
+            GC.SuppressFinalize(this);
+
+        }
+
+        #endregion
 
     }
 

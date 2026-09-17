@@ -1,0 +1,400 @@
+﻿/*
+ * Copyright (c) 2014-2026 GraphDefined GmbH <achim.friedland@graphdefined.com>
+ * This file is part of CSMS <https://github.com/OpenChargingCloud/CSMS>
+ *
+ * Licensed under the Affero GPL license, Version 3.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.gnu.org/licenses/agpl.html
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#region Usings
+
+using System.Net.Security;
+using System.Net.WebSockets;
+using System.Security.Cryptography.X509Certificates;
+using System.Text;
+
+using Newtonsoft.Json.Linq;
+
+using NUnit.Framework;
+
+using cloud.charging.open.CSMS.OCPP;
+
+#endregion
+
+namespace cloud.charging.open.CSMS.Tests
+{
+
+    /// <summary>
+    /// A charging station connecting over TLS, to the certificate this local
+    /// CSMS chose out of its store.
+    /// </summary>
+    /// <remarks>
+    /// The certificates have their own tests and the logins have theirs; what
+    /// neither of them can show is that the thing chosen is the thing actually
+    /// presented on the wire. Between the store and a charging station sit a
+    /// chain selector, an SSL stream and a certificate context, and a store
+    /// that picks perfectly into a server that presents something else is
+    /// exactly the failure nobody would find until a site went dark.
+    ///
+    /// Built by hand rather than on the fixture base: the certificate has to be
+    /// in the directory before the CSMS is built, because whether this
+    /// port speaks TLS at all is decided when it starts.
+    /// </remarks>
+    public class ChargingStationTLSTests
+    {
+
+        #region Data
+
+        private const String     ThePassword = "a-password-long-enough-for-ocpp";
+
+        private String           directory   = default!;
+        private TestCA           ca          = default!;
+        private CSMS  CSMS  = default!;
+        private UInt16           port;
+
+        #endregion
+
+        #region SetUp / TearDown
+
+        [SetUp]
+        public void StartAControllerThatAlreadyHasACertificate()
+        {
+
+            directory = TestCSMSs.TemporaryDirectory("tls");
+            Directory.CreateDirectory(directory);
+
+            ca        = TestCA.Create("Test CA", WithIntermediate: true);
+            port      = TestCSMSs.FreePort();
+
+            #region A key and a certificate, put there before anything starts
+
+            using (var store = new ServerCertificateStore(Path.Combine(directory, ServerCertificateStore.DefaultDirectoryName)))
+            {
+
+                Assert.That(store.TryCreateKey("127.0.0.1", [ "127.0.0.1" ], null, out _, out var csr, out var keyError),
+                            Is.True, keyError);
+
+                using var certificate = ca.Sign(csr!, DateTimeOffset.UtcNow.AddDays(-1), DateTimeOffset.UtcNow.AddYears(1));
+
+                Assert.That(store.TryAddCertificate(ca.ChainPEM(certificate), [ "127.0.0.1" ], out _, out _, out var addError),
+                            Is.True, addError);
+
+            }
+
+            #endregion
+
+            CSMS = TestCSMSs.New(
+                             directory,
+                             new JObject(
+
+                                 new JProperty("nts", new JObject(new JProperty("enabled", false))),
+
+                                 new JProperty("ocppServer", new JObject(
+                                     new JProperty("enabled",           true),
+                                     new JProperty("address",           "127.0.0.1"),
+                                     new JProperty("port",              port),
+                                     new JProperty("securityProfiles",  new JArray(2)),
+                                     new JProperty("reachableAs",       new JArray("127.0.0.1"))
+                                 ))
+
+                             )
+                         );
+
+            CSMS.StationLogins.TrySetPassword("cs001", ThePassword, null, null, out _, out _);
+
+            CSMS.Start().GetAwaiter().GetResult();
+
+        }
+
+        [TearDown]
+        public async Task StopIt()
+        {
+
+            if (CSMS is not null)
+                await CSMS.DisposeAsync();
+
+            ca?.Dispose();
+
+            TestCSMSs.Remove(directory);
+
+        }
+
+        #endregion
+
+        #region (private) Connect()
+
+        /// <summary>
+        /// One charging station, over TLS, remembering what it was shown.
+        /// </summary>
+        private async Task<(Boolean Connected, String? Why, X509Certificate2? Presented, Int32 ChainLength)> Connect()
+        {
+
+            using var client = new ClientWebSocket();
+
+            X509Certificate2?  presented   = null;
+            var                chainLength = 0;
+
+            client.Options.AddSubProtocol("ocpp2.1");
+            client.Options.SetRequestHeader(
+                "Authorization",
+                "Basic " + Convert.ToBase64String(Encoding.UTF8.GetBytes($"cs001:{ThePassword}"))
+            );
+
+            // What a charging station does: check the certificate against the
+            // authority it was told about, and nothing else. Recorded here so
+            // that the test can say which certificate arrived, not only that
+            // one did.
+            client.Options.RemoteCertificateValidationCallback =
+                (sender, certificate, chain, errors) => {
+
+                    if (certificate is not null)
+                        presented = X509CertificateLoader.LoadCertificate(certificate.GetRawCertData());
+
+                    chainLength = chain?.ChainElements.Count ?? 0;
+
+                    if (chain is null || certificate is null)
+                        return false;
+
+                    using var ours = new X509Chain();
+
+                    ours.ChainPolicy.TrustMode        = X509ChainTrustMode.CustomRootTrust;
+                    ours.ChainPolicy.RevocationMode   = X509RevocationMode.NoCheck;
+                    ours.ChainPolicy.CustomTrustStore.Add(ca.Certificate);
+
+                    // Only what the server sent: the point is whether the
+                    // intermediates travelled, so nothing is added from here.
+                    foreach (var element in chain.ChainElements)
+                        ours.ChainPolicy.ExtraStore.Add(element.Certificate);
+
+                    return ours.Build(X509CertificateLoader.LoadCertificate(certificate.GetRawCertData()));
+
+                };
+
+            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+
+            try
+            {
+                await client.ConnectAsync(new Uri($"wss://127.0.0.1:{port}"), timeout.Token);
+            }
+            catch (Exception e)
+            {
+
+                // The whole chain, not only the outermost message: what matters
+                // here is whether the port refused the connection or the TLS
+                // handshake was reset, and "Unable to connect to the remote
+                // server" says neither.
+                var why = new List<String>();
+
+                for (var inner = e; inner is not null; inner = inner.InnerException)
+                    why.Add($"{inner.GetType().Name}: {inner.Message}");
+
+                return (false, String.Join("  <-  ", why), presented, chainLength);
+
+            }
+
+            // Whether the charging station got in was decided by the handshake
+            // and the upgrade, and both have just succeeded. How the socket is
+            // taken down again is a different question, and a server that drops
+            // a silent station before the closing handshake finishes must not
+            // fail a test about who may connect.
+            try
+            {
+                await client.CloseAsync(WebSocketCloseStatus.NormalClosure, "done", timeout.Token);
+            }
+            catch (Exception)
+            { }
+
+            return (true, null, presented, chainLength);
+
+        }
+
+        #endregion
+
+
+        #region ThePortIsEncryptedOnceThereIsACertificate()
+
+        [Test]
+        public void ThePortIsEncryptedOnceThereIsACertificate()
+        {
+
+            Assert.Multiple(() => {
+                Assert.That(CSMS.OCPPServerTLS,                  Is.True,
+                            "A CSMS that found a certificate is still serving its charging stations unencrypted.");
+                Assert.That(CSMS.ServerCertificates.HasCertificate, Is.True);
+                Assert.That(CSMS.OCPPServerURL,                   Does.StartWith("wss://"));
+            });
+
+        }
+
+        #endregion
+
+        #region AStationGetsTheCertificateTheStoreChose()
+
+        /// <summary>
+        /// The whole point of the store, proved over a socket: what
+        /// <see cref="ServerCertificateStore.Select"/> picked is what a charging
+        /// station is shown.
+        /// </summary>
+        [Test]
+        public async Task AStationGetsTheCertificateTheStoreChose()
+        {
+
+            var (connected, why, presented, chainLength) = await Connect();
+
+            var chosen = CSMS.ServerCertificates.Entries.
+                             Single(entry => entry.Id == CSMS.ServerCertificates.ServedId);
+
+            Assert.Multiple(() => {
+
+                Assert.That(connected,  Is.True, why);
+                Assert.That(presented,  Is.Not.Null, "No certificate arrived at the charging station.");
+
+                Assert.That(presented!.Thumbprint, Is.EqualTo(chosen.Certificate!.Thumbprint),
+                            "The charging station was shown a different certificate than the one this CSMS chose.");
+
+                // Leaf and the issuing authority: the intermediate travelled,
+                // which is what lets a station that only knows the root build a
+                // chain at all.
+                Assert.That(chainLength, Is.GreaterThanOrEqualTo(2),
+                            "The intermediate certificate was not sent, so a charging station that only knows the root cannot verify this.");
+
+            });
+
+        }
+
+        #endregion
+
+        #region AReplacementIsPresentedWithoutARestart()
+
+        /// <summary>
+        /// The reason more than one certificate lives in the store: the new one
+        /// takes over on the next connection, and nothing is restarted.
+        /// </summary>
+        [Test]
+        public async Task AReplacementIsPresentedWithoutARestart()
+        {
+
+            var (before, whyBefore, first, _) = await Connect();
+
+            Assert.That(before, Is.True, whyBefore);
+
+            #region A second certificate, valid from a moment ago
+
+            Assert.That(CSMS.ServerCertificates.TryCreateKey("127.0.0.1", [ "127.0.0.1" ], null, out _, out var csr, out var keyError),
+                        Is.True, keyError);
+
+            using var replacement = ca.Sign(csr!, DateTimeOffset.UtcNow.AddMinutes(-1), DateTimeOffset.UtcNow.AddYears(2));
+
+            Assert.That(CSMS.ServerCertificates.TryAddCertificate(ca.ChainPEM(replacement), [ "127.0.0.1" ], out var newId, out _, out var addError),
+                        Is.True, addError);
+
+            #endregion
+
+            var (after, whyAfter, second, _) = await Connect();
+
+            Assert.Multiple(() => {
+
+                Assert.That(after,   Is.True, whyAfter);
+                Assert.That(second,  Is.Not.Null);
+
+                Assert.That(second!.Thumbprint, Is.Not.EqualTo(first!.Thumbprint),
+                            "The replacement did not take over; the old certificate is still being presented.");
+
+                Assert.That(second.Thumbprint,  Is.EqualTo(replacement.Thumbprint));
+                Assert.That(CSMS.ServerCertificates.ServedId, Is.EqualTo(newId));
+
+            });
+
+        }
+
+        #endregion
+
+        #region AStationThatDoesNotTrustTheAuthorityGetsNoFurther()
+
+        /// <summary>
+        /// The other side of the same handshake: a charging station checks, and
+        /// what it does not accept it does not talk to.
+        /// </summary>
+        [Test]
+        public async Task AStationThatDoesNotTrustTheAuthorityGetsNoFurther()
+        {
+
+            using var client = new ClientWebSocket();
+
+            client.Options.AddSubProtocol("ocpp2.1");
+            client.Options.SetRequestHeader(
+                "Authorization",
+                "Basic " + Convert.ToBase64String(Encoding.UTF8.GetBytes($"cs001:{ThePassword}"))
+            );
+
+            // Trusts nothing, which is what a station with the wrong authority
+            // configured amounts to.
+            client.Options.RemoteCertificateValidationCallback = (sender, certificate, chain, errors) => false;
+
+            using var timeout   = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+            var       connected = true;
+
+            try
+            {
+                await client.ConnectAsync(new Uri($"wss://127.0.0.1:{port}"), timeout.Token);
+            }
+            catch
+            {
+                connected = false;
+            }
+
+            Assert.That(connected, Is.False);
+
+        }
+
+        #endregion
+
+        #region AnUnencryptedStationCannotSpeakToAnEncryptedPort()
+
+        /// <summary>
+        /// A port either encrypts or it does not - so a station configured for
+        /// security profile 1 against an encrypted CSMS does not get a
+        /// quiet downgrade, it gets nothing.
+        /// </summary>
+        [Test]
+        public async Task AnUnencryptedStationCannotSpeakToAnEncryptedPort()
+        {
+
+            using var client = new ClientWebSocket();
+
+            client.Options.AddSubProtocol("ocpp2.1");
+            client.Options.SetRequestHeader(
+                "Authorization",
+                "Basic " + Convert.ToBase64String(Encoding.UTF8.GetBytes($"cs001:{ThePassword}"))
+            );
+
+            using var timeout   = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+            var       connected = true;
+
+            try
+            {
+                await client.ConnectAsync(new Uri($"ws://127.0.0.1:{port}"), timeout.Token);
+            }
+            catch
+            {
+                connected = false;
+            }
+
+            Assert.That(connected, Is.False);
+
+        }
+
+        #endregion
+
+    }
+
+}
