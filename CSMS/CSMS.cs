@@ -1,4 +1,4 @@
-/*
+﻿/*
  * Copyright (c) 2014-2026 GraphDefined GmbH <achim.friedland@graphdefined.com>
  * This file is part of CSMS <https://github.com/OpenChargingCloud/CSMS>
  *
@@ -95,7 +95,7 @@ namespace cloud.charging.open.CSMS
         /// the three, so everything that is not it needs a prefix that says
         /// so before the stub gets the request.
         /// </remarks>
-        public static readonly HTTPPath DefaultHTTPExtAPIPath = HTTPPath.Parse("/ext");
+        public static readonly HTTPPath  ExtAPIPath                   = HTTPPath.Parse("/ext");
 
         /// <summary>
         /// The directory the HTTPExt API keeps its accounts in, unless another
@@ -107,12 +107,29 @@ namespace cloud.charging.open.CSMS
         /// password resets all live below it, and it names them itself. What is
         /// chosen here is only where that tree starts.
         /// </remarks>
-        public const String  DefaultHTTPExtAPIDataPath     = "CSMS-accounts";
+        public const String  DefaultAccountsPath           = "accounts";
 
         /// <summary>
         /// The file inside that directory that holds the accounts.
         /// </summary>
-        public const String  DefaultHTTPExtAPIDatabaseFile = "CSMS-accounts.db";
+        public const String  DefaultAccountsDatabaseFile   = "users.db";
+
+        /// <summary>
+        /// The account made at a first start.
+        /// </summary>
+        public const String  DefaultAdminUser              = "root";
+
+        /// <summary>
+        /// The organization that account belongs to.
+        /// </summary>
+        /// <remarks>
+        /// A CSMS on a bench has no organizations to speak of, and this one
+        /// exists because the HTTPExt API's sign-in refuses an account that is
+        /// in none - "You do not have access to any organization!" - however
+        /// right its password is. So there is exactly one, named after the
+        /// thing it stands for.
+        /// </remarks>
+        public const String  DefaultOrganization           = "CSMS";
 
         /// <summary>
         /// The file of the bundle that is the web interface; its presence is
@@ -195,14 +212,13 @@ namespace cloud.charging.open.CSMS
         public EventLog               Log                    { get; }
 
         /// <summary>
-        /// Who may open the web interface, and which browsers currently may.
+        /// The directory the accounts live in between starts.
         /// </summary>
-        public WebSessions            Sessions               { get; }
-
-        /// <summary>
-        /// Where the web login lives between starts.
-        /// </summary>
-        public WebLoginFile           LoginFile              { get; }
+        /// <remarks>
+        /// Where its own accounts live. A CSMS handed somebody else's
+        /// HTTPExt API writes nothing here - see <see cref="OwnsExtAPI"/>.
+        /// </remarks>
+        public String                 AccountsPath           { get; }
 
         /// <summary>
         /// Where everything this CSMS can be told in writing lives
@@ -266,7 +282,7 @@ namespace cloud.charging.open.CSMS
         /// login file, or null when the login came from the file. It is shown
         /// once, on the console, and kept nowhere but in its hash.
         /// </summary>
-        public String?                GeneratedPassword      { get; }
+        public String?                GeneratedPassword      { get; private set; }
 
         /// <summary>
         /// Where the web interface comes from: this assembly, or a directory
@@ -285,16 +301,74 @@ namespace cloud.charging.open.CSMS
         /// this CSMS is administered with.
         /// </summary>
         /// <remarks>
-        /// This is where a CSMS parts company with a charging station or a
-        /// local controller, which carry one web login each and are done with
-        /// it. A CSMS is the back end of an estate: the people who read it are
-        /// not the people who configure it, the machines that call it are not
+        /// <para>
+        /// A CSMS is the back end of an estate: the people who read it are not
+        /// the people who configure it, the machines that call it are not
         /// people at all, and both outlive any one of its operators. That is
         /// what Hermod's HTTPExt API is - accounts, groups, organizations and
-        /// API keys, kept in its own database file - and building a second,
-        /// smaller version of it here would only mean having two.
+        /// API keys - and building a second, smaller version of it here would
+        /// only mean having two.
+        /// </para>
+        /// <para>
+        /// The vehicle, the charging station and the local controller sign in
+        /// against the same thing, which is what makes one of these serve all
+        /// four at once: their roles are groups in it, the names overlap, and
+        /// an account in "systemadmin" is then an administrator of every one
+        /// of them. See <see cref="OwnsExtAPI"/>.
+        /// </para>
         /// </remarks>
         public HTTPExtAPI             ExtAPI                 { get; }
+
+        /// <summary>
+        /// Whether those accounts are this CSMS's own, or somebody else's
+        /// that it was handed.
+        /// </summary>
+        /// <remarks>
+        /// Handing one in is what makes one sign-in open several of these
+        /// programs at once: the groups each of them makes as it starts land
+        /// in one set of accounts, and the names overlap on purpose - an
+        /// account in "systemadmin" is an administrator of every one of them.
+        /// </remarks>
+        public Boolean                OwnsExtAPI             { get; }
+
+        /// <summary>
+        /// Whether the HTTP server is this CSMS's own, or one it was
+        /// handed and shares with somebody else.
+        /// </summary>
+        /// <remarks>
+        /// A shared server is started and stopped by whoever made it. One that
+        /// started a server it did not make would take the same socket twice
+        /// where several of these programs are on it, and one that stopped it
+        /// would close the web interface of every other program registered
+        /// within it.
+        /// </remarks>
+        public Boolean                OwnsHTTPServer         { get; }
+
+        /// <summary>
+        /// Everything of this CSMS - its web interface, its JSON API and,
+        /// where the accounts are its own, those too - sits below this.
+        /// </summary>
+        /// <remarks>
+        /// The root, which is what a CSMS on a port of its own wants and
+        /// what it always used to be. It is something else only where several
+        /// of these programs share one HTTP server and are told apart by the
+        /// first path segment rather than by the port.
+        /// </remarks>
+        public HTTPPath               BasePath               { get; }
+
+        /// <summary>
+        /// The base path as it is written into a URL: the empty string at the
+        /// root, and "/CSMS" or the like below one.
+        /// </summary>
+        /// <remarks>
+        /// Its own property because the two forms are not interchangeable and
+        /// the difference is exactly one character: <c>HTTPPath.Root</c> writes
+        /// itself as "/", and "/" + "/index.html" is a URL nothing serves.
+        /// </remarks>
+        public String                 BasePathText
+            => BasePath == HTTPPath.Root
+                   ? ""
+                   : BasePath.ToString().TrimEnd('/');
 
         /// <summary>
         /// The JSON API at "/api/".
@@ -345,12 +419,13 @@ namespace cloud.charging.open.CSMS
         /// <param name="DNSClient">The DNS client used by everything below.</param>
         /// <param name="NTSClient">The time client.</param>
         /// <param name="HTTPServer">An HTTP server to register within, or null to make one.</param>
-        /// <param name="HTTPRootPath">The root path of the JSON API, "/api" by default.</param>
-        /// <param name="HTTPExtAPIPath">The root path of the HTTPExt API, "/ext" by default.</param>
-        /// <param name="HTTPExtAPIDataPath">The directory the HTTPExt API keeps its users, organizations and API keys in.</param>
+        /// <param name="BasePath">What everything of this CSMS sits below; the root by default. Something else only where several of these programs share one HTTP server.</param>
+        /// <param name="HTTPRootPath">The root path of the JSON API, "/api" below <paramref name="BasePath"/> by default.</param>
+        /// <param name="ExtAPI">An HTTPExt API to sign in against, or null for one of this CSMS's own. Handing one in is what makes one sign-in open several of these programs at once.</param>
+        /// <param name="HTTPExtAPIPath">Where this CSMS's own HTTPExt API sits below <paramref name="BasePath"/>, "/ext" by default. Ignored when one is handed in.</param>
+        /// <param name="AccountsPath">The directory the accounts live in between starts.</param>
         /// <param name="HTTPHostname">The address to listen on; the loopback address by default.</param>
         /// <param name="HTTPPort">The TCP port to listen on.</param>
-        /// <param name="LoginFile">Where the web login lives; "web-login.json" beside the process by default.</param>
         /// <param name="ConfigFile">Where everything this CSMS can be told in writing lives; "configuration.json" beside the process by default.</param>
         /// <param name="OCPP">Who this CSMS says it is in OCPP, unless the configuration file says otherwise.</param>
         /// <param name="Frontend">Where the web interface comes from; the bundle embedded in this assembly by default.</param>
@@ -362,12 +437,13 @@ namespace cloud.charging.open.CSMS
         public CSMS(DNSClient?             DNSClient               = null,
                     NTSClient?             NTSClient               = null,
                     HTTPServer?            HTTPServer              = null,
+                    HTTPPath?              BasePath                = null,
                     HTTPPath?              HTTPRootPath            = null,
+                    HTTPExtAPI?            ExtAPI                  = null,
                     HTTPPath?              HTTPExtAPIPath          = null,
-                    String?                HTTPExtAPIDataPath      = null,
+                    String?                AccountsPath            = null,
                     IIPAddress?            HTTPHostname            = null,
                     IPPort?                HTTPPort                = null,
-                    WebLoginFile?          LoginFile               = null,
                     CSMSConfigFile?        ConfigFile              = null,
                     OCPPConfiguration?     OCPP                    = null,
                     IStaticContentSource?  Frontend                = null,
@@ -409,36 +485,16 @@ namespace cloud.charging.open.CSMS
 
             #endregion
 
-            #region Who may open the web interface
+            #region Where the accounts live
 
-            this.LoginFile = LoginFile ?? new WebLoginFile(WebLoginFile.DefaultFileName);
+            // Ending in a separator, because the HTTPExt API builds the paths
+            // of its files by putting strings together rather than with
+            // Path.Combine: a directory that does not end in one would give it
+            // "...accountsUsersAPI" and not "...accounts/UsersAPI".
+            this.AccountsPath = AccountsPath ?? DefaultAccountsPath;
 
-            if (this.LoginFile.TryLoad(out var loadedLogin, out var loginError) && loadedLogin is not null)
-                this.Sessions = new WebSessions(loadedLogin,   TimeProvider: this.TimeProvider);
-
-            else
-            {
-
-                // A login file that is there but unreadable is not something to
-                // paper over with a new password: that would lock out whoever
-                // owns the old one without saying why.
-                if (loginError is not null)
-                    throw new InvalidOperationException($"{loginError} Repair or remove '{this.LoginFile.Path}' and start again.");
-
-                // A first start: nobody can sign in to a web interface whose
-                // login is not set yet, and an unauthenticated setup page would
-                // be a door of its own. So the password is made up here and
-                // shown once, on the console, to whoever started the process.
-                var (generated, password) = WebLoginSettings.Generate();
-
-                this.LoginFile.Save(generated);
-
-                this.Sessions           = new WebSessions(generated, TimeProvider: this.TimeProvider);
-                this.GeneratedPassword  = password;
-
-                this.Log.Notice($"No web login found, so one was made up and written to '{this.LoginFile.Path}'.", "web", "auth");
-
-            }
+            if (!this.AccountsPath.EndsWith(Path.DirectorySeparatorChar))
+                this.AccountsPath += Path.DirectorySeparatorChar;
 
             #endregion
 
@@ -505,6 +561,8 @@ namespace cloud.charging.open.CSMS
             var address        = HTTPHostname ?? IPv4Address.Localhost;
             var port           = HTTPPort     ?? DefaultHTTPPort;
 
+            this.OwnsHTTPServer = HTTPServer is null;
+
             this.httpServer    = HTTPServer   ?? new HTTPServer(
                                                      IPAddress:       address,
                                                      TCPPort:         port,
@@ -512,28 +570,32 @@ namespace cloud.charging.open.CSMS
                                                      DNSClient:       dnsClient
                                                  );
 
-            this.httpRootPath  = HTTPRootPath ?? CSMSHTTPAPI.DefaultAPIPath;
+            // The root unless somebody is putting several of these programs on
+            // one server, where the first path segment is what tells them
+            // apart. Everything below is relative to it, which is the whole
+            // reason it is settled here and read rather than repeated.
+            this.BasePath      = BasePath     ?? HTTPPath.Root;
 
-            this.WebInterfaceURL = URL.Parse($"http://{address}:{port}/");
+            this.httpRootPath  = HTTPRootPath ?? this.BasePath + CSMSHTTPAPI.DefaultAPIPath;
+
+            this.WebInterfaceURL = URL.Parse($"http://{address}:{port}{this.BasePath.ToString().TrimEnd('/')}/");
 
             // The HTTPExt API builds the paths of its files by putting strings
             // together rather than with Path.Combine, so a directory that does
             // not end in a separator would give it "...accountsUsersAPI" and
             // not "...accounts/UsersAPI". Ending it here is cheaper than
             // finding that out from the name of a file nobody meant to write.
-            var extAPIDataPath = HTTPExtAPIDataPath ?? Path.Combine(AppContext.BaseDirectory, DefaultHTTPExtAPIDataPath);
-
-            if (!extAPIDataPath.EndsWith(Path.DirectorySeparatorChar))
-                extAPIDataPath += Path.DirectorySeparatorChar;
 
             // 1) The HTTPExt API at "/ext". First of the three, because it is
             //    the one with a database behind it: whatever it finds wrong
             //    with its files, it should say so before a port is opened and
             //    before a charging station is let in against accounts that
             //    were not read.
-            this.ExtAPI        = new HTTPExtAPI(
+            this.OwnsExtAPI    = ExtAPI is null;
+
+            this.ExtAPI        = ExtAPI ?? new HTTPExtAPI(
                                      HTTPServer:             httpServer,
-                                     RootPath:               HTTPExtAPIPath ?? DefaultHTTPExtAPIPath,
+                                     RootPath:               this.BasePath + (HTTPExtAPIPath ?? ExtAPIPath),
                                      HTTPServerName:         $"OpenChargingCloud CSMS v{Version}",
                                      HTTPServiceName:        $"OpenChargingCloud CSMS v{Version}",
                                      APIRobotEMailAddress:   EMailAddress.Parse("OpenChargingCloud CSMS Robot <robot@charging.cloud>"),
@@ -549,8 +611,34 @@ namespace cloud.charging.open.CSMS
                                      SMTPSubmissionClient:   new NullMailer(),
                                      DisableNotifications:   true,
 
-                                     LoggingPath:            extAPIDataPath,
-                                     DatabaseFileName:       DefaultHTTPExtAPIDatabaseFile,
+                                     // The cookie has to reach "/api", and its
+                                     // path would otherwise be the root path of
+                                     // this API - "/ext" - so a browser signed
+                                     // in at /ext/login would send nothing to
+                                     // the API and look signed out everywhere
+                                     // else.
+                                     HTTPCookiePath:         "/",
+
+                                     // A secure cookie is dropped by a browser
+                                     // over plain HTTP, and a CSMS on a bench is
+                                     // reached over plain HTTP. Tied to the TLS
+                                     // the server is actually using rather than
+                                     // switched off: on a CSMS with a
+                                     // certificate this stays on.
+                                     UseSecureCookies:       false,
+
+                                     // The shortest name a role of this CSMS has,
+                                     // because that is what a group identification
+                                     // has to be allowed to be. Hermod's own floor
+                                     // is four characters and "cpo" is three, so
+                                     // the group would be refused - and the role it
+                                     // carries could never be held by anybody, with
+                                     // every route asking for it refusing everybody
+                                     // and nothing anywhere saying why.
+                                     MinUserGroupIdLength:   (Byte) UserRole.All.Min(role => role.Name.Length),
+
+                                     LoggingPath:            AccountsPath,
+                                     DatabaseFileName:       DefaultAccountsDatabaseFile,
 
                                      // Left on, and that is what makes the
                                      // directory above: switching it off skips
@@ -561,7 +649,12 @@ namespace cloud.charging.open.CSMS
                                      DisableLogging:         false
                                  );
 
-            this.Log.Info($"The HTTPExt API is at '{(HTTPExtAPIPath ?? DefaultHTTPExtAPIPath)}', its accounts in '{ExtAPI.DatabaseFileName}'.", "web", "http");
+            this.Log.Info(
+                OwnsExtAPI
+                    ? $"The HTTPExt API is at '{this.ExtAPI.RootPath}', its accounts in '{this.ExtAPI.DatabaseFileName}'."
+                    : $"This CSMS signs in against accounts it shares, at '{this.ExtAPI.RootPath}'.",
+                "web", "http"
+            );
 
             // 2) The JSON API at "/api". Before the web interface, so that it
             //    is the more specific API and an unknown /api path never
@@ -569,7 +662,7 @@ namespace cloud.charging.open.CSMS
             this.API           = new CSMSHTTPAPI(
                                      HTTPServer:  httpServer,
                                      CSMS:        this,
-                                     Sessions:    Sessions,
+                                     ExtAPI:      this.ExtAPI,
                                      Log:         this.Log,
                                      APIPath:     httpRootPath,
                                      Version:     Version
@@ -583,12 +676,25 @@ namespace cloud.charging.open.CSMS
             if (this.Frontend.TryGet(IndexFile, out _))
             {
 
-                this.WebInterface = httpServer.AddHTTPAPI();
+                this.WebInterface = httpServer.AddHTTPAPI(this.BasePath);
 
                 this.WebInterface.MapSinglePageApplication(
                     this.Frontend,
                     new SinglePageAppOptions {
-                        IndexTransform = html => html.Replace("{{ServerVersion}}", $"v{Version}", StringComparison.Ordinal)
+
+                        // Three placeholders and not one. The bundle reads
+                        // where it is and where its API is out of <meta> tags
+                        // rather than assuming "/" and "/api/v1", because
+                        // under a base path both of those are wrong - and a
+                        // single-page application that guesses its own base
+                        // path is one that works until somebody mounts it
+                        // somewhere.
+                        IndexTransform = html => html.
+                                                     Replace("{{ServerVersion}}", $"v{Version}",         StringComparison.Ordinal).
+                                                     Replace("{{BasePath}}",      BasePathText,          StringComparison.Ordinal).
+                                                     Replace("{{APIBase}}",       $"{httpRootPath.ToString().TrimEnd('/')}/v1", StringComparison.Ordinal).
+                                                     Replace("{{ExtBase}}",       this.ExtAPI.RootPath.ToString().TrimEnd('/'), StringComparison.Ordinal)
+
                     }
                 );
 
@@ -603,7 +709,7 @@ namespace cloud.charging.open.CSMS
                         request => Task.FromResult(
                                        new HTTPResponse.Builder(request) {
                                            HTTPStatusCode  = HTTPStatusCode.TemporaryRedirect,
-                                           Location        = Location.From(HTTPPath.Parse("/" + FaviconSVG)),
+                                           Location        = Location.From(HTTPPath.Parse($"{BasePathText}/{FaviconSVG}")),
                                            CacheControl    = "public, max-age=3600"
                                        }.AsImmutable
                                    ),
@@ -698,7 +804,15 @@ namespace cloud.charging.open.CSMS
             if (started)
                 return;
 
-            await httpServer.Start();
+            // Before the port opens, and that order is the point: a web
+            // interface reachable before its accounts exist is a door with
+            // nobody behind it.
+            await EnsureAccounts();
+
+            // Only where it is ours: a shared server is started by whoever
+            // made it, and starting it again would take the same socket twice.
+            if (OwnsHTTPServer)
+                await httpServer.Start();
 
             await StartOCPPServer();
 
@@ -738,9 +852,196 @@ namespace cloud.charging.open.CSMS
 
             await StopOCPPServer();
 
-            await httpServer.Stop();
+            // The event streams above are ended whoever owns the server,
+            // because they are this CSMS's; the socket is closed only where it
+            // is this CSMS's too.
+            if (OwnsHTTPServer)
+                await httpServer.Stop();
 
             started = false;
+
+        }
+
+        #endregion
+
+        #region (private) EnsureAccounts()
+
+        /// <summary>
+        /// Make the three groups and, at a first start, the one account that
+        /// is in the last of them.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// The groups are made every start rather than only the first, because
+        /// they are this CSMS's vocabulary and not somebody's data: a
+        /// group deleted by hand would otherwise leave a role that can never be
+        /// held again, and the routes asking for it would refuse everybody with
+        /// no way to put it right.
+        /// </para>
+        /// <para>
+        /// The account is made only when there is none at all. Nobody can sign
+        /// in to a web interface whose accounts are empty, and an
+        /// unauthenticated setup page would be a door of its own - so the
+        /// password is made up here and shown once, on the console, to whoever
+        /// started the process. It is never written down: what the accounts
+        /// hold is the hash the HTTPExt API makes of it.
+        /// </para>
+        /// </remarks>
+        private async Task EnsureAccounts()
+        {
+
+            // Read what is on disk first. The HTTPExt API writes its accounts
+            // as it goes but does not read them back when it is built, so a
+            // CSMS that skipped this would find no accounts at every
+            // start, make a second root beside the first, and refuse the
+            // password its owner already has.
+            await ExtAPI.LoadDatabase();
+
+            var firstStart  = !ExtAPI.Users.Any();
+
+            IUser?  admin   = null;
+
+            #region The one account, when there is none
+
+            if (firstStart)
+            {
+
+                var password  = RandomExtensions.RandomString(24);
+                var userId    = User_Id.Parse(DefaultAdminUser);
+
+                // An account in no organization is refused at the sign-in -
+                // "You do not have access to any organization!" - however right
+                // its password is. Hence the single organization, which a box
+                // in a car park has no other use for.
+                var organization  = await ExtAPI.CreateOrganizationIfNotExists(
+                                              Organization_Id.Parse(DefaultOrganization),
+                                              I18NString.Create(Languages.en, DefaultOrganization)
+                                          );
+
+                if (organization is not Organization csmsOrganization)
+                    throw new InvalidOperationException("The organization of this CSMS could not be created, and an account outside one cannot sign in.");
+
+                // CreateUser rather than AddUser: the password is set from
+                // inside the OnAdded callback, where the user already has its
+                // API back-reference, and that is the only place the password
+                // store can be reached. AddUser followed by ChangePassword
+                // looks equivalent and writes the account without one - which
+                // is an account nobody can sign in to, and nothing says so.
+                admin         = await ExtAPI.CreateUser(
+                                          userId,
+                                          I18NString.Create(Languages.en, DefaultAdminUser),
+                                          SimpleEMailAddress.Parse($"{DefaultAdminUser}@localhost"),
+                                          User2OrganizationEdgeLabel.IsAdmin,
+                                          csmsOrganization,
+                                          Password:                  password,
+
+                                          // Nothing is sent and nobody is told:
+                                          // a CSMS has no mail server, no
+                                          // second user to notify, and the one
+                                          // account it makes is announced on the
+                                          // console it was started from.
+                                          SkipDefaultNotifications:  true,
+                                          SkipNewUserEMail:          true,
+                                          SkipNewUserNotifications:  true,
+
+                                          // Without this nobody can sign in, and
+                                          // nothing says why: the sign-in paths
+                                          // require an accepted EULA and refuse a
+                                          // correct password without one. There is
+                                          // no agreement to show here - whoever
+                                          // started the process owns the box - so
+                                          // it is accepted at the moment the
+                                          // account is made.
+                                          AcceptedEULA:              TimeProvider.GetUtcNow().AddSeconds(-1),
+
+                                          IsAuthenticated:           true
+                                      );
+
+                if (admin is null)
+                    throw new InvalidOperationException("The account of this CSMS could not be created, so nobody could sign in to it.");
+
+                GeneratedPassword = password;
+
+                Log.Notice($"No accounts were found, so '{DefaultAdminUser}' was made up and put in the {UserRole.SystemAdmin.Name} group.",
+                           "web", "auth");
+
+            }
+
+            #endregion
+
+            #region The three groups
+
+            foreach (var role in UserRole.All)
+            {
+
+                if (ExtAPI.TryGetUserGroup(role.GroupId, out _))
+                    continue;
+
+                var added = await ExtAPI.AddUserGroup(
+                                      new UserGroup(
+                                          role.GroupId,
+                                          I18NString.Create(Languages.en, role.Name)
+                                      )
+                                  );
+
+                // Looked at, and that is the point: this answers with a result
+                // rather than throwing, so a group it declined to make would
+                // otherwise leave a role nobody can ever hold - and every route
+                // asking for it refusing everybody, with nothing anywhere to
+                // say why. Better to stop before the port opens.
+                if (added.Result != CommandResult.Success)
+                    throw new InvalidOperationException(
+                              $"The user group '{role.GroupId}' of this CSMS could not be made: " +
+                              $"{added.Description.FirstText()} A role without its group is a role nobody can hold."
+                          );
+
+            }
+
+            #endregion
+
+            #region The one account joins the one group that can fix the rest
+
+            // Through AddUserToUserGroup, which writes a command of its own.
+            // Putting the edge on the group object before storing it looks
+            // equivalent and is not: what AddUserGroup writes is the group,
+            // and a group's stored form does not carry its members - so the
+            // membership was there until the next start and gone after it,
+            // which is the worst shape a permission can have.
+            if (admin is not null)
+            {
+
+                if (!ExtAPI.TryGetUser     (admin.Id,                     out var storedAdmin) ||
+                    !ExtAPI.TryGetUserGroup(UserRole.SystemAdmin.GroupId, out var adminGroup)  ||
+                     storedAdmin is not User      user ||
+                     adminGroup  is not UserGroup group)
+                {
+                    throw new InvalidOperationException(
+                              $"The account of this CSMS could not be put in the {UserRole.SystemAdmin.Name} group, " +
+                               "so the one account it has would be allowed to do nothing at all."
+                          );
+                }
+
+                var joined = await ExtAPI.AddUserToUserGroup(
+                                       user,
+                                       User2UserGroupEdgeLabel.IsAdmin,
+                                       group
+                                   );
+
+                // Looked at for the same reason as the group above: this
+                // answers with a result too, and a membership it declined to
+                // write leaves the one account able to do nothing at all -
+                // with a password about to be printed that opens nothing.
+                // A different result type from AddUserGroup's, and so a
+                // different question: IsSuccess rather than Result.
+                if (!joined.IsSuccess)
+                    throw new InvalidOperationException(
+                              $"The account '{DefaultAdminUser}' could not be put in the {UserRole.SystemAdmin.Name} group: " +
+                              $"{joined.ErrorDescription?.FirstText()} It would be able to do nothing at all."
+                          );
+
+            }
+
+            #endregion
 
         }
 
@@ -754,8 +1055,8 @@ namespace cloud.charging.open.CSMS
         /// </summary>
         /// <remarks>
         /// Read-only: it answers "what am I running", not "change it". Nothing
-        /// here is a secret - the web login appears with its username and the
-        /// path of its file, and never with anything about its password.
+        /// here is a secret - the accounts appear as the path they live at and
+        /// the route to sign in, and never as anything about a password.
         /// </remarks>
         public JObject ConfigurationJSON()
 
@@ -779,13 +1080,13 @@ namespace cloud.charging.open.CSMS
                    )),
 
                    new JProperty("web",        new JObject(
-                       new JProperty("username",       Sessions.Username),
-                       new JProperty("loginFile",      LoginFile.Path),
-                       new JProperty("cookie",         Sessions.CookieName.ToString()),
-                       new JProperty("secureCookies",  Sessions.SecureCookies),
-                       new JProperty("idleTimeout",    Sessions.IdleTimeout.    ToString()),
-                       new JProperty("maxLifetime",    Sessions.MaximumLifetime.ToString()),
-                       new JProperty("sessions",       Sessions.Count)
+                       new JProperty("accountsPath",   AccountsPath),
+                       new JProperty("sharedAccounts", !OwnsExtAPI),
+                       new JProperty("signInAt",       $"{ExtAPI.RootPath.ToString().TrimEnd('/')}/login"),
+                       new JProperty("users",          ExtAPI.Users.     Count()),
+                       new JProperty("groups",         ExtAPI.UserGroups.Count()),
+                       new JProperty("cookie",         ExtAPI.SessionCookieName.ToString()),
+                       new JProperty("maxLifetime",    ExtAPI.MaxSignInSessionLifetime.ToString())
                    )),
 
                    new JProperty("log",        new JObject(

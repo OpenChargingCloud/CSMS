@@ -1,4 +1,4 @@
-/*
+﻿/*
  * Copyright (c) 2014-2026 GraphDefined GmbH <achim.friedland@graphdefined.com>
  * This file is part of CSMS <https://github.com/OpenChargingCloud/CSMS>
  *
@@ -22,9 +22,9 @@ namespace cloud.charging.open.CSMS.Web
     /// Writing a file that only its owner may read.
     /// </summary>
     /// <remarks>
-    /// The web login file holds the hash of the password that opens this
-    /// CSMS's web interface, which is worth a dictionary attack to
-    /// whoever gets hold of it.
+    /// What is written this way here is private keys: the OCPP server key
+    /// this CSMS listens with, which is the whole of its identity to every
+    /// charging station on the site.
     ///
     /// <b>The mode goes on at creation and not afterwards.</b> Creating a file
     /// readable and restricting it once the content is in leaves a window, and

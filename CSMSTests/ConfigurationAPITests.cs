@@ -89,9 +89,9 @@ namespace cloud.charging.open.CSMS.Tests
         #region TheConfigurationNeverCarriesThePassword()
 
         /// <summary>
-        /// The web login appears in the configuration with its username and the
-        /// path of its file, and never with anything about its password -
-        /// neither the password nor its hash.
+        /// The accounts appear in the configuration as the path they live at
+        /// and the route to sign in, and never with anything about a password -
+        /// neither a password nor its hash.
         /// </summary>
         [Test]
         public async Task TheConfigurationNeverCarriesThePassword()

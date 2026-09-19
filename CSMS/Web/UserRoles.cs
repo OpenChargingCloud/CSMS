@@ -1,4 +1,4 @@
-/*
+﻿/*
  * Copyright (c) 2014-2026 GraphDefined GmbH <achim.friedland@graphdefined.com>
  * This file is part of CSMS <https://github.com/OpenChargingCloud/CSMS>
  *
@@ -18,6 +18,8 @@
 #region Usings
 
 using System.Diagnostics.CodeAnalysis;
+
+using org.GraphDefined.Vanaheimr.Hermod.HTTP;
 
 #endregion
 
@@ -118,11 +120,22 @@ namespace cloud.charging.open.CSMS.Web
     /// file is read, rather than quietly granting nothing - or, far worse,
     /// being taken for a known one because it looks similar.
     /// </remarks>
-    /// <param name="Name">How the role is written in the login file.</param>
+    /// <param name="Name">How the role is written, and the identification of the group whose members hold it.</param>
     /// <param name="Permissions">What it grants.</param>
     public sealed record UserRole(String       Name,
                                   Permissions  Permissions)
     {
+
+        #region Properties
+
+        /// <summary>
+        /// The user group in the HTTPExt API whose members hold this role.
+        /// </summary>
+        public UserGroup_Id  GroupId
+            => UserGroup_Id.Parse(Name);
+
+        #endregion
+
 
         #region Data
 

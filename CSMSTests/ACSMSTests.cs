@@ -41,7 +41,7 @@ namespace cloud.charging.open.CSMS.Tests
     ///
     /// Each one gets a directory of its own for the two files it writes, and a
     /// port the operating system has just confirmed is free - so a developer
-    /// with a CSMS running on 2351 can still run the tests.
+    /// with a CSMS running on 2350 can still run the tests.
     ///
     /// **Nothing here reaches the network.** The configuration written before
     /// the CSMS is built switches the time client off, which is what
@@ -71,7 +71,7 @@ namespace cloud.charging.open.CSMS.Tests
         protected String           BaseURL      { get; private set; } = default!;
 
         /// <summary>
-        /// The directory holding its web login and its configuration, removed
+        /// The directory holding its accounts and its configuration, removed
         /// again in TearDown.
         /// </summary>
         protected String           Directory    { get; private set; } = default!;
@@ -107,25 +107,26 @@ namespace cloud.charging.open.CSMS.Tests
         #region SetUp / TearDown
 
         [SetUp]
-        public async Task StartTheController()
+        public async Task StartTheCSMS()
         {
 
             Directory   = TestCSMSs.TemporaryDirectory("tests");
 
             CSMS  = TestCSMSs.New(Directory, Configuration, Clock);
 
-            // Null would mean the login came from a file, and there was no file.
-            Password    = CSMS.GeneratedPassword
-                              ?? throw new InvalidOperationException("The CSMS did not make up a password for its first start!");
-
             BaseURL     = CSMS.WebInterfaceURL.ToString();
 
             await CSMS.Start();
 
+            // After Start(), because that is what makes the account. Null would
+            // mean accounts were already there, and the directory is new.
+            Password    = CSMS.GeneratedPassword
+                              ?? throw new InvalidOperationException("The CSMS did not make up a password for its first start!");
+
         }
 
         [TearDown]
-        public async Task StopTheController()
+        public async Task StopTheCSMS()
         {
 
             if (CSMS is not null)
@@ -157,18 +158,29 @@ namespace cloud.charging.open.CSMS.Tests
         /// A browser that has signed in with the password this CSMS made
         /// up, carrying the session cookie from here on.
         /// </summary>
+        /// <remarks>
+        /// At the HTTPExt API and not at the JSON API: the password store is
+        /// private to the HTTPExt API, so "/ext/login" is the only door that
+        /// can check one. What it sets is the cookie the JSON API reads.
+        /// </remarks>
         protected async Task<HttpClient> SignedIn()
+
+            => await SignedInAs(CSMS.DefaultAdminUser, Password);
+
+        #endregion
+
+        #region (protected) SignedInAs(Login, Password)
+
+        /// <summary>
+        /// A browser that has tried to sign in as somebody in particular, for
+        /// a test that wants a second account or a wrong password.
+        /// </summary>
+        protected async Task<HttpClient> SignedInAs(String Login, String Password)
         {
 
             var http      = Anonymous();
 
-            var response  = await http.PostAsync(
-                                      "/api/v1/auth/login",
-                                      JSONBody(
-                                          new JProperty("username", CSMS.Sessions.Username),
-                                          new JProperty("password", Password)
-                                      )
-                                  );
+            var response  = await http.PostAsync(SignInPath, LoginBody(Login, Password));
 
             Assert.That(response.IsSuccessStatusCode, Is.True,
                         $"Signing in failed with {(Int32) response.StatusCode}, and every assertion below it would say so instead.");
@@ -176,6 +188,28 @@ namespace cloud.charging.open.CSMS.Tests
             return http;
 
         }
+
+        #endregion
+
+        #region (protected static) SignInPath / LoginBody(Login, Password)
+
+        /// <summary>
+        /// Where a password is checked: the HTTPExt API's own sign-in.
+        /// </summary>
+        protected static String SignInPath
+
+            => $"{CSMS.ExtAPIPath.ToString().TrimEnd('/')}/login";
+
+        /// <summary>
+        /// A sign-in body, as the web interface sends one: form-urlencoded,
+        /// and the field is called "login" rather than "username".
+        /// </summary>
+        protected static FormUrlEncodedContent LoginBody(String Login, String Password)
+
+            => new ([
+                   new KeyValuePair<String, String>("login",     Login),
+                   new KeyValuePair<String, String>("password",  Password)
+               ]);
 
         #endregion
 

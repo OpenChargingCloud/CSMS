@@ -31,15 +31,22 @@ the certificate and trust stores, the station logins, the event log - is the
 same code doing the same thing at the other end of the same connection.
 
 
-## The one difference: `HTTPExtAPI`
+## Who may open it: `HTTPExtAPI`
 
-A charging station and a local controller carry one web login each and are done
-with it. A CSMS is the back end of an estate: the people who read it are not the
-people who configure it, the machines that call it are not people at all, and
-both outlive any one of its operators. So the HTTP server of this CSMS carries
+A CSMS is the back end of an estate: the people who read it are not the people
+who configure it, the machines that call it are not people at all, and both
+outlive any one of its operators. So the HTTP server of this CSMS carries
 Hermod's `HTTPExtAPI` - accounts, groups, organizations and API keys, kept in a
 directory of its own - at `/ext`, beside the JSON API at `/api` and the web
 interface at `/`.
+
+The vehicle, the charging station and the local controller sign in against the
+same thing, and their roles are groups in it with names that overlap on purpose:
+all four have `systemadmin` and `viewer`, three of them have `cpo`. So handing
+one `HTTPExtAPI` to several of them makes one sign-in open all of them, with
+each still deciding for itself what a role permits - which is what
+[EVChargingTestEnvironment](https://github.com/OpenChargingCloud/EVChargingTestEnvironment)
+does with `--shared`.
 
 One HTTP server, one port, three things registered on it in that order: the most
 specific first, the single-page-application catch-all last.
@@ -96,18 +103,20 @@ From the repository that has this one as a submodule
 dotnet run --project CSMSCLI
 ```
 
-At the first start there is no web login, so the CSMS makes one up for the user
-`root`, writes its hash to `web-login.json` and prints the password once:
+At the first start there are no accounts, so the CSMS makes one up - `root`,
+under `accounts/` beside the configuration - and prints its password once:
 
 ```
-  ┌─ First start: there was no web login, so one was made up for you ─────────
+  ┌─ First start: there were no accounts, so one was made up for you ─────────
   │  user      root
   │  password  QBDD77Lc7HseB-xORuuw8RpX
   │  It is shown here once and kept only as a hash. Write it down.
   └───────────────────────────────────────────────────────────────────────────
 ```
 
-Then open http://127.0.0.1:2351/ and sign in.
+Then open http://127.0.0.1:2351/ and sign in. Signing in happens at Hermod's
+HTTPExt API, mounted under `/ext` - the same door the charging station and the
+local controller use.
 
 Port 2351 and not 2348 or 2350: an OpenChargingCloud charging station uses 2348
 and 2349 and a local controller 2350, and all three are routinely tried out on
@@ -226,11 +235,12 @@ events costs bytes and nothing else.
 
 ## Who may open it
 
-Two answers, on purpose.
+One answer, and it is Hermod's: the accounts of the **HTTPExt API** at `/ext`,
+under `accounts/`, with every password kept as a PBKDF2-SHA256 PHC string and
+never in the clear. Signing in happens there; this CSMS's own API only reads
+what that door set.
 
-The **web interface** has one login, in `web-login.json`, with the password kept
-as a PBKDF2-SHA256 PHC string and never in the clear. What it may do comes from
-its roles:
+What somebody may do comes from the groups they are in, one per role:
 
 | Role | May |
 |------|-----|
@@ -238,11 +248,11 @@ its roles:
 | `cpo` | that, and change the name and time servers, and test them |
 | `systemadmin` | everything this CSMS can be told |
 
-A role this CSMS has never heard of is refused when the login file is read,
-rather than quietly granting nothing. The permissions travel to the browser so a
-page can grey out what somebody may not do - a courtesy, not a lock: every
-request is checked again on arrival.
-
-The **HTTPExt API** at `/ext` has the other answer: users, groups, organizations
-and API keys under `CSMS-accounts/`, for everything that outlives one operator
-at one keyboard.
+The groups are made at every start rather than only the first, because they are
+this CSMS's vocabulary and not somebody's data: a group deleted by hand would
+otherwise leave a role nobody could ever hold again. Membership is asked of the
+groups on every request rather than remembered at the sign-in, so taking
+somebody out of one takes effect on their next request instead of at their next
+sign-in. The permissions travel to the browser so a page can grey out what
+somebody may not do - a courtesy, not a lock: every request is checked again on
+arrival.

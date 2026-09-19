@@ -29,13 +29,14 @@ namespace cloud.charging.open.CSMS.Tests
 {
 
     /// <summary>
-    /// What a CSMS does with its two files when it is built, and
-    /// what it refuses to do.
+    /// What a CSMS does with the configuration file it is handed
+    /// and the accounts it finds, and what it refuses to do.
     /// </summary>
     /// <remarks>
-    /// Built, not started: everything here is decided in the constructor, and
-    /// a CSMS that was only built has not scheduled anything or bound a
-    /// socket.
+    /// The configuration is read in the constructor, so those tests only build
+    /// a CSMS. The accounts are made by <c>Start()</c>, because creating
+    /// one is asynchronous - so the tests about them start the CSMS, and
+    /// pay for a socket to do it.
     /// </remarks>
     public class StartupTests
     {
@@ -62,31 +63,38 @@ namespace cloud.charging.open.CSMS.Tests
         #endregion
 
 
-        #region AFirstStartMakesUpAPasswordAndWritesItDown()
+        #region AFirstStartMakesUpAnAccountAndKeepsOnlyItsHash()
 
         /// <summary>
-        /// Nobody can sign in to a web interface whose login is not set yet,
-        /// and an unauthenticated setup page would be a door of its own. So the
+        /// Nobody can sign in to a web interface with no accounts in it, and
+        /// an unauthenticated setup page would be a door of its own. So the
         /// password is made up, handed back once, and kept only as a hash.
         /// </summary>
         [Test]
-        public async Task AFirstStartMakesUpAPasswordAndWritesItDown()
+        public async Task AFirstStartMakesUpAnAccountAndKeepsOnlyItsHash()
         {
 
             await using var CSMS = TestCSMSs.New(directory, TestCSMSs.Offline);
 
-            var loginFile = Path.Combine(directory, "web-login.json");
+            await CSMS.Start();
 
             Assert.Multiple(() => {
 
-                Assert.That(CSMS.GeneratedPassword, Is.Not.Null.And.Not.Empty);
-                Assert.That(CSMS.Sessions.Username, Is.EqualTo("root"));
-                Assert.That(File.Exists(loginFile),       Is.True);
+                Assert.That(CSMS.GeneratedPassword,      Is.Not.Null.And.Not.Empty);
+                Assert.That(CSMS.ExtAPI.Users.Count(),   Is.EqualTo(1));
+                Assert.That(CSMS.ExtAPI.Users.First().Id.ToString(),
+                                                               Is.EqualTo(CSMS.DefaultAdminUser));
 
-                var written = File.ReadAllText(loginFile);
+                // The password is nowhere below the accounts directory, in any
+                // of the files the HTTPExt API writes - only the hash of it.
+                var written = String.Join(
+                                  "\n",
+                                  Directory.GetFiles(CSMS.AccountsPath, "*", SearchOption.AllDirectories).
+                                            Select(File.ReadAllText)
+                              );
 
                 Assert.That(written, Does.Not.Contain(CSMS.GeneratedPassword!),
-                            "The password this CSMS made up was written to its file in the clear.");
+                            "The password this CSMS made up was written to disk in the clear.");
                 Assert.That(written, Does.Contain("$pbkdf2"));
 
             });
@@ -95,62 +103,48 @@ namespace cloud.charging.open.CSMS.Tests
 
         #endregion
 
-        #region ASecondStartUsesTheLoginItFindsAndMakesUpNothing()
+        #region ASecondStartUsesTheAccountsItFindsAndMakesUpNothing()
 
         [Test]
-        public async Task ASecondStartUsesTheLoginItFindsAndMakesUpNothing()
+        public async Task ASecondStartUsesTheAccountsItFindsAndMakesUpNothing()
         {
 
             String firstPassword;
 
             await using (var first = TestCSMSs.New(directory, TestCSMSs.Offline))
             {
+                await first.Start();
                 firstPassword = first.GeneratedPassword!;
             }
 
             await using var second = TestCSMSs.New(directory, TestCSMSs.Offline);
 
+            await second.Start();
+
             Assert.Multiple(() => {
-                Assert.That(second.GeneratedPassword, Is.Null,
-                            "A CSMS that found a login file made up another password anyway.");
-                Assert.That(second.Sessions.Login.Verify("root", firstPassword), Is.True,
-                            "The login from the file is not the one the first start wrote.");
+                Assert.That(second.GeneratedPassword,    Is.Null,
+                            "A CSMS that found accounts made up another password anyway.");
+                Assert.That(second.ExtAPI.Users.Count(), Is.EqualTo(1),
+                            "A second account was made beside the one the first start wrote.");
             });
 
-        }
-
-        #endregion
-
-        #region AnUnreadableLoginFileStopsTheController()
-
-        /// <summary>
-        /// Papering over it with a new password would lock out whoever owns the
-        /// old one without saying why.
-        /// </summary>
-        [Test]
-        public void AnUnreadableLoginFileStopsTheController()
-        {
-
-            File.WriteAllText(Path.Combine(directory, "web-login.json"), "{ not json at all");
-
-            var problem = Assert.Throws<InvalidOperationException>(
-                              () => TestCSMSs.New(directory, TestCSMSs.Offline)
-                          );
-
-            Assert.That(problem!.Message, Does.Contain("web-login.json"));
+            // That the first password still opens it is checked over the wire
+            // in AuthenticationTests.TheAccountSurvivesARestart; here what is
+            // asked is only that nothing was made up a second time.
+            Assert.That(firstPassword, Is.Not.Null.And.Not.Empty);
 
         }
 
         #endregion
 
-        #region AnUnreadableConfigurationStopsTheController()
+        #region AnUnreadableConfigurationStopsTheCSMS()
 
         /// <summary>
         /// Somebody wrote down what their CSMS is and got it wrong.
         /// Quietly running as something else would be worse than stopping.
         /// </summary>
         [Test]
-        public void AnUnreadableConfigurationStopsTheController()
+        public void AnUnreadableConfigurationStopsTheCSMS()
         {
 
             File.WriteAllText(Path.Combine(directory, "configuration.json"), "{ dns: [ unquoted");
@@ -167,10 +161,10 @@ namespace cloud.charging.open.CSMS.Tests
 
         #endregion
 
-        #region AControllerWithNoFilesRunsOnItsDefaults()
+        #region ACSMSWithNoFilesRunsOnItsDefaults()
 
         [Test]
-        public async Task AControllerWithNoFilesRunsOnItsDefaults()
+        public async Task ACSMSWithNoFilesRunsOnItsDefaults()
         {
 
             await using var CSMS = TestCSMSs.New(directory);
@@ -188,14 +182,14 @@ namespace cloud.charging.open.CSMS.Tests
 
         #endregion
 
-        #region TheFileDecidesWhoThisControllerIsInOCPP()
+        #region TheFileDecidesWhoThisCSMSIsInOCPP()
 
         /// <summary>
         /// Read once, at the start. What the file says beats what the
         /// constructor was handed, and what it does not mention is left alone.
         /// </summary>
         [Test]
-        public async Task TheFileDecidesWhoThisControllerIsInOCPP()
+        public async Task TheFileDecidesWhoThisCSMSIsInOCPP()
         {
 
             var configuration = new JObject(

@@ -261,16 +261,14 @@ namespace cloud.charging.open.CSMS.Tests
                            BaseAddress = new Uri(CSMS.WebInterfaceURL.ToString())
                        };
 
+            // At the HTTPExt API: it is the only place that can check a
+            // password, and the cookie it sets is what the JSON API reads.
             var response = await http.PostAsync(
-                                     "/api/v1/auth/login",
-                                     new StringContent(
-                                         new JObject(
-                                             new JProperty("username", CSMS.Sessions.Username),
-                                             new JProperty("password", CSMS.GeneratedPassword)
-                                         ).ToString(),
-                                         System.Text.Encoding.UTF8,
-                                         "application/json"
-                                     )
+                                     $"{CSMS.ExtAPIPath.ToString().TrimEnd('/')}/login",
+                                     new FormUrlEncodedContent([
+                                         new KeyValuePair<String, String>("login",     CSMS.DefaultAdminUser),
+                                         new KeyValuePair<String, String>("password",  CSMS.GeneratedPassword ?? "")
+                                     ])
                                  );
 
             Assert.That(response.IsSuccessStatusCode, Is.True, "Signing in failed.");

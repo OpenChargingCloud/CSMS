@@ -1,4 +1,4 @@
-/*
+﻿/*
  * Copyright (c) 2014-2026 GraphDefined GmbH <achim.friedland@graphdefined.com>
  * This file is part of CSMS <https://github.com/OpenChargingCloud/CSMS>
  *
@@ -37,8 +37,9 @@ namespace cloud.charging.open.CSMS.Configuration
     /// the web interface edits the file rather than a copy of it in memory.
     ///
     /// Nothing in here is secret, so it is an ordinary file that anybody who
-    /// can read the directory may read. The one secret this CSMS
-    /// has, the web login, stays in its own file with its own permissions.
+    /// can read the directory may read. What is secret - the accounts and
+    /// their password hashes - lives in the accounts directory beside it,
+    /// with its own permissions.
     /// </remarks>
     public sealed class CSMSConfigFile
     {

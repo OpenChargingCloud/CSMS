@@ -54,8 +54,11 @@ namespace cloud.charging.open.CSMS.Tests
         /// puts a timer on the network to check the clock, so a CSMS that
         /// was only built is also one that will not quietly go and ask a time
         /// server in the middle of a test run.
+        ///
+        /// It is also <c>Start()</c> that makes the accounts, so a CSMS
+        /// that was only built has none yet and no password to show for them.
         /// </remarks>
-        /// <param name="Directory">Where its web login and its configuration go; created when it does not exist.</param>
+        /// <param name="Directory">Where its accounts and its configuration go; created when it does not exist.</param>
         /// <param name="Configuration">What its configuration file says, or null for a CSMS nobody has configured.</param>
         /// <param name="Clock">Where it reads the time, for a test that needs to decide what time it is.</param>
         public static CSMS New(String         Directory,
@@ -71,19 +74,12 @@ namespace cloud.charging.open.CSMS.Tests
                 File.WriteAllText(configFile, Configuration.ToString());
 
             return new CSMS(
-                       HTTPPort:              IPPort.Parse(FreePort()),
-                       LoginFile:             new WebLoginFile  (Path.Combine(Directory, "web-login.json")),
-                       ConfigFile:            new CSMSConfigFile(configFile),
-
-                       // Below this test's own directory like everything
-                       // else it writes: the HTTPExt API makes a tree of
-                       // its own, and left at its default every test in
-                       // the run would share one beside the test binary.
-                       HTTPExtAPIDataPath:    Path.Combine(Directory, "accounts"),
-
-                       LogToConsole:          false,
-                       BridgeDebugLog:        false,
-                       TimeProvider:          Clock
+                       HTTPPort:         IPPort.Parse(FreePort()),
+                       AccountsPath:     Path.Combine(Directory, "accounts"),
+                       ConfigFile:       new CSMSConfigFile(configFile),
+                       LogToConsole:     false,
+                       BridgeDebugLog:   false,
+                       TimeProvider:     Clock
                    );
 
         }
@@ -120,7 +116,7 @@ namespace cloud.charging.open.CSMS.Tests
         /// <remarks>
         /// Asked of the operating system rather than counted up from a
         /// constant, so that these tests do not fight with a CSMS
-        /// somebody has running on 2351 while they write them - and do not
+        /// somebody has running on 2350 while they write them - and do not
         /// fight with each other when the runner is told to parallelise.
         ///
         /// There is a gap between letting the port go and binding it again, and
@@ -151,7 +147,7 @@ namespace cloud.charging.open.CSMS.Tests
 
         /// <summary>
         /// A directory of its own for one test, so that no two of them read
-        /// each other's web login or configuration.
+        /// each other's accounts or configuration.
         /// </summary>
         public static String TemporaryDirectory(String Purpose)
 
