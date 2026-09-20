@@ -386,6 +386,12 @@ namespace cloud.charging.open.CSMS
         public URL                    WebInterfaceURL        { get; }
 
         /// <summary>
+        /// The JSON API as a browser would type it: the server and the API's
+        /// root path, which already carries the base path, with a slash at the end.
+        /// </summary>
+        public URL                    APIURL                 { get; }
+
+        /// <summary>
         /// The version of this CSMS.
         /// </summary>
         public String                 Version                { get; }
@@ -579,6 +585,11 @@ namespace cloud.charging.open.CSMS
             this.httpRootPath  = HTTPRootPath ?? this.BasePath + CSMSHTTPAPI.DefaultAPIPath;
 
             this.WebInterfaceURL = URL.Parse($"http://{address}:{port}{this.BasePath.ToString().TrimEnd('/')}/");
+
+            // From the server rather than from the web interface's URL: the API's
+            // root path already carries the base path, and behind a URL that ends
+            // in the base path it would be named twice.
+            this.APIURL          = URL.Parse($"http://{address}:{port}/{this.httpRootPath.ToString().Trim('/')}/");
 
             // The HTTPExt API builds the paths of its files by putting strings
             // together rather than with Path.Combine, so a directory that does
@@ -821,7 +832,7 @@ namespace cloud.charging.open.CSMS
             started = true;
 
             Log.Notice($"The web interface is listening on {WebInterfaceURL}", "web", "http");
-            Log.Info   ($"The JSON API is at {WebInterfaceURL}{httpRootPath.ToString().Trim('/')}/v1/status", "web", "http");
+            Log.Info   ($"The JSON API is at {APIURL}v1/status", "web", "http");
 
         }
 
