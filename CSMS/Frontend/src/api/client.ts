@@ -45,7 +45,9 @@ export type Permission = 'readConfiguration'
                        | 'changeNetworkSettings'
                        | 'runDiagnostics'
                        | 'changeStationSettings'
-                       | 'manageCertificates';
+                       | 'manageCertificates'
+                       | 'manageLocations'
+                       | 'manageRoamingPartners';
 
 /** Who is signed in to the web interface. */
 export interface Me {
@@ -79,6 +81,7 @@ export interface Configuration {
     log:         Record<string, unknown>;
     time:        Record<string, unknown>;
     ocpp:        Record<string, unknown>;
+    ocpi:        Record<string, unknown>;
     assemblies:  Record<string, unknown>[];
 }
 
@@ -489,6 +492,160 @@ export interface TOTPUpdate {
 }
 
 
+
+// OCPI
+
+/** Where one OCPI version is: its endpoints as absolute URLs a partner is told. */
+export interface OCPIVersionEndpoints {
+    version:      string;
+    details:      string;
+    credentials:  string;
+    modules:      Record<string, string>;
+}
+
+/** The OCPI side of this CSMS: which operator it is, where it is, how much it holds. */
+export interface OCPIConfiguration {
+    party: {
+        countryCode:  string;
+        partyId:      string;
+        id:           string;
+        role:         string;
+        name:         string;
+        website:      string | null;
+    };
+    endpoints: {
+        base:         string;
+        versions:     string;
+        externalURL:  string | null;
+        byVersion:    OCPIVersionEndpoints[];
+    };
+    versions:       string[];
+    knownVersions:  string[];
+    settings: {
+        locationsAsOpenData:  boolean;
+        tariffsAsOpenData:    boolean;
+        allowDowngrades:      boolean;
+        logRequests:          boolean;
+        logPayloads:          boolean;
+    };
+    counts: {
+        partners:   number;
+        locations:  number;
+        tokens:     number;
+        tariffs:    number;
+        sessions:   number;
+        cdrs:       number;
+    };
+    directory:  string;
+    file:       string;
+}
+
+/**
+ * One roaming partner. The tokens are present only for whoever may manage
+ * partners; everybody else sees that there is one.
+ */
+export interface Partner {
+    version:           string;
+    id:                string;
+    countryCode:       string;
+    partyId:           string;
+    role:              string;
+    name:              string;
+    website:           string | null;
+    status:            string;
+    ourToken:          string | null;
+    hasOurToken:       boolean;
+    ourTokenStatus:    string | null;
+    theirToken:        string | null;
+    hasTheirToken:     boolean;
+    theirVersionsURL:  string | null;
+    remoteStatus:      string | null;
+    selectedVersion:   string | null;
+    /** Whether this operator holds a token of theirs and a place to send it. */
+    canRegister:       boolean;
+    /** Whether the peering is complete in both directions. */
+    registered:        boolean;
+    created:           string;
+    lastUpdated:       string;
+}
+
+/** Every roaming partner, and what the add form may choose from. */
+export interface Partners {
+    partners:        Partner[];
+    versions:        string[];
+    roles:           string[];
+    ourVersionsURL:  string;
+}
+
+/** What it takes to add a roaming partner. */
+export interface PartnerSpec {
+    version:       string;
+    countryCode:   string;
+    partyId:       string;
+    role:          string;
+    name:          string;
+    website?:      string;
+    /** Empty means "make one up"; it comes back in the answer. */
+    ourToken?:     string;
+    /** Both or neither: with both, this operator can start the peering itself. */
+    theirToken?:   string;
+    versionsURL?:  string;
+}
+
+/** One location this operator publishes, as OCPI writes it, with the version added. */
+export interface Location {
+    version:       string;
+    id:            string;
+    name?:         string;
+    address?:      string;
+    city?:         string;
+    postal_code?:  string;
+    country?:      string;
+    coordinates?:  { latitude: string; longitude: string };
+    evses?:        unknown[];
+    publish?:      boolean;
+    last_updated:  string;
+    [other: string]: unknown;
+}
+
+/** Every location, and what the form may choose from. */
+export interface Locations {
+    locations:  Location[];
+    versions:   string[];
+    operator:   string;
+    partyId:    string;
+    /** Whether anybody may read them without a token. */
+    openData:   boolean;
+}
+
+/** What it takes to publish a location. */
+export interface LocationSpec {
+    version:     string;
+    id:          string;
+    name:        string;
+    address:     string;
+    city:        string;
+    postalCode:  string;
+    country:     string;
+    latitude:    number;
+    longitude:   number;
+    timeZone:    string;
+    publish?:    boolean;
+}
+
+/** What travels between this operator and its partners, other than the locations. */
+export type RoamingDataKind = 'tokens' | 'tariffs' | 'sessions' | 'cdrs';
+
+/** One object as OCPI writes it, with the version added. */
+export type RoamingItem = { version: string } & Record<string, unknown>;
+
+export interface RoamingData {
+    kind:      RoamingDataKind;
+    versions:  string[];
+    items:     RoamingItem[];
+}
+
+
 export class ApiError extends Error {
 
     constructor(public readonly status:  number,
@@ -643,6 +800,52 @@ export const api = {
         save:  (update: NTSUpdate)   => request<NTSConfiguration>('PUT', '/configuration/nts', update),
         /** One key exchange and one authenticated NTP request, with every step in the log. */
         sync:  ()                    => request<NTSConfiguration>('POST', '/configuration/nts/sync', {})
+    },
+
+    /**
+     * The OCPI side: which charge point operator this CSMS is, its roaming
+     * partners, the locations it publishes, and what travels between them.
+     */
+    ocpi: {
+
+        configuration: () => request<OCPIConfiguration>('GET', '/configuration/ocpi'),
+
+        partners: {
+
+            get:       ()                     => request<Partners>('GET', '/ocpi/partners'),
+
+            /**
+             * Add a partner. The answer carries the token this operator made
+             * up for them - the one thing that has to be handed over by hand.
+             */
+            add:       (spec: PartnerSpec)    => request<{ message: string; id: string; version: string; ourToken: string; partners: Partners }>(
+                                                     'POST', '/ocpi/partners', spec),
+
+            /** Start the peering from here: fetch their versions, POST our credentials. */
+            register:  (version: string, id: string) =>
+                           request<{ ok: boolean; message: string; partners: Partners }>(
+                               'POST', `/ocpi/partners/${encodeURIComponent(version)}/${encodeURIComponent(id)}/register`, {}),
+
+            remove:    (version: string, id: string) =>
+                           request<Partners>('DELETE', `/ocpi/partners/${encodeURIComponent(version)}/${encodeURIComponent(id)}`)
+
+        },
+
+        locations: {
+
+            get:     ()                    => request<Locations>('GET', '/ocpi/locations'),
+
+            add:     (spec: LocationSpec)  => request<{ message: string; id: string; version: string; locations: Locations }>(
+                                                  'POST', '/ocpi/locations', spec),
+
+            remove:  (version: string, id: string) =>
+                         request<Locations>('DELETE', `/ocpi/locations/${encodeURIComponent(version)}/${encodeURIComponent(id)}`)
+
+        },
+
+        /** One kind of what travels between this operator and its partners. */
+        data: (kind: RoamingDataKind) => request<RoamingData>('GET', `/ocpi/${kind}`)
+
     },
 
     /**

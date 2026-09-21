@@ -23,6 +23,13 @@ it, and is the thing they are all pointed at. That is what the web interface is
 for: it is the one place where somebody can see which of them got in, which were
 turned away and why, without reading a log file over somebody else's shoulder.
 
+Beside that it is a charge point operator in OCPI: the e-mobility service
+providers whose customers charge at those stations are peered with it, it
+publishes the locations its stations stand at, and it takes what the partners
+push. Two protocols and one box - separate ports, separate identities, separate
+stores - and what ties them together is that an operator with no stations has
+nothing to publish and an operator with no partners has nobody to publish it to.
+
 This is built the same way as
 [ChargingStation](https://github.com/OpenChargingCloud/ChargingStation) and
 [LocalController](https://github.com/OpenChargingCloud/LocalController), and
@@ -79,6 +86,10 @@ socket.
 | Server certificates | the keys and chains this CSMS presents | `manageCertificates` |
 | Client trust | the chains a station's certificate may come from | `manageCertificates` |
 | Station logins | who may sign in, and with what | `changeStationSettings` |
+| OCPI | nothing - who this operator is and where its partners find it | `readConfiguration` |
+| Roaming partners | the EMSPs it is peered with, and the peering itself | `manageRoamingPartners` |
+| Locations | the charging locations it publishes | `manageLocations` |
+| Roaming data | nothing - what travels between it and its partners | `readConfiguration` |
 | Logs | nothing - it reads | `readConfiguration` |
 
 Everything on the DNS and NTS pages takes effect the moment it is saved, for
@@ -92,6 +103,14 @@ is read from the `ocpp` section of that file at the start and is deliberately
 *not* changeable while running: an identification is what a charging station
 knows this CSMS by, and changing it under live connections would not rename the
 CSMS, it would make it a second one nobody is talking to.
+
+The same goes for the `ocpi` section - the country code, the party
+identification, the business name and the versions offered. Those are what every
+roaming partner wrote into its credentials, and they have nothing to do with the
+OCPP identification above. The partners themselves are *not* in that file: the
+OCPI library keeps them, and what they sent, in append-only files of its own
+below an `ocpi/` directory beside the configuration, one set per version, and
+reads them back at every start.
 
 
 ## Running it

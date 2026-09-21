@@ -294,7 +294,9 @@ namespace cloud.charging.open.CSMS.Tests
                                                                  "changeNetworkSettings",
                                                                  "runDiagnostics",
                                                                  "changeStationSettings",
-                                                                 "manageCertificates" }));
+                                                                 "manageCertificates",
+                                                                 "manageLocations",
+                                                                 "manageRoamingPartners" }));
             });
 
         }

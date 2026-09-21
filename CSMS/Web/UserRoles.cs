@@ -51,7 +51,9 @@ namespace cloud.charging.open.CSMS.Web
         None                   = 0,
 
         /// <summary>
-        /// See how this CSMS is configured.
+        /// See how this CSMS is configured, and what travels between it and
+        /// its roaming partners: the locations, the tokens, the sessions and
+        /// the charge detail records.
         /// </summary>
         ReadConfiguration      = 1,
 
@@ -106,7 +108,35 @@ namespace cloud.charging.open.CSMS.Web
         /// add a trust anchor can let in a charging station that nobody issued
         /// a password to, and no other permission here reaches that far.
         /// </remarks>
-        ManageCertificates     = 16
+        ManageCertificates     = 16,
+
+        /// <summary>
+        /// Publish and withdraw the charging locations this operator offers to
+        /// its roaming partners.
+        /// </summary>
+        /// <remarks>
+        /// Day-to-day work at an operator: a site opens, another is taken off
+        /// the map. It is a bigger thing than changing a name server, because
+        /// being wrong here is quiet - a location that was not published is a
+        /// driver who is never sent there, and nobody here finds out - so it is
+        /// a permission of its own rather than part of
+        /// <see cref="ChangeNetworkSettings"/>.
+        /// </remarks>
+        ManageLocations        = 32,
+
+        /// <summary>
+        /// Add and remove roaming partners, hand out the access token a partner
+        /// signs in with, and start the OCPI peering with one.
+        /// </summary>
+        /// <remarks>
+        /// As far-reaching as the certificates, and for the same reason.
+        /// Everything else here is about what this CSMS does; this and
+        /// <see cref="ManageCertificates"/> are about whom it believes.
+        /// Somebody who can add a roaming partner hands a foreign system the
+        /// right to push tokens into this operator and to ask it to start and
+        /// stop charging sessions at its stations.
+        /// </remarks>
+        ManageRoamingPartners  = 64
 
     }
 
@@ -147,7 +177,8 @@ namespace cloud.charging.open.CSMS.Web
 
         /// <summary>
         /// The operator of this CSMS: may point it at other name
-        /// and time servers, and may test them.
+        /// and time servers, may test them, looks after the charging stations
+        /// below it and after the locations they stand at.
         /// </summary>
         /// <remarks>
         /// Day-to-day operation. A CSMS is reached by whoever runs the charging
@@ -158,24 +189,28 @@ namespace cloud.charging.open.CSMS.Web
                                                              Permissions.ReadConfiguration      |
                                                              Permissions.ChangeNetworkSettings  |
                                                              Permissions.RunDiagnostics         |
-                                                             Permissions.ChangeStationSettings);
+                                                             Permissions.ChangeStationSettings  |
+                                                             Permissions.ManageLocations);
 
         /// <summary>
         /// Everything this CSMS can be told, by whoever is trusted
         /// with all of it at once.
         /// </summary>
         /// <remarks>
-        /// What separates it from the CPO is the keys and the trust: whoever
-        /// runs a site adds and removes charging stations all day, and whoever
-        /// decides which certificate authority this CSMS believes does it
-        /// twice in the life of the box.
+        /// What separates it from the CPO is the keys, the trust and the
+        /// roaming partners: whoever runs a site adds and removes charging
+        /// stations all day, and whoever decides which certificate authority
+        /// and which foreign operator this CSMS believes does it twice in the
+        /// life of the box.
         /// </remarks>
         public static readonly UserRole  SystemAdmin  = new ("systemadmin",
                                                              Permissions.ReadConfiguration      |
                                                              Permissions.ChangeNetworkSettings  |
                                                              Permissions.RunDiagnostics         |
                                                              Permissions.ChangeStationSettings  |
-                                                             Permissions.ManageCertificates);
+                                                             Permissions.ManageCertificates     |
+                                                             Permissions.ManageLocations        |
+                                                             Permissions.ManageRoamingPartners);
 
         /// <summary>
         /// Every role this CSMS knows.

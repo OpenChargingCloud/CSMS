@@ -434,6 +434,7 @@ namespace cloud.charging.open.CSMS
         /// <param name="HTTPPort">The TCP port to listen on.</param>
         /// <param name="ConfigFile">Where everything this CSMS can be told in writing lives; "configuration.json" beside the process by default.</param>
         /// <param name="OCPP">Who this CSMS says it is in OCPP, unless the configuration file says otherwise.</param>
+        /// <param name="OCPI">Who this CSMS is in OCPI, unless the configuration file says otherwise.</param>
         /// <param name="Frontend">Where the web interface comes from; the bundle embedded in this assembly by default.</param>
         /// <param name="Log">The event log; a new one by default.</param>
         /// <param name="LogToConsole">Whether the event log is also written to the console.</param>
@@ -452,6 +453,7 @@ namespace cloud.charging.open.CSMS
                     IPPort?                HTTPPort                = null,
                     CSMSConfigFile?        ConfigFile              = null,
                     OCPPConfiguration?     OCPP                    = null,
+                    OCPIConfiguration?     OCPI                    = null,
                     IStaticContentSource?  Frontend                = null,
                     EventLog?              Log                     = null,
                     Boolean                LogToConsole            = true,
@@ -799,6 +801,19 @@ namespace cloud.charging.open.CSMS
 
             #endregion
 
+            #region The OCPI endpoints the roaming partners call
+
+            // After the HTTPExt API, because they hang off it, and after the
+            // configuration file, because who this operator is in OCPI is
+            // written there. They share the HTTP server above rather than
+            // opening a port of their own: OCPI is plain HTTP, and one
+            // operator is one address to point a partner at - and not the
+            // port the charging stations dial into, which is the other
+            // protocol entirely.
+            BuildOCPI(configuration?.OCPI ?? OCPI);
+
+            #endregion
+
         }
 
         #endregion
@@ -833,6 +848,10 @@ namespace cloud.charging.open.CSMS
 
             Log.Notice($"The web interface is listening on {WebInterfaceURL}", "web", "http");
             Log.Info   ($"The JSON API is at {APIURL}v1/status", "web", "http");
+            Log.Notice ($"Roaming partners find this operator at {OCPIVersionsURL} " +
+                        $"(OCPI {String.Join(", ", OCPIVersions.Select(version => version.Label))}, " +
+                        $"{RemotePartyCount} partner(s), {LocationCount} location(s)).",
+                        "ocpi");
 
         }
 
@@ -1136,10 +1155,29 @@ namespace cloud.charging.open.CSMS
                        new JProperty("certificates",     ServerCertificates.Entries.Count)
                    )),
 
+                   new JProperty("ocpi",       new JObject(
+                       new JProperty("role",             "CPO"),
+                       new JProperty("partyId",          PartyIdText),
+                       new JProperty("countryCode",      PartyId.CountryCode.ToString()),
+                       new JProperty("party",            PartyId.PartyId.ToString()),
+                       new JProperty("name",             BusinessDetails.Name),
+                       new JProperty("website",          BusinessDetails.Website?.ToString()),
+                       new JProperty("versions",         new JArray(OCPIVersions.Select(version => version.Label))),
+                       new JProperty("versionsURL",      OCPIVersionsURL.ToString()),
+                       new JProperty("partners",         RemotePartyCount),
+                       new JProperty("locations",        LocationCount),
+                       new JProperty("tokens",           TokenCount),
+                       new JProperty("file",             ConfigFile.Path)
+                   )),
+
                    new JProperty("assemblies", new JArray(
                        AssemblyJSON<HTTPServer>                              ("Hermod"),
                        AssemblyJSON<NTSClient>                               ("Norn"),
-                       AssemblyJSON<OCPPv2_1_CSMS.TestCSMSNode>     ("OCPP 2.1")
+                       AssemblyJSON<OCPPv2_1_CSMS.TestCSMSNode>     ("OCPP 2.1"),
+                       AssemblyJSON<protocols.OCPI.CommonHTTPAPI>            ("OCPI"),
+                       AssemblyJSON<protocols.OCPIv2_1_1.CommonAPI>          ("OCPI 2.1.1"),
+                       AssemblyJSON<protocols.OCPIv2_2_1.CommonAPI>          ("OCPI 2.2.1"),
+                       AssemblyJSON<protocols.OCPIv2_3_0.CommonAPI>          ("OCPI 2.3.0")
                    ))
 
                );

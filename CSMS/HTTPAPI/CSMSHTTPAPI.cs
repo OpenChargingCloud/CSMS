@@ -210,6 +210,11 @@ namespace cloud.charging.open.CSMS
             // CSMSHTTPAPI.OCPPServer.cs.
             RegisterOCPPServerRoutes();
 
+            // The OCPI side: the roaming partners, the locations this operator
+            // publishes and what travels between them; see
+            // CSMSHTTPAPI.OCPI.cs.
+            RegisterOCPIRoutes();
+
             AddHandler(HTTPPath.Root + "v1/logs",          GetLogs,           HTTPMethod.GET);
 
             AddHandler(HTTPMethod.GET,

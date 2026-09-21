@@ -17,6 +17,10 @@ import { ocppServerPage }         from './pages/ocppServer';
 import { stationLoginsPage }      from './pages/stationLogins';
 import { serverCertificatesPage } from './pages/serverCertificates';
 import { clientTrustPage }        from './pages/clientTrust';
+import { ocpiPage }               from './pages/ocpi';
+import { partnersPage }           from './pages/partners';
+import { locationsPage }          from './pages/locations';
+import { roamingDataPages }       from './pages/roamingData';
 import { loginPage }              from './pages/login';
 import { logsPage }               from './pages/logs';
 import { notFoundPage }           from './pages/notFound';
@@ -45,6 +49,16 @@ const router = new Router({
         { path: '/configuration/ocpp-server/logins',        page: stationLoginsPage,      guard: auth.requireSignIn },
         { path: '/configuration/ocpp-server/certificates',  page: serverCertificatesPage, guard: auth.requireSignIn },
         { path: '/configuration/ocpp-server/trust',         page: clientTrustPage,        guard: auth.requireSignIn },
+
+        { path: '/configuration/ocpi',            page: ocpiPage,                  guard: auth.requireSignIn },
+        { path: '/configuration/ocpi/partners',   page: partnersPage,              guard: auth.requireSignIn },
+        { path: '/configuration/ocpi/locations',  page: locationsPage,             guard: auth.requireSignIn },
+
+        { path: '/roaming',                       page: roamingDataPages.tokens,   guard: auth.requireSignIn },
+        { path: '/roaming/tokens',                page: roamingDataPages.tokens,   guard: auth.requireSignIn },
+        { path: '/roaming/tariffs',               page: roamingDataPages.tariffs,  guard: auth.requireSignIn },
+        { path: '/roaming/sessions',              page: roamingDataPages.sessions, guard: auth.requireSignIn },
+        { path: '/roaming/cdrs',                  page: roamingDataPages.cdrs,     guard: auth.requireSignIn },
 
         { path: '/logs',                page: logsPage,           guard: auth.requireSignIn },
         { path: '/login',               page: loginPage }

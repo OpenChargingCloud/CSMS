@@ -68,6 +68,12 @@ export const configurationPage: Page = {
                             configuration.ocpp
                         )}
 
+                        ${card(
+                            `OCPI - ${formatValue(configuration.ocpi.role)}`,
+                            'fa-handshake',
+                            configuration.ocpi
+                        )}
+
                         <section class="card">
                             <h2><i class="fa-solid fa-cubes"></i> Libraries</h2>
                             <div class="kv-list">

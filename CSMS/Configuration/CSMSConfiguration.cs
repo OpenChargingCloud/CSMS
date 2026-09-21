@@ -47,10 +47,12 @@ namespace cloud.charging.open.CSMS.Configuration
     /// <param name="NTS">Where this CSMS reads the time.</param>
     /// <param name="OCPP">Who this CSMS says it is when it speaks OCPP.</param>
     /// <param name="OCPPServer">The server the charging stations below it connect to.</param>
+    /// <param name="OCPI">Who this CSMS is when it speaks OCPI to its roaming partners.</param>
     public sealed record CSMSConfiguration(DNSConfiguration?         DNS          = null,
                                                  NTSConfiguration?         NTS          = null,
                                                  OCPPConfiguration?        OCPP         = null,
-                                                 OCPPServerConfiguration?  OCPPServer   = null)
+                                                 OCPPServerConfiguration?  OCPPServer   = null,
+                                                 OCPIConfiguration?        OCPI         = null)
     {
 
         #region Properties
@@ -59,7 +61,7 @@ namespace cloud.charging.open.CSMS.Configuration
         /// Whether this document says anything at all.
         /// </summary>
         public Boolean IsEmpty
-            => DNS is null && NTS is null && OCPP is null && OCPPServer is null;
+            => DNS is null && NTS is null && OCPP is null && OCPPServer is null && OCPI is null;
 
         #endregion
 
@@ -168,7 +170,27 @@ namespace cloud.charging.open.CSMS.Configuration
 
             #endregion
 
-            Configuration = new CSMSConfiguration(dns, nts, ocpp, ocppServer);
+            #region OCPI
+
+            OCPIConfiguration? ocpi = null;
+
+            if (JSON[OCPIConfiguration.SectionName] is JToken ocpiToken && ocpiToken.Type != JTokenType.Null)
+            {
+
+                if (ocpiToken is not JObject ocpiJSON)
+                {
+                    Error = $"'{OCPIConfiguration.SectionName}' must be a JSON object.";
+                    return false;
+                }
+
+                if (!OCPIConfiguration.TryParse(ocpiJSON, out ocpi, out Error))
+                    return false;
+
+            }
+
+            #endregion
+
+            Configuration = new CSMSConfiguration(dns, nts, ocpp, ocppServer, ocpi);
             return true;
 
         }
@@ -197,6 +219,9 @@ namespace cloud.charging.open.CSMS.Configuration
             if (OCPPServer is not null)
                 json.Add(OCPPServerConfiguration.SectionName, OCPPServer.ToJSON());
 
+            if (OCPI is not null)
+                json.Add(OCPIConfiguration.SectionName,  OCPI.ToJSON());
+
             return json;
 
         }
@@ -214,7 +239,8 @@ namespace cloud.charging.open.CSMS.Configuration
                              DNS        is not null ? "DNS"                  : null,
                              NTS        is not null ? "NTS"                  : null,
                              OCPP       is not null ? OCPP.ToString()        : null,
-                             OCPPServer is not null ? OCPPServer.ToString()  : null
+                             OCPPServer is not null ? OCPPServer.ToString()  : null,
+                             OCPI       is not null ? OCPI.ToString()        : null
                          }.Where(section => section is not null));
 
         #endregion

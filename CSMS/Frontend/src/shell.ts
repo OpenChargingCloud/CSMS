@@ -34,7 +34,21 @@ export const menu: MenuEntry[] = [
             { path: '/configuration/ocpp-server',                label: 'Charging stations',   icon: 'fa-charging-station'          },
             { path: '/configuration/ocpp-server/logins',         label: 'Logins and groups',   icon: 'fa-users-gear'                },
             { path: '/configuration/ocpp-server/certificates',   label: 'Server certificates', icon: 'fa-certificate'               },
-            { path: '/configuration/ocpp-server/trust',          label: 'Accepted chains',     icon: 'fa-user-shield'               }
+            { path: '/configuration/ocpp-server/trust',          label: 'Accepted chains',     icon: 'fa-user-shield'               },
+            { path: '/configuration/ocpi',                       label: 'OCPI',                icon: 'fa-plug'                      },
+            { path: '/configuration/ocpi/partners',              label: 'Roaming partners',    icon: 'fa-handshake'                 },
+            { path: '/configuration/ocpi/locations',             label: 'Locations',           icon: 'fa-map-location-dot'          }
+        ]
+    },
+    {
+        path:      '/roaming',
+        label:     'Roaming data',
+        icon:      'fa-database',
+        children:  [
+            { path: '/roaming/tokens',     label: 'Tokens',                 icon: 'fa-id-card'      },
+            { path: '/roaming/tariffs',    label: 'Tariffs',                icon: 'fa-tags'         },
+            { path: '/roaming/sessions',   label: 'Charging sessions',      icon: 'fa-bolt'         },
+            { path: '/roaming/cdrs',       label: 'Charge detail records',  icon: 'fa-file-invoice' }
         ]
     },
     { path: '/logs', label: 'Logs', icon: 'fa-list-ul' }
