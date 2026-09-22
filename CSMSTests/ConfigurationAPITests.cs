@@ -345,6 +345,15 @@ namespace cloud.charging.open.CSMS.Tests
                 Assert.That(nts["cookies"],                               Is.Not.Null);
                 Assert.That(nts["keyExchange"],                           Is.Not.Null);
                 Assert.That(nts.Value<String>("file"),                    Is.EqualTo(CSMS.ConfigFile.Path));
+
+                // What the page draws its "Time servers" card from. A CSMS
+                // nobody has configured has a group of one, and the card has
+                // to have something to draw rather than nothing.
+                Assert.That(nts["timeSources"],                           Is.Not.Null.And.Count.EqualTo(1));
+                Assert.That(nts["timeSources"]?[0]?.Value<String>("hostname"),
+                                                                          Is.EqualTo(CSMS.NTSClient.Hostname.ToString()));
+                Assert.That(nts["group"]?.Value<String>("name"),          Is.EqualTo("legal"));
+                Assert.That(nts["group"]?.Value<Byte>  ("minServers"),    Is.EqualTo(1));
             });
 
         }
