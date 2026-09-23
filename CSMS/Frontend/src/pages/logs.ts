@@ -82,6 +82,14 @@ export const logsPage: Page = {
 
         let renderedTags = '';
 
+        // What the last adjustment below could not put into scrollTop.
+        // A line is about 24.33px tall and scrollTop snaps to whole device
+        // pixels, so a fraction of one is dropped on every batch - always the
+        // same fraction, because every line is the same height, so it is a
+        // drift rather than noise. Carried to the next batch, where it is
+        // paid.
+        let scrollDebt = 0;
+
 
         function matches(entry: LogEntry): boolean {
 
@@ -136,11 +144,15 @@ export const logsPage: Page = {
 
         function scrollToTop(): void {
             list.scrollTop = 0;
+            scrollDebt     = 0;
             toTop.hidden   = true;
         }
 
         /** Everything again: after a reload, or when a filter changed. */
         function redraw(): void {
+
+            // Everything is drawn again, so nothing is owed from before.
+            scrollDebt = 0;
 
             // The store keeps its entries oldest first, because that is the
             // order their ids come in and the order the next batch continues;
@@ -168,16 +180,24 @@ export const logsPage: Page = {
 
                 list.querySelector('.log-empty')?.remove();
 
-                // Measured with the empty-notice already gone and the trimming
-                // below not yet done, so this is the height the new lines added
-                // and nothing else.
-                const before = list.scrollHeight;
+                // Where the line that is at the top sits right now. Everything
+                // below it is about to be pushed down by whatever goes in
+                // above, and how far this one moved is that distance - in
+                // fractions of a pixel, which the difference of two
+                // scrollHeights is not, those being whole numbers.
+                const anchor    = list.firstElementChild;
+                const anchorWas = anchor?.getBoundingClientRect().top ?? 0;
 
                 // Turned around inside the batch as well: a burst that arrives
                 // in one event would otherwise sit at the top back to front.
                 list.insertAdjacentHTML('afterbegin', wanted.reverse().map(lineHTML).join(''));
 
-                const grew = list.scrollHeight - before;
+                // Read before the trimming below, which takes its lines off
+                // the bottom - that moves nothing above it, but it can take
+                // the anchor itself when the store has just wrapped.
+                const grew = anchor
+                                 ? anchor.getBoundingClientRect().top - anchorWas
+                                 : 0;
 
                 // The CSMS keeps a bounded log and so does this page; what
                 // fell out of the store has to leave the list as well - and that is
@@ -193,10 +213,18 @@ export const logsPage: Page = {
                     // them down, so the older line somebody stopped to read
                     // would walk off the screen at the speed the log fills.
                     // Put the view back where it was, by exactly what was
-                    // added; the trimming above only takes lines off the
-                    // bottom and moves nothing.
-                    list.scrollTop  += grew;
-                    toTop.hidden     = false;
+                    // added and whatever the last correction was short.
+                    const asked     = list.scrollTop + grew + scrollDebt;
+                    list.scrollTop  = asked;
+
+                    // What scrollTop took is not always what it was asked for.
+                    // Only the snapping is worth carrying: a larger refusal
+                    // means the list is at its end, which is not arithmetic to
+                    // argue with.
+                    const refused   = asked - list.scrollTop;
+                    scrollDebt      = Math.abs(refused) < 1 ? refused : 0;
+
+                    toTop.hidden    = false;
                 }
 
             }
@@ -219,7 +247,14 @@ export const logsPage: Page = {
         function drawTags(): void {
 
             const all = [...new Set([...logLevels, ...logs.tags])].sort();
-            const key = all.join(' ') + '|' + [...chosenTags].sort().join(' ');
+
+            // NUL as the separator, written as an escape rather than as the
+            // byte itself - the byte made this file binary to git, which shows
+            // every change to it as a blob instead of a diff, and to grep,
+            // which then skips it without a word. A tag may hold anything a
+            // tag may hold, so the separator has to be the one thing it
+            // cannot contain, or two different sets could share a key.
+            const key = all.join('\0') + '|' + [...chosenTags].sort().join('\0');
 
             if (key === renderedTags)
                 return;
