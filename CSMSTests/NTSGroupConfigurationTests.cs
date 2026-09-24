@@ -21,7 +21,9 @@ using Newtonsoft.Json.Linq;
 
 using NUnit.Framework;
 
+using org.GraphDefined.Vanaheimr.Hermod;
 using org.GraphDefined.Vanaheimr.Hermod.DNS;
+using org.GraphDefined.Vanaheimr.Norn.NTS;
 
 using cloud.charging.open.CSMS.Configuration;
 
@@ -150,6 +152,45 @@ namespace cloud.charging.open.CSMS.Tests
 
         #endregion
 
+        #region TheDefaultIsFourPeersAndAQuorumOfTwo()
+
+        /// <summary>
+        /// What a CSMS asks when its configuration says nothing at all.
+        /// </summary>
+        /// <remarks>
+        /// One band rather than two: the PTB's four are peers, and splitting
+        /// them into a first choice and a fallback would say something about
+        /// them that is not true. A quorum of two, so that one host being away
+        /// is survivable and one host being wrong is visible.
+        /// </remarks>
+        [Test]
+        public void TheDefaultIsFourPeersAndAQuorumOfTwo()
+        {
+
+            var group = NTSConfiguration.DefaultGroup();
+            var bands = group.Bands();
+
+            Assert.Multiple(() => {
+
+                Assert.That(bands,             Has.Count.EqualTo(1),  "peers, not a first choice and a fallback");
+                Assert.That(bands[0],          Has.Count.EqualTo(4));
+                Assert.That(group.MinServers,  Is.EqualTo(2));
+
+                Assert.That(bands[0].Select(source => source.Hostname.ToString()),
+                            Is.EqualTo(new[] { "ptbtime1.ptb.de.", "ptbtime2.ptb.de.",
+                                               "ptbtime3.ptb.de.", "ptbtime4.ptb.de." }));
+
+                // The single-server default is the first of them, so a client
+                // built the old way and this group cannot name different hosts.
+                Assert.That(bands[0][0].Hostname.ToString(),
+                            Is.EqualTo(DomainName.Parse(NTSConfiguration.DefaultHostname).ToString()));
+
+            });
+
+        }
+
+        #endregion
+
         #region AnEmptySectionFallsBackToTheGivenServer()
 
         [Test]
@@ -270,29 +311,126 @@ namespace cloud.charging.open.CSMS.Tests
 
         #endregion
 
-        #region AGroupOfOneIsWhatAStationStartsWith()
+        #region TheDefaultFourAreWhatACSMSStartsWith()
 
         /// <summary>
-        /// A CSMS handed nothing but a time client has a group of one, so
-        /// that everything reading the group reads something rather than
-        /// checking for null first.
+        /// A CSMS nobody has configured asks the PTB's four.
         /// </summary>
         /// <remarks>
-        /// This is the case every existing installation is in, and the one a
-        /// port to groups is likeliest to break: the CSMS is built the way
-        /// it has always been built, with no "nts" section at all.
+        /// This is the case every existing installation is in - built the way
+        /// it has always been built, with no "nts" section at all - and it
+        /// used to be a group of one. Four is the better default for the clock
+        /// the stations below this CSMS are told the time by: one host being
+        /// rebooted no longer leaves it without a time, and two that agree
+        /// catch what one cannot, a server that is wrong rather than absent.
+        ///
+        /// The first of the four is still what the single-server client points
+        /// at, so the group and the client cannot name different hosts - which
+        /// is what the third assertion is for, and why it reads the same as it
+        /// did when there was only one.
         /// </remarks>
         [Test]
-        public async Task AGroupOfOneIsWhatAStationStartsWith()
+        public async Task TheDefaultFourAreWhatACSMSStartsWith()
         {
 
             await using var CSMS = TestCSMSs.New(directory);
 
             Assert.Multiple(() => {
-                Assert.That(CSMS.TimeSources.Bands(),                 Has.Count.EqualTo(1));
-                Assert.That(CSMS.TimeSources.Bands()[0],              Has.Count.EqualTo(1));
+                Assert.That(CSMS.TimeSources.Bands(),                 Has.Count.EqualTo(1),  "peers, asked together");
+                Assert.That(CSMS.TimeSources.Bands()[0],              Has.Count.EqualTo(4));
                 Assert.That(CSMS.TimeSources.Bands()[0][0].Hostname,  Is.EqualTo(CSMS.NTSClient.Hostname));
-                Assert.That(CSMS.TimeSources.MinServers,              Is.EqualTo(1));
+                Assert.That(CSMS.TimeSources.MinServers,              Is.EqualTo(2));
+            });
+
+        }
+
+        #endregion
+
+        #region ACSMSHandedItsOwnClientAsksThatServer()
+
+        /// <summary>
+        /// A caller that hands in its own time client means that server, and
+        /// gets a group of one built from it: four others beside it would be a
+        /// report about somebody else's clock.
+        /// </summary>
+        [Test]
+        public async Task ACSMSHandedItsOwnClientAsksThatServer()
+        {
+
+            System.IO.Directory.CreateDirectory(directory);
+
+            await using var CSMS = new CSMS(
+                                       NTSClient:       new NTSClient(DomainName.Parse("time.example"), NTSKE_Port: IPPort.Parse(4461)),
+                                       HTTPPort:        IPPort.Parse(TestCSMSs.FreePort()),
+                                       AccountsPath:    Path.Combine(directory, "accounts"),
+                                       ConfigFile:      new CSMSConfigFile(Path.Combine(directory, "configuration.json")),
+                                       LogToConsole:    false,
+                                       BridgeDebugLog:  false
+                                   );
+
+            Assert.Multiple(() => {
+                Assert.That(CSMS.TimeSources.Bands()[0].Select(source => source.Hostname.ToString()),
+                            Is.EqualTo(new[] { "time.example." }));
+                Assert.That(CSMS.TimeSources.Bands()[0][0].NTSKEPort.ToUInt16(),  Is.EqualTo(4461));
+                Assert.That(CSMS.TimeSources.MinServers,                          Is.EqualTo(1));
+            });
+
+        }
+
+        #endregion
+
+        #region ASectionSayingOnlyWhetherKeepsTheServers()
+
+        /// <summary>
+        /// A section that only switches NTS on or off says nothing about the
+        /// servers, and leaves the four alone - the file every test here starts
+        /// from is one of those.
+        /// </summary>
+        [Test]
+        public async Task ASectionSayingOnlyWhetherKeepsTheServers()
+        {
+
+            await using var CSMS = TestCSMSs.New(directory, TestCSMSs.Offline);
+
+            Assert.Multiple(() => {
+                Assert.That(CSMS.NTSEnabled,              Is.False);
+                Assert.That(CSMS.TimeSources.Bands()[0],  Has.Count.EqualTo(4),
+                            "a section mentioning nothing but 'enabled' reduced the servers to one");
+                Assert.That(CSMS.TimeSources.MinServers,  Is.EqualTo(2));
+            });
+
+        }
+
+        #endregion
+
+        #region SwitchingNTSOffAndOnLeavesTheGroupAlone()
+
+        /// <summary>
+        /// The switch on the NTS page sends "enabled" and nothing else. It used
+        /// to rebuild the group from what was sent - which named no servers, so
+        /// the configured ones became the one the single test client points at,
+        /// held to a quorum of one, until the next start read the file again.
+        /// </summary>
+        [Test]
+        public async Task SwitchingNTSOffAndOnLeavesTheGroupAlone()
+        {
+
+            var file = new JObject(
+                           new JProperty("nts", new JObject(
+                               new JProperty("enabled",     false),
+                               new JProperty("servers",     new JArray("a.example", "b.example", "c.example")),
+                               new JProperty("minServers",  3)
+                           ))
+                       );
+
+            await using var CSMS = TestCSMSs.New(directory, file);
+
+            Assert.That(CSMS.TryUpdateNTSConfiguration(new JObject(new JProperty("enabled", false)), out var error),  Is.True,  error);
+
+            Assert.Multiple(() => {
+                Assert.That(CSMS.TimeSources.Bands()[0].Select(source => source.Hostname.ToString()),
+                            Is.EqualTo(new[] { "a.example.", "b.example.", "c.example." }));
+                Assert.That(CSMS.TimeSources.MinServers,  Is.EqualTo(3));
             });
 
         }
