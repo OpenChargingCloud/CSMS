@@ -79,10 +79,10 @@ export const configurationPage: Page = {
                             <div class="kv-list">
                                 ${configuration.assemblies.map(assembly => html`
                                     <div class="kv">
-                                        <span class="k">${formatValue(assembly.name)}</span>
+                                        <span class="k">${breakable(formatValue(assembly.name))}</span>
                                         <span class="v">
                                             ${formatValue(assembly.version)}
-                                            <span class="muted small">${formatValue(assembly.assembly)}</span>
+                                            <span class="muted small">${breakable(formatValue(assembly.assembly))}</span>
                                         </span>
                                     </div>
                                 `)}
@@ -115,6 +115,25 @@ export const configurationPage: Page = {
     }
 
 };
+
+
+/**
+ * A dotted name that may break after its dots.
+ *
+ * A library's name has no space in it to break at, so "BouncyCastle.Cryptography"
+ * ran out of its column and across the version beside it, and
+ * "cloud.charging.open.protocols.OCPPv2_1.CSMS" broke wherever the line
+ * happened to end. After a dot is where somebody reading it would break it.
+ */
+function breakable(name: string): HTMLFragment {
+
+    const parts = name.split('.');
+
+    return html`${parts.map((part, index) => index < parts.length - 1
+                                                 ? html`${part}.<wbr>`
+                                                 : html`${part}`)}`;
+
+}
 
 
 /**
