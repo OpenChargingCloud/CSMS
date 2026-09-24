@@ -253,6 +253,14 @@ snapshot from `/api/v1/logs`, which says how far it reaches, and then applies
 everything newer from `/api/v1/events` - so a reconnect that replays a few cached
 events costs bytes and nothing else.
 
+Three places keep it, because they answer different questions. The console
+shows it to whoever started the CSMS, at the level they chose; the Logs page
+keeps the last two thousand entries; and a `LogPath` handed to the constructor
+writes every entry, down to the debug ones, into one file per UTC day below it.
+CSMSCLI does that unless told `--no-log-file`, since the other two are gone with
+the process. A file that cannot be written is said once on stderr, and the file
+says how many entries it missed once it can be written again.
+
 A program that reads commands on the same console hands the log a way to write
 around the line being typed, so that an entry arriving mid-word neither lands
 inside the command nor waits for it:

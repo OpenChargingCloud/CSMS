@@ -112,6 +112,11 @@ namespace cloud.charging.open.CSMS
         public const String  DefaultAccountsPath           = "accounts";
 
         /// <summary>
+        /// Where the log files go, unless another directory is given.
+        /// </summary>
+        public const String  DefaultLogPath                = "logs";
+
+        /// <summary>
         /// The file inside that directory that holds the accounts.
         /// </summary>
         public const String  DefaultAccountsDatabaseFile   = "users.db";
@@ -231,6 +236,7 @@ namespace cloud.charging.open.CSMS
         private           NTSConfiguration?               ntsSettings;
 
         private readonly  ConsoleLog?                     consoleLog;
+        private readonly  FileLog?                        fileLog;
         private readonly  TraceBridge?                    traceBridge;
 
         private readonly  OCPPv2_1_CSMS.TestCSMSNode  csms01;
@@ -480,6 +486,7 @@ namespace cloud.charging.open.CSMS
         /// <param name="Log">The event log; a new one by default.</param>
         /// <param name="LogToConsole">Whether the event log is also written to the console.</param>
         /// <param name="ConsoleLogLevel">What the console shows of it.</param>
+        /// <param name="LogPath">The directory the log files are written to, or null to write none.</param>
         /// <param name="BridgeDebugLog">Whether what the libraries below write with DebugX ends up in the log.</param>
         /// <param name="TimeProvider">Where this CSMS reads the time; the system clock by default.</param>
         public CSMS(DNSClient?             DNSClient               = null,
@@ -499,6 +506,7 @@ namespace cloud.charging.open.CSMS
                     EventLog?              Log                     = null,
                     Boolean                LogToConsole            = true,
                     LogLevel               ConsoleLogLevel         = LogLevel.Info,
+                    String?                LogPath                 = null,
                     Boolean                BridgeDebugLog          = true,
                     TimeProvider?          TimeProvider            = null)
         {
@@ -521,6 +529,14 @@ namespace cloud.charging.open.CSMS
 
             this.consoleLog   = LogToConsole
                                     ? new ConsoleLog(this.Log, ConsoleLogLevel)
+                                    : null;
+
+            // Everything, and not what the console was told to show: a level
+            // is chosen to keep a console readable, and a file nobody is
+            // reading has no such problem. What is left out here cannot be
+            // asked for afterwards.
+            this.fileLog      = LogPath is not null
+                                    ? new FileLog(this.Log, LogPath)
                                     : null;
 
             // Attached before anything else is built, so that what the DNS
@@ -1377,6 +1393,7 @@ namespace cloud.charging.open.CSMS
 
             traceBridge?.Dispose();
             consoleLog? .Dispose();
+            fileLog?    .Dispose();
 
             ServerCertificates?.Dispose();
             ClientTrust?       .Dispose();
