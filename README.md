@@ -253,6 +253,14 @@ snapshot from `/api/v1/logs`, which says how far it reaches, and then applies
 everything newer from `/api/v1/events` - so a reconnect that replays a few cached
 events costs bytes and nothing else.
 
+A program that reads commands on the same console hands the log a way to write
+around the line being typed, so that an entry arriving mid-word neither lands
+inside the command nor waits for it:
+
+```csharp
+csms.ShareConsoleWith(cli.WriteBlock);   // line off, entry whole, line back
+```
+
 
 ## Who may open it
 
