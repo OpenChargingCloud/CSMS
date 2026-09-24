@@ -18,7 +18,8 @@ import { formatTime, formatTimestamp, isAtLeast } from '../ui';
  *
  * The store keeps its entries oldest first and is left alone: that order is
  * what its own de-duplication and its bounded trim are written against. Only
- * what is drawn is reversed, at the three places that map a line to an entry.
+ * what is drawn is reversed, and only through drawOrder and entryAt in
+ * logs/order.ts, whose test holds the two to each other.
  */
 export const logsPage: Page = {
 
@@ -256,9 +257,10 @@ export const logsPage: Page = {
                 const anchor    = lineBox.firstElementChild;
                 const anchorWas = anchor?.getBoundingClientRect().top ?? 0;
 
-                // Turned around inside the batch as well: a burst that arrives
-                // in one event would otherwise sit at the top back to front.
-                const batch = [...added].reverse();
+                // Turned around inside the batch as well, by the same drawOrder
+                // as everything else: a burst that arrives in one event would
+                // otherwise sit at the top back to front.
+                const batch = drawOrder(added);
 
                 lineBox.insertAdjacentHTML('afterbegin', batch.map(lineHTML).join(''));
 
