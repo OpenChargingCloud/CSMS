@@ -202,10 +202,9 @@ export const logsPage: Page = {
          * filtering costs nothing.
          *
          * A line is now made once and then only told whether it is wanted,
-         * which measured 3 ms for the same 3655. What the browser spends laying
-         * the list out again afterwards is untouched, and was 87 ms either way:
-         * this buys back the work the page was doing twice, not the work of
-         * showing the answer.
+         * which measured 3 ms for the same 3655. The browser lays the list out
+         * again either way; after a rebuild, which drew every line anew, that
+         * took another 125 ms.
          */
         function applyFilters(): void {
 
