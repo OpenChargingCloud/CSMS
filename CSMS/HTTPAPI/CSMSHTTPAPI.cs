@@ -70,6 +70,19 @@ namespace cloud.charging.open.CSMS
         public const           String    LogEventName        = "log";
 
         /// <summary>
+        /// How long an event stream stays silent before a comment is sent down
+        /// it instead.
+        /// </summary>
+        /// <remarks>
+        /// Silence is how an event stream waits, and a proxy in front of the
+        /// CSMS cannot tell it from a CSMS that has gone: nginx gives up on an
+        /// upstream that has sent nothing for 60 seconds. Fifteen seconds is
+        /// what the HTML standard suggests for exactly this, and a browser skips
+        /// a comment.
+        /// </remarks>
+        public static readonly TimeSpan  DefaultEventStreamHeartbeat = TimeSpan.FromSeconds(15);
+
+        /// <summary>
         /// The most log entries one request may ask for.
         /// </summary>
         public const           Int32     MaxLogPageSize      = 2_000;
@@ -123,6 +136,13 @@ namespace cloud.charging.open.CSMS
         /// The Server-Sent Events source every browser hangs on (/api/v1/events).
         /// </summary>
         public HTTPEventSource<JObject>  Events      { get; }
+
+        /// <summary>
+        /// How long an event stream stays silent before a comment is sent down
+        /// it; <see cref="DefaultEventStreamHeartbeat"/> unless set, and never
+        /// when set to zero.
+        /// </summary>
+        public TimeSpan                  EventStreamHeartbeat { get; set; } = DefaultEventStreamHeartbeat;
 
         #endregion
 
@@ -621,6 +641,24 @@ namespace cloud.charging.open.CSMS
         /// hangs on. Modelled on Hermod's MapEventSource, with the session
         /// checked first and without opening the stream to other origins.
         /// </summary>
+        /// <remarks>
+        /// Two things in here are for a proxy in front of the CSMS, and both
+        /// were learned from nginx as it comes - in front of the vehicle, whose
+        /// stream this one is the sibling of.
+        ///
+        /// "X-Accel-Buffering: no", because nginx buffers what it passes on,
+        /// and a buffered event stream reaches the browser as nothing at all -
+        /// not even its header - until a buffer is full or the CSMS has been
+        /// silent long enough for nginx to give up on it. The browser never saw
+        /// the stream open, so the Logs page said "reconnecting ..." and did not
+        /// ask for its snapshot either: behind nginx the vehicle's header came
+        /// after 72 seconds, and the stream ended 98 ms later.
+        ///
+        /// And a comment whenever the stream has been silent for
+        /// <see cref="EventStreamHeartbeat"/>, because the 60 seconds after
+        /// which nginx gives up are an ordinary pause for a CSMS nobody is
+        /// using.
+        /// </remarks>
         private Task<HTTPResponse> StreamEvents(HTTPRequest Request)
         {
 
@@ -663,16 +701,65 @@ namespace cloud.charging.open.CSMS
                                    // timeout expired.
                                    await stream.FlushAsync(ending.Token);
 
-                                   await foreach (var httpEvent in Events.GetAllEventsGreater(
-                                                                       clientId,
-                                                                       Request.GetHeaderField(HTTPRequestHeaderField.LastEventId),
-                                                                       ending.Token
-                                                                   ))
+                                   var heartbeat  = EventStreamHeartbeat > TimeSpan.Zero
+                                                        ? EventStreamHeartbeat
+                                                        : Timeout.InfiniteTimeSpan;
+
+                                   await using var events = Events.GetAllEventsGreater(
+                                                                clientId,
+                                                                Request.GetHeaderField(HTTPRequestHeaderField.LastEventId),
+                                                                ending.Token
+                                                            ).GetAsyncEnumerator(ending.Token);
+
+                                   // The next event is waited for across heartbeats
+                                   // rather than asked for again: an enumerator
+                                   // takes one question at a time.
+                                   var next = events.MoveNextAsync().AsTask();
+
+                                   try
                                    {
-                                       await stream.WriteAsync(httpEvent.SerializedHeader);
-                                       await stream.WriteAsync(httpEvent.SerializedData);
-                                       await stream.WriteAsync("\n\n");
-                                       await stream.FlushAsync(ending.Token);
+
+                                       while (true)
+                                       {
+
+                                           try
+                                           {
+                                               if (!await next.WaitAsync(heartbeat, ending.Token))
+                                                   break;
+                                           }
+                                           catch (TimeoutException)
+                                           {
+                                               await stream.WriteHeartbeat(CancellationToken: ending.Token);
+                                               continue;
+                                           }
+
+                                           var httpEvent = events.Current;
+
+                                           await stream.WriteAsync(httpEvent.SerializedHeader);
+                                           await stream.WriteAsync(httpEvent.SerializedData);
+                                           await stream.WriteAsync("\n\n");
+                                           await stream.FlushAsync(ending.Token);
+
+                                           next = events.MoveNextAsync().AsTask();
+
+                                       }
+
+                                   }
+                                   finally
+                                   {
+                                       // However the loop ended, the enumerator may
+                                       // still be waiting for the next event - a
+                                       // heartbeat that could not be written leaves
+                                       // it so - and it cannot be disposed before
+                                       // it has stopped. Cancelling stops it.
+                                       ending.Cancel();
+
+                                       try
+                                       {
+                                           await next;
+                                       }
+                                       catch
+                                       { }
                                    }
 
                                }
@@ -698,7 +785,9 @@ namespace cloud.charging.open.CSMS
 
                            }
 
-                       }.WithCommonSecurityHeaders().AsImmutable
+                       }.Set("X-Accel-Buffering", "no").
+                         WithCommonSecurityHeaders().
+                         AsImmutable
                    );
 
         }
