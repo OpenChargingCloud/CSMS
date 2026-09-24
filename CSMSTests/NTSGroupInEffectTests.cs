@@ -375,6 +375,38 @@ namespace cloud.charging.open.CSMS.Tests
 
         #endregion
 
+        #region TheTestWritesTheNameAsItIsRead()
+
+        /// <summary>
+        /// The detailed test names the server the way everything else this CSMS
+        /// prints does: without the root's dot.
+        /// </summary>
+        /// <remarks>
+        /// "Asking ptbtime2.ptb.de.: key exchange on port 4460" - the name is
+        /// exact with the dot, and in the middle of a sentence it reads like a
+        /// typing mistake. The steps and the log lines use the name as it is
+        /// read; the name the result carries as data is left as it is. Name
+        /// resolution is switched off, so that nothing goes out.
+        /// </remarks>
+        [Test]
+        public async Task TheTestWritesTheNameAsItIsRead()
+        {
+
+            await using var csms = NewCSMS("""{ "dns": { "enabled": false }, "nts": { "servers": [ "a.example", "b.example" ], "timeoutSeconds": 1 } }""");
+
+            var before  = csms.Log.LastId;
+            var result  = await csms.TestTimeServerAsync("b.example");
+            var said    = csms.Log.Recent(50, before, "test").Select(entry => entry.Message).ToArray();
+
+            Assert.Multiple(() => {
+                Assert.That(result["steps"]?[0]?.Value<String>("text"),  Does.StartWith("Asking b.example:"));
+                Assert.That(said,                                          Has.Some.EqualTo("NTS test: asking b.example ..."),  String.Join(" | ", said));
+            });
+
+        }
+
+        #endregion
+
         #region TheQuorumWantedAndTheQuorumHeldAreBothShown()
 
         /// <summary>
