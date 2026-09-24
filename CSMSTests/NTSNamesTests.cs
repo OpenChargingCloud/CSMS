@@ -57,37 +57,6 @@ namespace cloud.charging.open.CSMS.Tests
 
         #endregion
 
-        #region (private) TimerlessClock
-
-        /// <summary>
-        /// The system's time, and timers that never fire.
-        /// </summary>
-        /// <remarks>
-        /// For a CSMS started with NTS switched on, which schedules a check of
-        /// its clock a minute in. A test has no business asking the PTB the
-        /// time, and nothing here waits for a timer.
-        /// </remarks>
-        private sealed class TimerlessClock : TimeProvider
-        {
-
-            public override ITimer CreateTimer(TimerCallback  Callback,
-                                               Object?        State,
-                                               TimeSpan       DueTime,
-                                               TimeSpan       Period)
-
-                => new NeverFires();
-
-            private sealed class NeverFires : ITimer
-            {
-                public Boolean   Change(TimeSpan DueTime, TimeSpan Period) => true;
-                public void      Dispose() { }
-                public ValueTask DisposeAsync() => ValueTask.CompletedTask;
-            }
-
-        }
-
-        #endregion
-
 
         #region TheLineAtTheStartNamesTheServersAsTheyAreRead()
 
