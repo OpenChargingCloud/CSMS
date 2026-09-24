@@ -268,6 +268,121 @@ namespace cloud.charging.open.CSMS.Tests
 
         #endregion
 
+        #region AnAddressWithSomethingAroundItIsRefusedWithASentence(Address)
+
+        /// <summary>
+        /// An address with its port, with a scheme in front of it, or at the
+        /// front of a host name is not an address to listen on, and is refused
+        /// like any other. Hermod's IPAddress.TryParse used to find the address
+        /// inside such a text and then throw on the rest of it, so a CSMS given
+        /// one stopped at its start with an ArgumentException that named
+        /// neither the file nor the key.
+        /// </summary>
+        [TestCase("0.0.0.0:9920")]
+        [TestCase("tcp://10.0.0.1")]
+        [TestCase("10.0.0.1.nip.io")]
+        public void AnAddressWithSomethingAroundItIsRefusedWithASentence(String Address)
+        {
+
+            String? error = null;
+
+            Assert.That(() => error = Refuse(new JObject(new JProperty("address", Address))),  Throws.Nothing);
+
+            Assert.That(error,  Does.Contain("'ocppServer.address'"));
+
+        }
+
+        #endregion
+
+        #region AHostNameThatBeginsWithAnAddressIsAName()
+
+        /// <summary>
+        /// "10.0.0.1.nip.io" is a host name - what a bench is reached under when
+        /// it has an address and no name of its own - and is taken as one. It
+        /// used to stop the CSMS at its start: the pattern IPAddress.TryParse
+        /// asked found an address at its front, and the parser the whole name
+        /// was then handed to threw.
+        /// </summary>
+        [Test]
+        public void AHostNameThatBeginsWithAnAddressIsAName()
+        {
+
+            OCPPServerConfiguration? configuration = null;
+
+            Assert.That(() => configuration = Parse(new JObject(new JProperty("reachableAs", new JArray("10.0.0.1.nip.io")))),  Throws.Nothing);
+
+            Assert.That(configuration?.ReachableAs,  Is.EqualTo(new[] { "10.0.0.1.nip.io" }));
+
+        }
+
+        #endregion
+
+        #region AReachableAddressWithItsPortIsRefusedWithASentence()
+
+        /// <summary>
+        /// A port does not go into a signing request, so an address written
+        /// with one is refused - with the sentence every other wrong name gets,
+        /// rather than the exception it used to stop the CSMS with.
+        /// </summary>
+        [Test]
+        public void AReachableAddressWithItsPortIsRefusedWithASentence()
+        {
+
+            String? error = null;
+
+            Assert.That(() => error = Refuse(new JObject(new JProperty("reachableAs", new JArray("192.168.1.10:9920")))),  Throws.Nothing);
+
+            Assert.That(error,  Does.Contain("'ocppServer.reachableAs'").And.Contain("192.168.1.10:9920"));
+
+        }
+
+        #endregion
+
+        #region ACSMSReachableUnderSuchANameComesUp()
+
+        /// <summary>
+        /// And where it mattered, at a start: a file naming such a host is read
+        /// and the stations are told to connect to it, where the same file used
+        /// to stop the CSMS before anything was up.
+        /// </summary>
+        /// <remarks>
+        /// Built and never started: the constructor is what reads the file.
+        /// </remarks>
+        [Test]
+        public async Task ACSMSReachableUnderSuchANameComesUp()
+        {
+
+            var directory = TestCSMSs.TemporaryDirectory("ocpp-server");
+
+            try
+            {
+
+                var configuration = TestCSMSs.Offline;
+
+                configuration.Add("ocppServer", new JObject(new JProperty("reachableAs", new JArray("10.0.0.1.nip.io"))));
+
+                CSMS? csms = null;
+
+                Assert.That(() => csms = TestCSMSs.New(directory, configuration),  Throws.Nothing);
+
+                await using (csms!)
+                {
+                    Assert.Multiple(() => {
+                        Assert.That(csms!.OCPPServerSettings.ReachableAs,  Is.EqualTo(new[] { "10.0.0.1.nip.io" }));
+                        Assert.That(csms!.OCPPServerURL,                   Does.Contain("://10.0.0.1.nip.io:"));
+                    });
+                }
+
+            }
+            finally
+            {
+                TestCSMSs.Remove(directory);
+            }
+
+        }
+
+        #endregion
+
         #region NumbersHaveToBeWithinReason()
 
         [Test]

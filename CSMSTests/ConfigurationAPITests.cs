@@ -271,6 +271,38 @@ namespace cloud.charging.open.CSMS.Tests
 
         #endregion
 
+        #region ANameServerInTheLogsFormIsRefusedWithASentence()
+
+        /// <summary>
+        /// "udp://213.133.98.98:53" is how the log names a name server, and
+        /// somebody copying it from there into the DNS page is told that this
+        /// is not a form the list takes. The parser it goes through used to
+        /// throw on it instead, out of Hermod's IPAddress.TryParse.
+        /// </summary>
+        [Test]
+        public async Task ANameServerInTheLogsFormIsRefusedWithASentence()
+        {
+
+            using var http = await SignedIn();
+
+            var before   = CSMS.DNSClient.DNSServers.Select(server => server.ToString()).ToArray();
+
+            var response = await http.PutAsync("/api/v1/configuration/dns",
+                                               JSONBody(new JProperty("servers", new JArray("udp://213.133.98.98:53"))));
+
+            var body     = await response.Content.ReadAsStringAsync();
+
+            Assert.Multiple(() => {
+                Assert.That(response.StatusCode,  Is.EqualTo(HttpStatusCode.BadRequest),  body);
+                Assert.That(body,                 Does.Contain("dns.servers").And.Contain("udp://213.133.98.98:53"));
+                Assert.That(CSMS.DNSClient.DNSServers.Select(server => server.ToString()),  Is.EqualTo(before),
+                            "The refused request changed the name servers anyway.");
+            });
+
+        }
+
+        #endregion
+
         #region SwitchingNameResolutionOffTakesTheServersAway()
 
         /// <summary>
