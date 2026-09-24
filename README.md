@@ -81,7 +81,7 @@ socket.
 |------|-----------------|------------|
 | Configuration | nothing - it answers "what am I running" | `readConfiguration` |
 | DNS client | the name servers and how they are asked; a test lookup | `changeNetworkSettings`, `runDiagnostics` |
-| NTS client | the time server and how it is asked; a synchronisation | `changeNetworkSettings`, `runDiagnostics` |
+| NTS client | the time servers of the group and what it is held to; a synchronisation, and a test of each server | `changeNetworkSettings`, `runDiagnostics` |
 | Charging station server | the port, TLS, the security profiles it accepts | `changeStationSettings` |
 | Server certificates | the keys and chains this CSMS presents | `manageCertificates` |
 | Client trust | the chains a station's certificate may come from | `manageCertificates` |
@@ -217,10 +217,73 @@ var gone  = csms.Sessions.Count;                             // 0
 ```
 
 **The clock is never set from NTS.** Every fifteen minutes the CSMS asks its time
-server what time it is, measures the difference and reports it - and leaves its
+servers what time it is, measures the difference and reports it - and leaves its
 own clock exactly where it was. Everything connected to this CSMS is stamped
 against this clock, so a jump backwards would put two meter readings out of order
 in a record written somewhere else entirely, with nothing in it to say why.
+
+**It asks a group, not a server.** `nts.servers` is a list, and by default it is
+the PTB's four, of which `nts.minServers` - two - have to answer before the group
+has a time at all. One host being rebooted no longer leaves this CSMS without a
+check, and two servers that agree catch what one server cannot: one that is
+wrong rather than absent. What the check reports is what the servers that
+answered and authenticated agree on, with a line for each of them, so a failure
+says which of the four failed and how.
+
+Every key of the `nts` section, and what it is when absent:
+
+| Key | Default | |
+|---|---|---|
+| `enabled` | `true` | whether to ask at all |
+| `servers` | the PTB's four | a list, see below |
+| `minServers` | `2`, or all of them when fewer | how many must answer for the group to have a time |
+| `maxDeviationSeconds` | `60` | how far apart they may be before it is written down |
+| `hostname` | - | one server instead of a list |
+| `ntsKEPort`, `ntpPort` | `4460`, `123` | for that one server |
+| `timeoutSeconds` | `10` | per request |
+| `checkEverySeconds` | `900` | how often the clock is checked |
+| `legalTimeAuthority` | - | who the operator says stands behind it |
+| `legalTimeToleranceSeconds` | `1` | how far off the clock may be |
+| `legalTimeMaxAgeSeconds` | `3600` | how old the last check may be |
+
+Servers sharing a priority are **one band** and are asked together; a lower
+priority is asked first. The four it asks by default share one, because they are
+peers - putting them in separate bands would say something about them that is not
+true. An entry may be a bare host name or an object saying more:
+`{ "hostname": "time.local", "priority": 0, "ntsKEPort": 4460, "enabled": true }`.
+
+Servers that disagree by more than `nts.maxDeviationSeconds` are written down
+rather than acted on. The disagreement belongs in the log, and the time is still a
+time.
+
+A section naming a single `hostname` and no list becomes a group of one, which is
+what every file written before there were groups says, and it keeps working. A
+group of one is held to a quorum of one, and a section asking two of it is
+refused. A list without `minServers` is held to two, as the default four are, or
+to all of its servers when it has fewer switched on.
+
+A section mentioning neither leaves the servers alone rather than quietly reducing
+four to one - the switch on the NTS page sends nothing but `enabled` - and one
+mentioning nothing but `minServers` or `maxDeviationSeconds` holds the servers the
+CSMS already has to it. A quorum those servers could never reach is refused: at
+the start, before anything is asked, and over the API, before anything is written
+into the file. A new interval, and switching NTS off or on, reach a running check
+at once.
+
+A host name written back into the file carries the root label -
+`ptbtime1.ptb.de.` - because that is the absolute form it was parsed into, and not
+a stray character. What the CSMS prints for somebody to read drops it again.
+
+An entry of `dns.servers` is an address or a host name, as a string or as the
+object the DNS page writes the list back in:
+
+```json
+{ "address": "9.9.9.9", "port": 853, "transport": "TLS", "queryTimeoutSeconds": 2 }
+```
+
+Without a port, the transport's own is used. `udp://9.9.9.9:53` is how the log and
+the banner name a name server, and not a form the file takes: a file saying it is
+refused at the start, and the page refuses it the same way, with the entry named.
 
 `GET /api/v1/configuration/time` is that measurement, and the one word it never
 guesses is "legal": that needs a claim the operator wrote into
