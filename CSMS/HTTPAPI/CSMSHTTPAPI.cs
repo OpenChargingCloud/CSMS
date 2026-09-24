@@ -202,6 +202,7 @@ namespace cloud.charging.open.CSMS
             AddHandler(HTTPPath.Root + "v1/configuration/nts",        GetNTSConfiguration,   HTTPMethod.GET);
             AddHandler(HTTPPath.Root + "v1/configuration/nts",        PutNTSConfiguration,   HTTPMethod.PUT);
             AddHandler(HTTPPath.Root + "v1/configuration/nts/sync",   PostNTSSync,           HTTPMethod.POST);
+            AddHandler(HTTPPath.Root + "v1/configuration/nts/test",   PostNTSTest,           HTTPMethod.POST);
 
             AddHandler(HTTPPath.Root + "v1/configuration/time",       GetClock,              HTTPMethod.GET);
 
@@ -487,6 +488,46 @@ namespace cloud.charging.open.CSMS
             json["result"] = result;
 
             return JSONResponse(Request, HTTPStatusCode.OK, json);
+
+        }
+
+        #endregion
+
+        #region (private) PostNTSTest(Request)
+
+        /// <summary>
+        /// POST /api/v1/configuration/nts/test with an optional {"host"}: ask
+        /// one time server everything there is to ask, and say where it got
+        /// to.
+        /// </summary>
+        /// <remarks>
+        /// The host is optional and names the server to ask; left out, it is
+        /// the configured one. The NTS page tests each server of the group from
+        /// its own row, and the key exchange may name NTP servers other than
+        /// itself - which is the whole reason this takes a host at all.
+        ///
+        /// At the diagnostics permission, with the other tests. Like "Sync
+        /// now", it does not step the clock.
+        /// </remarks>
+        private async Task<HTTPResponse> PostNTSTest(HTTPRequest Request)
+        {
+
+            if (!TryAuthorize(Request, Permissions.RunDiagnostics, true, out var user, out var refused))
+                return refused;
+
+            if (!TryParseJSONObject(Request, out var json, out var errorResponse))
+                return errorResponse;
+
+            var host = json.Value<String>("host")?.Trim();
+
+            Log.Info($"'{user.Id}' asked this CSMS to test {(host is null ? "its time server" : $"the time server '{host}'")}.",
+                     "nts", "test", "web");
+
+            return JSONResponse(
+                       Request,
+                       HTTPStatusCode.OK,
+                       await CSMS.TestTimeServerAsync(host, Request.CancellationToken)
+                   );
 
         }
 

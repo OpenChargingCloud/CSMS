@@ -476,6 +476,8 @@ namespace cloud.charging.open.CSMS.Tests
         /// <remarks>
         /// It led with "NTS: ptbtime1.ptb.de." above the servers switched on:
         /// one server, which was the test's, above the group that was asked.
+        /// The NTS answer carried the same client as "server", "cookies" and
+        /// "keyExchange", and does not any more either.
         /// </remarks>
         [Test]
         public async Task TheOverviewNamesTheGroupAndNotTheTestClient()
@@ -484,12 +486,17 @@ namespace cloud.charging.open.CSMS.Tests
             await using var csms = NewCSMS("""{ "nts": { "servers": [ "a.example", { "hostname": "b.example", "priority": 5 }, { "hostname": "c.example", "enabled": false } ] } }""");
 
             var time = csms.ConfigurationJSON()["time"] as JObject;
+            var nts  = csms.NTSConfigurationJSON();
 
             Assert.Multiple(() => {
 
                 Assert.That(time?.Value<String>("timeServers"),  Is.EqualTo("a.example, b.example (priority 5), c.example (switched off)"));
                 Assert.That(time?.Value<Boolean>("ntsEnabled"),  Is.True);
                 Assert.That(time?.ContainsKey("nts"),            Is.False,  "the test client's host is named again");
+
+                Assert.That(nts.ContainsKey("server"),           Is.False);
+                Assert.That(nts.ContainsKey("cookies"),          Is.False);
+                Assert.That(nts.ContainsKey("keyExchange"),      Is.False);
 
                 // There and empty while nothing has been synchronised, so that
                 // the card says "-" rather than leaving the line out.
