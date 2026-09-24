@@ -623,14 +623,9 @@ namespace cloud.charging.open.CSMS
                 // paper asks for: the disagreement belongs in the metrological
                 // log book, and the time is still a time.
                 if (verdict.DeviationExceeded)
-                    Log.Warning(
-                        $"NTS: the time servers of group '{group.Name}' disagree by " +
-                        $"{verdict.Spread!.Value.TotalMilliseconds:F1} ms, which reaches the agreed deviation of " +
-                        $"{group.MaxDeviation.TotalSeconds:F0} s.",
-                        "nts", "test"
-                    );
+                    Log.Warning(DeviationWarning(group.Name, verdict.Spread!.Value, group.MaxDeviation), "nts", "test");
 
-                Log.Notice($"NTS: group '{group.Name}' answered in {stopwatch.ElapsedMilliseconds} ms - {verdict}.", "nts", "test");
+                Log.Notice(AnsweredLine(group.Name, stopwatch.ElapsedMilliseconds, verdict), "nts", "test");
 
                 return Remember(new JObject(
                            new JProperty("ok",          true),
@@ -676,6 +671,52 @@ namespace cloud.charging.open.CSMS
             }
 
         }
+
+        #endregion
+
+        #region (static) AnsweredLine(Group, Milliseconds, Verdict)
+
+        /// <summary>
+        /// The line a synchronisation that produced a time ends with.
+        /// </summary>
+        /// <param name="Group">The name of the group that was asked.</param>
+        /// <param name="Milliseconds">How long the asking took.</param>
+        /// <param name="Verdict">What the group concluded; Norn writes its half of the sentence.</param>
+        public static String AnsweredLine(String           Group,
+                                          Int64            Milliseconds,
+                                          TimeSyncVerdict  Verdict)
+
+            => $"NTS: group '{Group}' answered in {Milliseconds} ms - {Verdict}.";
+
+        #endregion
+
+        #region (static) DeviationWarning(Group, Spread, MaxDeviation)
+
+        /// <summary>
+        /// The line written when the servers of a group disagree by as much as
+        /// the agreed deviation, or more.
+        /// </summary>
+        /// <remarks>
+        /// Invariant, like the verdict the next line ends with, and the agreed
+        /// deviation with as many places as it has. Under a German culture this
+        /// read "disagree by 2,2 ms", a decimal comma in the middle of an English
+        /// sentence; and the deviation may be set as low as a millisecond, which
+        /// a whole-second format wrote as "0 s" - the one number the warning
+        /// exists to compare against.
+        /// </remarks>
+        /// <param name="Group">The name of the group that was asked.</param>
+        /// <param name="Spread">How far apart their answers were.</param>
+        /// <param name="MaxDeviation">The agreed deviation.</param>
+        public static String DeviationWarning(String    Group,
+                                              TimeSpan  Spread,
+                                              TimeSpan  MaxDeviation)
+
+            => String.Format(System.Globalization.CultureInfo.InvariantCulture,
+                             "NTS: the time servers of group '{0}' disagree by {1:F1} ms, " +
+                             "which reaches the agreed deviation of {2:0.###} s.",
+                             Group,
+                             Spread.TotalMilliseconds,
+                             MaxDeviation.TotalSeconds);
 
         #endregion
 
