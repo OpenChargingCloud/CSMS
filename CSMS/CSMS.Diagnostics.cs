@@ -550,6 +550,7 @@ namespace cloud.charging.open.CSMS
 
             var group      = timeSources;
             var asked      = group.Bands().SelectMany(band => band).Select(source => source.Hostname.ToString()).ToArray();
+            var asking     = asked.Select(hostname => hostname.TrimEnd('.')).ToArray();
             var stopwatch  = Stopwatch.StartNew();
 
             Log.Info($"NTS: asking the {asked.Length} time server(s) of group '{group.Name}' ...", "nts", "test");
@@ -629,7 +630,7 @@ namespace cloud.charging.open.CSMS
 
                 return Remember(new JObject(
                            new JProperty("ok",          true),
-                           new JProperty("server",      $"{group.Name}: {String.Join(", ", asked)}"),
+                           new JProperty("server",      $"{group.Name}: {String.Join(", ", asking)}"),
                            new JProperty("at",          TimeProvider.GetUtcNow().ToString("o")),
                            new JProperty("runtime_ms",  stopwatch.ElapsedMilliseconds),
                            new JProperty("offset_ms",   verdict.Offset?.TotalMilliseconds),
