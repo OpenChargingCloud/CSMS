@@ -27,7 +27,7 @@ using org.GraphDefined.Vanaheimr.Hermod.HTTP;
 using org.GraphDefined.Vanaheimr.Hermod.WebSocket;
 
 using cloud.charging.open.CSMS.Configuration;
-using cloud.charging.open.CSMS.Logging;
+using cloud.charging.open.protocols.WWCP.Node.Logging;
 using cloud.charging.open.CSMS.OCPP;
 
 using OCPPWebSockets = cloud.charging.open.protocols.OCPP.WebSockets;

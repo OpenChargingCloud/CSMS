@@ -22,6 +22,7 @@ using Newtonsoft.Json.Linq;
 using NUnit.Framework;
 
 using cloud.charging.open.CSMS.Configuration;
+using cloud.charging.open.protocols.WWCP.Node.Configuration;
 
 #endregion
 
@@ -37,7 +38,7 @@ namespace cloud.charging.open.CSMS.Tests
         #region Data
 
         private String                directory   = default!;
-        private CSMSConfigFile  file        = default!;
+        private WWCPConfigFile  file        = default!;
 
         #endregion
 
@@ -48,7 +49,7 @@ namespace cloud.charging.open.CSMS.Tests
         {
             directory = TestCSMSs.TemporaryDirectory("config");
             Directory.CreateDirectory(directory);
-            file      = new CSMSConfigFile(Path.Combine(directory, "configuration.json"));
+            file      = new WWCPConfigFile(Path.Combine(directory, "configuration.json"));
         }
 
         [TearDown]
@@ -335,26 +336,36 @@ namespace cloud.charging.open.CSMS.Tests
 
         #region WhatIsWrittenComesBackAsWhatWasMeant()
 
+        /// <summary>
+        /// One file with the sections of the node below and those of the CSMS
+        /// in it, and each read back by whoever it belongs to.
+        /// </summary>
         [Test]
         public void WhatIsWrittenComesBackAsWhatWasMeant()
         {
 
-            var written = new CSMSConfiguration(
+            var written = new WWCPConfiguration(
                               DNS:   new DNSConfiguration(Enabled: false),
-                              NTS:   new NTSConfiguration(Enabled: true),
-                              OCPP:  new OCPPConfiguration(NodeId: "lc042", VendorName: "ACME")
-                          );
+                              NTS:   new NTSConfiguration(Enabled: true)
+                          ).ToJSON();
 
-            file.TryWrite(written.ToJSON(), out _);
+            written.Merge(new CSMSConfiguration(
+                              OCPP:  new OCPPConfiguration(NodeId: "lc042", VendorName: "ACME")
+                          ).ToJSON());
+
+            file.TryWrite(written, out _);
 
             Assert.That(file.TryLoad(out var read, out var error), Is.True, error);
+            Assert.That(file.TryLoadDocument(out var document, out var problem), Is.True, problem);
+            Assert.That(CSMSConfiguration.TryParse(document!, out var csms, out var csmsError), Is.True, csmsError);
 
             Assert.Multiple(() => {
                 Assert.That(read!.DNS?.Enabled,        Is.False);
                 Assert.That(read.NTS?.Enabled,         Is.True);
-                Assert.That(read.OCPP?.NodeId,         Is.EqualTo("lc042"));
-                Assert.That(read.OCPP?.VendorName,     Is.EqualTo("ACME"));
                 Assert.That(read.IsEmpty,              Is.False);
+                Assert.That(csms!.OCPP?.NodeId,        Is.EqualTo("lc042"));
+                Assert.That(csms.OCPP?.VendorName,     Is.EqualTo("ACME"));
+                Assert.That(csms.IsEmpty,              Is.False);
             });
 
         }

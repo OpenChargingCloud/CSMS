@@ -6,6 +6,16 @@ frontend of HTML, SCSS and TypeScript bundled by webpack and embedded into the
 assembly - so the CSMS is one binary to deploy and needs nothing installed
 beside it.
 
+Below it is [WWCP_Node](https://github.com/OpenChargingCloud/WWCP_Node): what
+every one of these programs is before it is anything in particular - the log,
+the configuration file, name resolution and the time, a certificate store, the
+accounts, and the HTTP server with the web interface behind it. The vehicle of
+[EV](https://github.com/OpenChargingCloud/EV) is one of those with a battery,
+[ChargingStation](https://github.com/OpenChargingCloud/ChargingStation) one
+with EVSEs; this CSMS is one with a server on a port of its own for the
+charging stations, the OCPI endpoints its roaming partners call, and the OCPP
+node it speaks through.
+
 Nothing is rendered on the server. The browser loads one bundle and talks to the
 CSMS over a JSON API and one Server-Sent Events stream.
 
@@ -32,10 +42,11 @@ nothing to publish and an operator with no partners has nobody to publish it to.
 
 This is built the same way as
 [ChargingStation](https://github.com/OpenChargingCloud/ChargingStation) and
-[LocalController](https://github.com/OpenChargingCloud/LocalController), and
-everything below - the DNS and NTS configuration, the charging station server,
-the certificate and trust stores, the station logins, the event log - is the
-same code doing the same thing at the other end of the same connection.
+[LocalController](https://github.com/OpenChargingCloud/LocalController). The
+DNS and NTS configuration, the clock and the event log are the node's below,
+and so the very code the station runs; the charging station server, the
+certificate and trust stores and the station logins are the same thing done at
+the other end of the same connection.
 
 
 ## Who may open it: `HTTPExtAPI`
@@ -55,8 +66,11 @@ each still deciding for itself what a role permits - which is what
 [EVChargingTestEnvironment](https://github.com/OpenChargingCloud/EVChargingTestEnvironment)
 does with `--shared`.
 
-One HTTP server, one port, three things registered on it in that order: the most
-specific first, the single-page-application catch-all last.
+One HTTP server, one port, three things registered on it: the accounts and the
+web interface by the node below, the JSON API by the CSMS. A request goes to the
+most specific of them, so the single-page-application catch-all only ever gets
+what neither of the other two claims - `AnUnknownAPIPathAnswersJSONAndNotTheStub`
+says so.
 
 ```csharp
 var csms = new CSMS(HTTPPort: IPPort.Parse(2351));
@@ -70,9 +84,9 @@ csms.Node         // the OCPP 2.1 CSMS node
 The OCPP node's own HTTP APIs are switched off on purpose. Left alone an
 `ACSMSNode` builds a second HTTP server and a second `HTTPExtAPI` on a port it
 picks itself; one CSMS should be one address to point a browser at, so the
-server and the HTTPExt API are made where the listening address, the port and
-the moment of starting are decided, and the node is handed a role rather than a
-socket.
+server and the HTTPExt API are the node's below, made where the listening
+address, the port and the moment of starting are decided, and the OCPP node is
+handed a role rather than a socket.
 
 
 ## What it can be told
@@ -97,6 +111,15 @@ everything inside the CSMS that resolves a name or reads a clock, and is written
 to `configuration.json` in the same breath - the file first, because a change
 that was applied but not written down disappears at the next start without
 anybody noticing.
+
+The node below reads the sections every one of these programs has - `dns`,
+`nts` and `certificates` - and the CSMS reads its own - `ocpp`, `ocppServer`
+and `ocpi` - from the same document; each passes over what is the other's. The
+node's certificate store keeps none of its kinds for a CSMS - they are ISO
+15118's - so there is no store directory of the node's beside the file. What
+the CSMS presents and believes is its charging station server's, in stores of
+its own beside the file: the keys it presents to the charging stations in
+`ocpp-server-keys/`, and the chains it trusts them by in `ocpp-client-trust/`.
 
 What this CSMS says it is in OCPP - its node id, vendor, model, serial number -
 is read from the `ocpp` section of that file at the start and is deliberately
@@ -175,12 +198,16 @@ dotnet test libs/CSMS/CSMSTests
 They start real CSMSs and talk to them over HTTP the way the browser does: the
 bundle is served, the sign-in works, a change to the name servers reaches both
 the shared DNS client and the file, the log filters, the event stream delivers,
-and a CSMS that is told to stop stops.
+and a CSMS that is told to stop stops. What the node below does on its own -
+the file's sections, the log, the time servers, the certificate store, the
+accounts' roles and the ports - is tested once more in WWCP_Node's own
+`WWCP_Node_Tests`, against a node of no particular kind.
 
 Each test gets a CSMS of its own, on a port the operating system has just
-confirmed is free and with its own directory for the files a CSMS writes - so
-they neither fight with each other nor with a CSMS somebody has running on 2351
-while they work.
+confirmed is free and with its own directory for what a CSMS writes: its
+accounts, its configuration file, and beside that the stores of the charging
+station server - so they neither fight with each other nor with a CSMS
+somebody has running on 2351 while they work.
 
 **They never touch the network.** The configuration written before each CSMS is
 built switches the time client off, which is what stops the clock check from
@@ -197,9 +224,10 @@ entry, `CreatedAt`, the uptime the status resource reports, and the sessions -
 through Hermod's `SessionStore`, which takes one too. The system clock by
 default; an NTS-disciplined or a fake one where a test says so.
 
-It is assigned first in the constructor, before the event log is built, because
-the log stamps its entries with it - a clock set afterwards would leave the log
-reading the system one, which is a log that cannot be held against anything.
+It is assigned first - by the node below, before the event log is built -
+because the log stamps its entries with it: a clock set afterwards would leave
+the log reading the system one, which is a log that cannot be held against
+anything.
 
 ```csharp
 sealed class FixedClock(DateTimeOffset Start) : TimeProvider
@@ -297,7 +325,10 @@ which one in `why`.
 Every entry carries a timestamp, a level (`debug`, `info`, `notice`, `warning`,
 `error`, `critical`) and any number of tags (`http`, `ocpp`, `dns`, `nts`, `web`,
 `auth`, `station`, ...). The Logs page filters on both - the level counts as a
-tag, so `critical` and `ocpp` can be picked together.
+tag, so `critical` and `ocpp` can be picked together. The log is the node's, and
+so are its three listeners - the console, the file and the debug bridge; the
+entries about the CSMS itself are tagged `csms`, and a day's file is
+`csms-2026-09-25.log`.
 
 Anything in the CSMS can write to it:
 
@@ -306,7 +337,9 @@ csms.Log.Warning("A charging station was turned away.", "ocpp", "station");
 ```
 
 What the libraries below write through Illias' `DebugX` lands there too, tagged
-`trace` plus whatever `TraceBridge` recognises in the text. That works in a debug
+`trace` plus whatever the CSMS's own table, `CSMS.TraceTags`, recognises in the
+text - OCPP and which side of it a line is about, rather than the vehicle's
+ISO 15118 the node's default table leans towards. That works in a debug
 build only: `Debug.WriteLine` carries `[Conditional("DEBUG")]`, so a release
 build of those libraries compiles the calls away. `--no-trace` switches the
 bridge off.

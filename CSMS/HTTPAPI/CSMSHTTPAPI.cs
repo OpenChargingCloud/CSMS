@@ -26,7 +26,7 @@ using Newtonsoft.Json.Linq;
 using org.GraphDefined.Vanaheimr.Illias;
 using org.GraphDefined.Vanaheimr.Hermod.HTTP;
 
-using cloud.charging.open.CSMS.Logging;
+using cloud.charging.open.protocols.WWCP.Node.Logging;
 using cloud.charging.open.CSMS.Web;
 
 #endregion
@@ -438,7 +438,9 @@ namespace cloud.charging.open.CSMS
             return JSONResponse(
                        Request,
                        HTTPStatusCode.OK,
-                       await CSMS.ResolveAsync(name, recordTypes, Request.CancellationToken)
+                       await CSMS.ResolveAsync(name,
+                                               recordTypes,
+                                               CancellationToken: Request.CancellationToken)
                    );
 
         }

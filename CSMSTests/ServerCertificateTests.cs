@@ -24,6 +24,8 @@ using NUnit.Framework;
 
 using cloud.charging.open.CSMS.OCPP;
 
+using cloud.charging.open.protocols.WWCP.Node.Logging;
+
 #endregion
 
 namespace cloud.charging.open.CSMS.Tests
@@ -725,12 +727,12 @@ namespace cloud.charging.open.CSMS.Tests
 
             clock.Advance(TimeSpan.FromDays(10));
 
-            var said = new List<(Logging.LogLevel Level, String Message)>();
+            var said = new List<(LogLevel Level, String Message)>();
             store.OnNotice += (level, message) => said.Add((level, message));
 
             store.CheckExpiry(ReachableAs);
 
-            Assert.That(said.Any(entry => entry.Level == Logging.LogLevel.Critical &&
+            Assert.That(said.Any(entry => entry.Level == LogLevel.Critical &&
                                           entry.Message.Contains("No server certificate")),
                         Is.True,
                         $"A CSMS with nothing valid said: {String.Join(" | ", said.Select(entry => $"{entry.Level}: {entry.Message}"))}");

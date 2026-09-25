@@ -21,8 +21,8 @@ using NUnit.Framework;
 
 using org.GraphDefined.Vanaheimr.Hermod;
 
-using cloud.charging.open.CSMS.Configuration;
-using cloud.charging.open.CSMS.Logging;
+using cloud.charging.open.protocols.WWCP.Node.Configuration;
+using cloud.charging.open.protocols.WWCP.Node.Logging;
 
 #endregion
 
@@ -120,7 +120,7 @@ namespace cloud.charging.open.CSMS.Tests
         public void EverythingIsWrittenDownToTheDebugEntries()
         {
 
-            using (new FileLog(log, directory))
+            using (new FileLog(log, directory, "csms"))
             {
                 log.Debug ("A debug line.",            "test");
                 log.Info  ("An info line.",            "nts", "test", "cli");
@@ -153,7 +153,7 @@ namespace cloud.charging.open.CSMS.Tests
         public void EachEntryIsOnDiskTheMomentItIsLogged()
         {
 
-            using var fileLog = new FileLog(log, directory);
+            using var fileLog = new FileLog(log, directory, "csms");
 
             log.Info("Written, and not yet closed.", "test");
 
@@ -182,7 +182,7 @@ namespace cloud.charging.open.CSMS.Tests
         public void AFileIsADayAndTheDayIsUTC()
         {
 
-            using (new FileLog(log, directory))
+            using (new FileLog(log, directory, "csms"))
             {
 
                 clock.Now = new DateTimeOffset(2026, 9, 23, 23, 59, 59, 999, TimeSpan.Zero);
@@ -227,7 +227,7 @@ namespace cloud.charging.open.CSMS.Tests
             Directory.CreateDirectory(directory);
             File.WriteAllText(Path.Combine(directory, "csms-2026-09-23.log"), "What the morning's run wrote.\n");
 
-            using (new FileLog(log, directory))
+            using (new FileLog(log, directory, "csms"))
                 log.Info("What the afternoon's run wrote.", "test");
 
             Assert.That(File.ReadAllLines(Path.Combine(directory, "csms-2026-09-23.log")),
@@ -277,7 +277,7 @@ namespace cloud.charging.open.CSMS.Tests
             try
             {
 
-                using (new FileLog(log, directory))
+                using (new FileLog(log, directory, "csms"))
                 {
 
                     log.Info("The first entry the disk refuses.",  "test");
@@ -332,7 +332,7 @@ namespace cloud.charging.open.CSMS.Tests
         public void ADisposedLogWritesNoMore()
         {
 
-            var fileLog = new FileLog(log, directory);
+            var fileLog = new FileLog(log, directory, "csms");
 
             log.Info("Before.", "test");
 
@@ -373,7 +373,7 @@ namespace cloud.charging.open.CSMS.Tests
             var csms     = new CSMS(
                                HTTPPort:        IPPort.Parse(TestCSMSs.FreePort()),
                                AccountsPath:    Path.Combine(directory, "accounts"),
-                               ConfigFile:      new CSMSConfigFile(Path.Combine(directory, CSMSConfigFile.DefaultFileName)),
+                               ConfigFile:      new WWCPConfigFile(Path.Combine(directory, WWCPConfigFile.DefaultFileName)),
                                LogToConsole:    false,
                                LogPath:         logs,
                                BridgeDebugLog:  false

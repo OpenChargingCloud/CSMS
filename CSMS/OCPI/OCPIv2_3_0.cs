@@ -22,6 +22,7 @@ using Newtonsoft.Json.Linq;
 using org.GraphDefined.Vanaheimr.Illias;
 
 using cloud.charging.open.protocols.OCPI;
+using cloud.charging.open.protocols.WWCP.Node.Logging;
 
 using V = cloud.charging.open.protocols.OCPIv2_3_0;
 
@@ -176,7 +177,7 @@ namespace cloud.charging.open.CSMS.OCPI
                     return;
 
                 log.Log(
-                    worked ? Logging.LogLevel.Notice : Logging.LogLevel.Warning,
+                    worked ? LogLevel.Notice : LogLevel.Warning,
                     worked
                         ? $"The roaming partner {who} {What} this operator (OCPI 2.3.0)."
                         : $"The roaming partner {who} tried to {What.Split(' ')[0]} this operator and was answered {Response.StatusCode}: {Response.StatusMessage} (OCPI 2.3.0).",

@@ -17,28 +17,24 @@
 
 #region Usings
 
+using System.Net.Sockets;
+
 using Newtonsoft.Json.Linq;
 
 using org.GraphDefined.Vanaheimr.Illias;
 using org.GraphDefined.Vanaheimr.Hermod;
 using org.GraphDefined.Vanaheimr.Hermod.DNS;
 using org.GraphDefined.Vanaheimr.Hermod.HTTP;
-using org.GraphDefined.Vanaheimr.Hermod.Mail;
-using org.GraphDefined.Vanaheimr.Norn.Monitoring;
 using org.GraphDefined.Vanaheimr.Norn.NTS;
-using org.GraphDefined.Vanaheimr.Norn.TimeSync;
 
 using cloud.charging.open.protocols.WWCP.NetworkingNode;
+using cloud.charging.open.protocols.WWCP.Node;
+using cloud.charging.open.protocols.WWCP.Node.Configuration;
+using cloud.charging.open.protocols.WWCP.Node.Logging;
 
 using OCPPv2_1_CSMS = cloud.charging.open.protocols.OCPPv2_1.CSMS;
 
-// Only the mailer, not the namespace: Hermod.SMTP carries a LogLevel of its
-// own, and importing it would make every LogLevel in this file ambiguous with
-// the one the event log uses.
-using NullMailer = org.GraphDefined.Vanaheimr.Hermod.SMTP.NullMailer;
-
 using cloud.charging.open.CSMS.Configuration;
-using cloud.charging.open.CSMS.Logging;
 using cloud.charging.open.CSMS.Web;
 
 #endregion
@@ -62,8 +58,17 @@ namespace cloud.charging.open.CSMS
     /// what this web interface is for: it is the one place where somebody can
     /// see which of them got in, which were turned away and why, without
     /// reading a log file over somebody else's shoulder.
+    ///
+    /// What every one of these programs is before it is anything in
+    /// particular - the log, the configuration file, name resolution and the
+    /// time, the certificate store, the accounts, and the HTTP server with the
+    /// web interface behind it - is the <see cref="WWCPNode"/> below. A CSMS
+    /// is one of those with sections of its own in the same file, its own
+    /// JSON API below "/api", a server on a port of its own for the charging
+    /// stations, the OCPI endpoints its roaming partners call, and the OCPP
+    /// node it speaks through.
     /// </remarks>
-    public partial class CSMS : IAsyncDisposable
+    public partial class CSMS : WWCPNode
     {
 
         #region Data
@@ -82,52 +87,51 @@ namespace cloud.charging.open.CSMS
         /// station 2348 and 2349, a local controller 2350 - and not one of them:
         /// a CSMS, a controller and a station are routinely tried out on the
         /// same bench, and two web interfaces fighting over one socket is a
-        /// confusing way to find that out.
+        /// confusing way to find that out. The node below has a port of its own
+        /// for a node of no particular kind, and this one is handed to it rather
+        /// than left to it.
         /// </remarks>
-        public static readonly IPPort DefaultHTTPPort = IPPort.Parse(2351);
+        public static new readonly IPPort DefaultHTTPPort = IPPort.Parse(2351);
 
         /// <summary>
-        /// Where the HTTPExt API - users, organizations, API keys - lives,
-        /// unless another path is given.
+        /// The port the charging stations connect to, as a sentence names it
+        /// when it cannot be had: the other of the two things this CSMS
+        /// listens for, beside <see cref="NodePort.WebInterface"/>.
+        /// </summary>
+        public static readonly NodePort  StationServerPort  = new ("The charging station server");
+
+        /// <summary>
+        /// What a line the libraries below write has to contain to be tagged,
+        /// and with what: the table the debug bridge of a CSMS reads by.
         /// </summary>
         /// <remarks>
-        /// Below a path of its own rather than at "/", because three things
-        /// share this server: the JSON API of this CSMS at "/api", the web
-        /// interface at "/", and this. The web interface is the catch-all of
-        /// the three, so everything that is not it needs a prefix that says
-        /// so before the stub gets the request.
+        /// What a CSMS overhears is mostly OCPP going past it in both
+        /// directions, so the table leans that way: which side a line is
+        /// about - this CSMS or one of the charging stations connected to it -
+        /// is worth more here than which layer it came from. None of the
+        /// vehicle's ISO 15118 and SLAC, which a CSMS never hears.
         /// </remarks>
-        public static readonly HTTPPath  ExtAPIPath                   = HTTPPath.Parse("/ext");
+        public static readonly IReadOnlyList<(String Needle, String Tag)> TraceTags = [
+            ("ocpp",               "ocpp"),
+            ("bootnotification",   "ocpp"),
+            ("heartbeat",          "ocpp"),
+            ("websocket",          "websocket"),
+            ("http",               "http"),
+            ("tls",                "tls"),
+            ("certificate",        "tls"),
+            ("dns",                "dns"),
+            ("nts",                "nts"),
+            ("ntp",                "nts"),
+            ("csms",               "csms"),
+            ("charging station",   "station"),
+            ("chargingstation",    "station"),
+            ("chargebox",          "station"),
+            ("routing",            "routing"),
+            ("forward",            "routing")
+        ];
 
         /// <summary>
-        /// The directory the HTTPExt API keeps its accounts in, unless another
-        /// is given.
-        /// </summary>
-        /// <remarks>
-        /// A directory and not a file, because the HTTPExt API writes more than
-        /// one: the accounts themselves, the passwords, the sessions and the
-        /// password resets all live below it, and it names them itself. What is
-        /// chosen here is only where that tree starts.
-        /// </remarks>
-        public const String  DefaultAccountsPath           = "accounts";
-
-        /// <summary>
-        /// Where the log files go, unless another directory is given.
-        /// </summary>
-        public const String  DefaultLogPath                = "logs";
-
-        /// <summary>
-        /// The file inside that directory that holds the accounts.
-        /// </summary>
-        public const String  DefaultAccountsDatabaseFile   = "users.db";
-
-        /// <summary>
-        /// The account made at a first start.
-        /// </summary>
-        public const String  DefaultAdminUser              = "root";
-
-        /// <summary>
-        /// The organization that account belongs to.
+        /// The organization the accounts of this CSMS are in.
         /// </summary>
         /// <remarks>
         /// A CSMS on a bench has no organizations to speak of, and this one
@@ -138,148 +142,11 @@ namespace cloud.charging.open.CSMS
         /// </remarks>
         public const String  DefaultOrganization           = "CSMS";
 
-        /// <summary>
-        /// The file of the bundle that is the web interface; its presence is
-        /// what says there is one to serve at all.
-        /// </summary>
-        public const String  IndexFile           = "index.html";
-
-        /// <summary>
-        /// The icon of the bundle, which /favicon.ico is pointed at.
-        /// </summary>
-        public const String  FaviconSVG          = "favicon.svg";
-
-        private readonly  DNSClient                       dnsClient;
-        private           NTSClient                       ntsClient;
-
-        /// <summary>
-        /// Every time server of this CSMS, and the rules for believing them.
-        /// </summary>
-        /// <remarks>
-        /// Beside the single client rather than instead of it, because the two
-        /// answer different questions. The group answers "what is the time",
-        /// which several servers should agree on before a CSMS believes it.
-        /// The client answers "what is that one server doing", which is what
-        /// the detailed test on the page asks and which a group would only
-        /// blur, having four of everything.
-        /// </remarks>
-        private           TimeSourceGroup                 timeSources;
-
-        /// <summary>
-        /// How many of those servers this CSMS was told must answer: by the
-        /// last section that named "minServers", or the default of two.
-        /// </summary>
-        /// <remarks>
-        /// Kept apart from the group's own quorum, which cannot be more than the
-        /// servers it has switched on. A lone hostname holds a group to one, and
-        /// if that one were all that was remembered, a list of four arriving
-        /// afterwards would be held to one as well - where the same file, read
-        /// at the next start, holds it to two.
-        /// </remarks>
-        private           Byte                            ntsQuorum           = NTSConfiguration.DefaultMinServers;
-
-        /// <summary>
-        /// What does the asking.
-        /// </summary>
-        /// <remarks>
-        /// One engine for the life of this CSMS, and that is not tidiness:
-        /// it holds the key exchange of each server between rounds, and a new
-        /// engine per check would pay a TLS handshake to every server every
-        /// time and throw the cookies away unspent. It refreshes an exchange
-        /// when it is older than half an hour or down to its last cookie, which
-        /// is the same discipline the single client follows.
-        /// </remarks>
-        private readonly  MeasurementEngine               timeEngine;
-
-        /// <summary>
-        /// The name servers this CSMS would ask, whether or not
-        /// name resolution is switched on at the moment.
-        /// </summary>
-        /// <remarks>
-        /// Kept beside the DNS client because switching name resolution off is
-        /// done by taking its servers away - which is what being switched off
-        /// actually means, for everything holding that client and not only for
-        /// the parts of this CSMS that remember to ask first. Switching
-        /// it back on needs the list back, and this is where it waited.
-        /// </remarks>
-        private           IReadOnlyList<DNSServerConfig>  configuredDNSServers;
-
-        /// <summary>
-        /// Serialises changes to what this CSMS is made of, so that
-        /// two browsers saving at the same moment do not build half a
-        /// CSMS each.
-        /// </summary>
-        private readonly  SemaphoreSlim                   reconfigureLock = new (1, 1);
-
-        private readonly  HTTPServer                      httpServer;
-        private readonly  HTTPPath                        httpRootPath;
-
-        /// <summary>
-        /// When this CSMS last managed to check its clock, what it
-        /// found, and against whom.
-        /// </summary>
-        /// <remarks>
-        /// Separate fields rather than one object because they are written from
-        /// one place and read from another, and the alternative - digging them
-        /// back out of the JSON of the last check - would make every reader
-        /// depend on the shape of a diagnostic.
-        ///
-        /// The server is a host name only where there is one of them. A group
-        /// of four is counted instead, in numbers, because the display puts
-        /// this behind "checked against" in whichever language it is showing
-        /// and a phrase assembled here would arrive in the wrong one.
-        /// </remarks>
-        private           DateTimeOffset?                 lastTimeCheck;
-        private           TimeSpan?                       lastTimeCheckOffset;
-        private           String?                         lastTimeCheckServer;
-        private           Int32?                          lastTimeCheckAsked;
-        private           Int32?                          lastTimeCheckAnswered;
-
-        /// <summary>
-        /// The clock that makes this CSMS check its own, when NTS
-        /// is on.
-        /// </summary>
-        private           ITimer?                         timeCheckTimer;
-
-        /// <summary>
-        /// What the file said about the time client, kept because the parts of
-        /// it that are not the client itself - how often to check, and what the
-        /// operator claims about the server - are read long afterwards.
-        /// </summary>
-        private           NTSConfiguration?               ntsSettings;
-
-        private readonly  ConsoleLog?                     consoleLog;
-        private readonly  FileLog?                        fileLog;
-        private readonly  TraceBridge?                    traceBridge;
-
         private readonly  OCPPv2_1_CSMS.TestCSMSNode  csms01;
-
-        private           Boolean                         started;
 
         #endregion
 
         #region Properties
-
-        /// <summary>
-        /// Everything that happens inside this CSMS.
-        /// </summary>
-        public EventLog               Log                    { get; }
-
-        /// <summary>
-        /// The directory the accounts live in between starts.
-        /// </summary>
-        /// <remarks>
-        /// Where its own accounts live. A CSMS handed somebody else's
-        /// HTTPExt API writes nothing here - see <see cref="OwnsExtAPI"/>.
-        /// </remarks>
-        public String                 AccountsPath           { get; }
-
-        /// <summary>
-        /// Where everything this CSMS can be told in writing lives
-        /// between starts: its name resolution, its time source, its OCPP
-        /// identification.
-        /// </summary>
-        public CSMSConfigFile   ConfigFile             { get; }
 
         /// <summary>
         /// Who this CSMS says it is when it speaks OCPP.
@@ -299,180 +166,9 @@ namespace cloud.charging.open.CSMS
             => csms01;
 
         /// <summary>
-        /// How this CSMS resolves names.
-        /// </summary>
-        public DNSClient              DNSClient
-            => dnsClient;
-
-        /// <summary>
-        /// Where this CSMS reads the time.
-        /// </summary>
-        /// <remarks>
-        /// Replaced rather than reconfigured when it is pointed at another
-        /// server: an NTS client is bound to its host at construction, and the
-        /// cookies and keys it holds belong to that host and to no other.
-        /// </remarks>
-        public NTSClient              NTSClient
-            => ntsClient;
-
-        /// <summary>
-        /// The time servers of this CSMS, as a group.
-        /// </summary>
-        public TimeSourceGroup        TimeSources
-            => timeSources;
-
-        /// <summary>
-        /// Whether this CSMS resolves names at all.
-        /// </summary>
-        /// <remarks>
-        /// Switched off by taking the name servers away from the DNS client, so
-        /// that it is off for everything that was handed that client - not only
-        /// for the parts of this CSMS that would have remembered to check
-        /// a flag first. A query then fails at once and says why.
-        /// </remarks>
-        public Boolean                DNSEnabled             { get; private set; } = true;
-
-        /// <summary>
-        /// Whether this CSMS may ask its time server.
-        /// </summary>
-        public Boolean                NTSEnabled             { get; private set; } = true;
-
-        /// <summary>
-        /// The password this CSMS made up because there was no
-        /// login file, or null when the login came from the file. It is shown
-        /// once, on the console, and kept nowhere but in its hash.
-        /// </summary>
-        public String?                GeneratedPassword      { get; private set; }
-
-        /// <summary>
-        /// Where the web interface comes from: this assembly, or a directory
-        /// on disk.
-        /// </summary>
-        public IStaticContentSource   Frontend               { get; }
-
-        /// <summary>
-        /// The HTTP server everything below is registered within.
-        /// </summary>
-        public HTTPServer             HTTPServer
-            => httpServer;
-
-        /// <summary>
-        /// The HTTPExt API at "/ext/": the users, organizations and API keys
-        /// this CSMS is administered with.
-        /// </summary>
-        /// <remarks>
-        /// <para>
-        /// A CSMS is the back end of an estate: the people who read it are not
-        /// the people who configure it, the machines that call it are not
-        /// people at all, and both outlive any one of its operators. That is
-        /// what Hermod's HTTPExt API is - accounts, groups, organizations and
-        /// API keys - and building a second, smaller version of it here would
-        /// only mean having two.
-        /// </para>
-        /// <para>
-        /// The vehicle, the charging station and the local controller sign in
-        /// against the same thing, which is what makes one of these serve all
-        /// four at once: their roles are groups in it, the names overlap, and
-        /// an account in "systemadmin" is then an administrator of every one
-        /// of them. See <see cref="OwnsExtAPI"/>.
-        /// </para>
-        /// </remarks>
-        public HTTPExtAPI             ExtAPI                 { get; }
-
-        /// <summary>
-        /// Whether those accounts are this CSMS's own, or somebody else's
-        /// that it was handed.
-        /// </summary>
-        /// <remarks>
-        /// Handing one in is what makes one sign-in open several of these
-        /// programs at once: the groups each of them makes as it starts land
-        /// in one set of accounts, and the names overlap on purpose - an
-        /// account in "systemadmin" is an administrator of every one of them.
-        /// </remarks>
-        public Boolean                OwnsExtAPI             { get; }
-
-        /// <summary>
-        /// Whether the HTTP server is this CSMS's own, or one it was
-        /// handed and shares with somebody else.
-        /// </summary>
-        /// <remarks>
-        /// A shared server is started and stopped by whoever made it. One that
-        /// started a server it did not make would take the same socket twice
-        /// where several of these programs are on it, and one that stopped it
-        /// would close the web interface of every other program registered
-        /// within it.
-        /// </remarks>
-        public Boolean                OwnsHTTPServer         { get; }
-
-        /// <summary>
-        /// Everything of this CSMS - its web interface, its JSON API and,
-        /// where the accounts are its own, those too - sits below this.
-        /// </summary>
-        /// <remarks>
-        /// The root, which is what a CSMS on a port of its own wants and
-        /// what it always used to be. It is something else only where several
-        /// of these programs share one HTTP server and are told apart by the
-        /// first path segment rather than by the port.
-        /// </remarks>
-        public HTTPPath               BasePath               { get; }
-
-        /// <summary>
-        /// The base path as it is written into a URL: the empty string at the
-        /// root, and "/CSMS" or the like below one.
-        /// </summary>
-        /// <remarks>
-        /// Its own property because the two forms are not interchangeable and
-        /// the difference is exactly one character: <c>HTTPPath.Root</c> writes
-        /// itself as "/", and "/" + "/index.html" is a URL nothing serves.
-        /// </remarks>
-        public String                 BasePathText
-            => BasePath == HTTPPath.Root
-                   ? ""
-                   : BasePath.ToString().TrimEnd('/');
-
-        /// <summary>
         /// The JSON API at "/api/".
         /// </summary>
         public CSMSHTTPAPI            API                    { get; }
-
-        /// <summary>
-        /// The web interface at "/", or null when no bundle was found to serve.
-        /// </summary>
-        public HTTPAPI?               WebInterface           { get; }
-
-        /// <summary>
-        /// The URL to open in a browser.
-        /// </summary>
-        public URL                    WebInterfaceURL        { get; }
-
-        /// <summary>
-        /// The JSON API as a browser would type it: the server and the API's
-        /// root path, which already carries the base path, with a slash at the end.
-        /// </summary>
-        public URL                    APIURL                 { get; }
-
-        /// <summary>
-        /// The version of this CSMS.
-        /// </summary>
-        public String                 Version                { get; }
-
-        /// <summary>
-        /// Where this CSMS reads the time.
-        /// </summary>
-        /// <remarks>
-        /// A CSMS is the clock of everything below it: it is what
-        /// a charging station without a time source of its own is told the time
-        /// by, and what the records passing through it are stamped against. So
-        /// the clock is something to be handed in rather than reached for. The
-        /// system clock by default; an NTS-disciplined or a fake one where a
-        /// test or a calibration says so.
-        /// </remarks>
-        public TimeProvider           TimeProvider           { get; }
-
-        /// <summary>
-        /// When this CSMS was created, by its own clock.
-        /// </summary>
-        public DateTimeOffset         CreatedAt              { get; }
 
         #endregion
 
@@ -480,7 +176,7 @@ namespace cloud.charging.open.CSMS
 
         /// <summary>
         /// Create a CSMS with a web interface in front of it.
-        /// Nothing listens yet: <see cref="Start"/> does.
+        /// Nothing listens yet: <see cref="WWCPNode.Start"/> does.
         /// </summary>
         /// <param name="DNSClient">The DNS client used by everything below.</param>
         /// <param name="NTSClient">The time client.</param>
@@ -488,11 +184,10 @@ namespace cloud.charging.open.CSMS
         /// <param name="BasePath">What everything of this CSMS sits below; the root by default. Something else only where several of these programs share one HTTP server.</param>
         /// <param name="HTTPRootPath">The root path of the JSON API, "/api" below <paramref name="BasePath"/> by default.</param>
         /// <param name="ExtAPI">An HTTPExt API to sign in against, or null for one of this CSMS's own. Handing one in is what makes one sign-in open several of these programs at once.</param>
-        /// <param name="HTTPExtAPIPath">Where this CSMS's own HTTPExt API sits below <paramref name="BasePath"/>, "/ext" by default. Ignored when one is handed in.</param>
         /// <param name="AccountsPath">The directory the accounts live in between starts.</param>
         /// <param name="HTTPHostname">The address to listen on; the loopback address by default.</param>
-        /// <param name="HTTPPort">The TCP port to listen on.</param>
-        /// <param name="ConfigFile">Where everything this CSMS can be told in writing lives; "configuration.json" beside the process by default.</param>
+        /// <param name="HTTPPort">The TCP port to listen on; <see cref="DefaultHTTPPort"/> by default.</param>
+        /// <param name="ConfigFile">Where everything this CSMS can be told in writing lives: one file, whose sections the node below and the CSMS each read for themselves; "configuration.json" beside the process by default.</param>
         /// <param name="OCPP">Who this CSMS says it is in OCPP, unless the configuration file says otherwise.</param>
         /// <param name="OCPI">Who this CSMS is in OCPI, unless the configuration file says otherwise.</param>
         /// <param name="Frontend">Where the web interface comes from; the bundle embedded in this assembly by default.</param>
@@ -502,269 +197,104 @@ namespace cloud.charging.open.CSMS
         /// <param name="LogPath">The directory the log files are written to, or null to write none.</param>
         /// <param name="BridgeDebugLog">Whether what the libraries below write with DebugX ends up in the log.</param>
         /// <param name="TimeProvider">Where this CSMS reads the time; the system clock by default.</param>
-        public CSMS(DNSClient?             DNSClient               = null,
-                    NTSClient?             NTSClient               = null,
-                    HTTPServer?            HTTPServer              = null,
-                    HTTPPath?              BasePath                = null,
-                    HTTPPath?              HTTPRootPath            = null,
-                    HTTPExtAPI?            ExtAPI                  = null,
-                    HTTPPath?              HTTPExtAPIPath          = null,
-                    String?                AccountsPath            = null,
-                    IIPAddress?            HTTPHostname            = null,
-                    IPPort?                HTTPPort                = null,
-                    CSMSConfigFile?        ConfigFile              = null,
-                    OCPPConfiguration?     OCPP                    = null,
-                    OCPIConfiguration?     OCPI                    = null,
-                    IStaticContentSource?  Frontend                = null,
-                    EventLog?              Log                     = null,
-                    Boolean                LogToConsole            = true,
-                    LogLevel               ConsoleLogLevel         = LogLevel.Info,
-                    String?                LogPath                 = null,
-                    Boolean                BridgeDebugLog          = true,
-                    TimeProvider?          TimeProvider            = null)
+        public CSMS(DNSClient?             DNSClient          = null,
+                    NTSClient?             NTSClient          = null,
+                    HTTPServer?            HTTPServer         = null,
+                    HTTPPath?              BasePath           = null,
+                    HTTPPath?              HTTPRootPath       = null,
+                    HTTPExtAPI?            ExtAPI             = null,
+                    String?                AccountsPath       = null,
+                    IIPAddress?            HTTPHostname       = null,
+                    IPPort?                HTTPPort           = null,
+                    WWCPConfigFile?        ConfigFile         = null,
+                    OCPPConfiguration?     OCPP               = null,
+                    OCPIConfiguration?     OCPI               = null,
+                    IStaticContentSource?  Frontend           = null,
+                    EventLog?              Log                = null,
+                    Boolean                LogToConsole       = true,
+                    LogLevel               ConsoleLogLevel    = LogLevel.Info,
+                    String?                LogPath            = null,
+                    Boolean                BridgeDebugLog     = true,
+                    TimeProvider?          TimeProvider       = null)
+
+            // Every name as it was before there was a node below: the entries
+            // about the CSMS itself are tagged "csms", the Server header says
+            // "OpenChargingCloud CSMS", and a day's log file is
+            // "csms-2026-09-25.log" - so that a log directory kept since then
+            // goes on under the same names, and nothing reading one has to
+            // learn a second. The organization is written into the accounts at
+            // the first start and read back at every start after it, and must
+            // never change at all.
+            : base(Kind:              new NodeKind(
+                                          Name:           "CSMS",
+                                          Tag:            "csms",
+                                          Product:        "CSMS",
+                                          Organization:   DefaultOrganization,
+                                          LogFilePrefix:  "csms"
+                                      ),
+                   Version:           typeof(CSMS).Assembly.GetName().Version?.ToString(3) ?? "0.0.0",
+                   HTTPPort:          HTTPPort ?? DefaultHTTPPort,
+                   HTTPHostname:      HTTPHostname,
+                   HTTPServer:        HTTPServer,
+                   BasePath:          BasePath,
+                   HTTPRootPath:      HTTPRootPath,
+                   ExtAPI:            ExtAPI,
+                   AccountsPath:      AccountsPath,
+                   Roles:             UserRole.All.Select(role => role.Name),
+                   ConfigFile:        ConfigFile,
+                   DNSClient:         DNSClient,
+                   NTSClient:         NTSClient,
+                   Frontend:          Frontend ?? new EmbeddedContentSource(HTTPRoot, typeof(CSMS).Assembly),
+
+                   // None of the kinds the node's store keeps - those are
+                   // ISO 15118's. What a CSMS presents and believes is its
+                   // charging station server's, in stores of its own:
+                   // ocpp-server-keys and ocpp-client-trust. So there is no
+                   // store directory of the node's beside the configuration
+                   // file either.
+                   CertificateKinds:  [],
+
+                   Log:               Log,
+                   LogToConsole:      LogToConsole,
+                   ConsoleLogLevel:   ConsoleLogLevel,
+                   LogPath:           LogPath,
+                   BridgeDebugLog:    BridgeDebugLog,
+                   TraceTags:         TraceTags,
+                   TimeProvider:      TimeProvider)
+
         {
 
-            #region The clock, before anything that wants to know the time
+            // "this." throughout, and not for tidiness: the parameters of this
+            // constructor shadow the properties of the same name, and a
+            // parameter such as "Log" or "ConfigFile" is null whenever the
+            // caller did not bring one of its own.
 
-            // First of all, and not for tidiness: the event log below stamps
-            // every entry with this, so a clock set afterwards would leave the
-            // log reading the system one - and a log on a different clock than
-            // the CSMS it belongs to cannot be held against anything.
-            this.TimeProvider  = TimeProvider ?? System.TimeProvider.System;
-            this.CreatedAt     = this.TimeProvider.GetUtcNow();
+            #region What the configuration file says about a CSMS
 
-            #endregion
+            // Its own sections of the document the node below has already
+            // read: the ones that reading passed over are the ones this is
+            // for. A file that is there but cannot be read has stopped the
+            // node before this line; a section of it that is wrong stops the
+            // CSMS here, for the same reason - somebody wrote down what their
+            // CSMS is and got it wrong, and quietly running as something else
+            // instead would be worse than stopping.
+            if (!CSMSConfiguration.TryParse(ConfigurationDocument, out var configuration, out var problem))
+                throw new InvalidOperationException($"'{this.ConfigFile.Path}': {problem} Repair or remove '{this.ConfigFile.Path}' and start again.");
 
-            #region The log, next - everything below it may want to say something
-
-            this.Version      = typeof(CSMS).Assembly.GetName().Version?.ToString(3) ?? "0.0.0";
-            this.Log          = Log ?? new EventLog(TimeProvider: this.TimeProvider);
-
-            this.consoleLog   = LogToConsole
-                                    ? new ConsoleLog(this.Log, ConsoleLogLevel)
-                                    : null;
-
-            // Everything, and not what the console was told to show: a level
-            // is chosen to keep a console readable, and a file nobody is
-            // reading has no such problem. What is left out here cannot be
-            // asked for afterwards.
-            this.fileLog      = LogPath is not null
-                                    ? new FileLog(this.Log, LogPath)
-                                    : null;
-
-            // Attached before anything else is built, so that what the DNS
-            // client, the HTTP server and the OCPP node say while they are
-            // being made is already in the log a browser will see later.
-            this.traceBridge  = BridgeDebugLog
-                                    ? TraceBridge.Attach(this.Log)
-                                    : null;
-
-            this.Log.Notice($"CSMS v{this.Version} starting up.", "csms");
-
-            #endregion
-
-            #region Where the accounts live
-
-            // Ending in a separator, because the HTTPExt API builds the paths
-            // of its files by putting strings together rather than with
-            // Path.Combine: a directory that does not end in one would give it
-            // "...accountsUsersAPI" and not "...accounts/UsersAPI".
-            this.AccountsPath = AccountsPath ?? DefaultAccountsPath;
-
-            if (!this.AccountsPath.EndsWith(Path.DirectorySeparatorChar))
-                this.AccountsPath += Path.DirectorySeparatorChar;
-
-            #endregion
-
-            #region What the configuration file says
-
-            this.ConfigFile = ConfigFile ?? new CSMSConfigFile(CSMSConfigFile.DefaultFileName);
-
-            CSMSConfiguration? configuration = null;
-
-            if (this.ConfigFile.Exists)
-            {
-
-                // A file that is there but cannot be read is not something to
-                // paper over with defaults: somebody wrote down what their
-                // CSMS is and got it wrong, and quietly running as
-                // something else instead would be worse than stopping.
-                if (!this.ConfigFile.TryLoad(out configuration, out var configError))
-                    throw new InvalidOperationException($"{configError} Repair or remove '{this.ConfigFile.Path}' and start again.");
-
-                this.Log.Info($"Configuration from '{this.ConfigFile.Path}': {configuration}.", "config");
-
-            }
-
-            #endregion
-
-            #region The clients everything below shares
-
-            this.dnsClient             = DNSClient ?? new DNSClient();
-            this.configuredDNSServers  = [.. dnsClient.DNSServers];
-
-            // The clock goes to the time client too: a CSMS that reads
-            // one clock itself and disciplines another would have two, which is
-            // one more than anything below it can be told the time by.
-            this.ntsClient     = NTSClient    ?? new NTSClient(
-                                                     DomainName.Parse(NTSConfiguration.DefaultHostname),
-                                                     Timeout:         TimeSpan.FromSeconds(10),
-                                                     DNSClient:       dnsClient,
-                                                     TimeProvider:    this.TimeProvider
-                                                 );
-
-            this.timeEngine    = new MeasurementEngine(
-                                     new MonitoringConfig {
-                                         DroneId       = "csms",
-                                         NTPTimeout    = TimeSpan.FromSeconds(5),
-                                         NTSKETimeout  = TimeSpan.FromSeconds(10)
-                                     },
-                                     this.TimeProvider
-                                 );
-
-            // The four this CSMS asks when nobody says otherwise - but only
-            // when nobody handed it a client either. A caller that named its
-            // own server means that server, and a group naming four others
-            // beside it would be a report about somebody else's clock.
-            this.timeSources   = NTSClient is null
-                                     ? NTSConfiguration.DefaultGroup()
-                                     : new TimeSourceGroup(
-                                           "legal",
-                                           [ new NTSServerEndpoint(
-                                                 ntsClient.Hostname,
-                                                 ntsClient.NTSKE_Port,
-                                                 ntsClient.NTP_Port
-                                             ) ]
-                                       );
-
-            // Last, and that is the whole precedence rule: what this
-            // constructor was handed holds until the file says otherwise, and
-            // what the file does not mention is left exactly as it was.
-            if (configuration?.DNS is not null)
-                ApplyDNSConfiguration(configuration.DNS);
-
-            if (configuration?.NTS is not null)
-            {
-
-                // Checked here rather than when the file was read: a quorum
-                // on its own is about the servers in effect, and which those
-                // are is only known now.
-                if (!TryCheckNTSQuorum(configuration.NTS, out var quorumError))
-                    throw new InvalidOperationException($"{quorumError} Repair or remove '{this.ConfigFile.Path}' and start again.");
-
-                ApplyNTSConfiguration(configuration.NTS);
-
-            }
-
-            this.ntsSettings = configuration?.NTS;
+            if (!configuration.IsEmpty)
+                this.Log.Info($"CSMS configuration from '{this.ConfigFile.Path}': {configuration}.", "config");
 
             #endregion
 
             #region Who this CSMS says it is
 
-            this.OCPP = configuration?.OCPP
+            this.OCPP = configuration.OCPP
                             ?? OCPP
                             ?? new OCPPConfiguration();
 
             #endregion
 
-            #region The HTTP server, the JSON API and the web interface
-
-            var address        = HTTPHostname ?? IPv4Address.Localhost;
-            var port           = HTTPPort     ?? DefaultHTTPPort;
-
-            this.OwnsHTTPServer = HTTPServer is null;
-
-            this.httpServer    = HTTPServer   ?? new HTTPServer(
-                                                     IPAddress:       address,
-                                                     TCPPort:         port,
-                                                     HTTPServerName:  $"OpenChargingCloud CSMS v{Version}",
-                                                     DNSClient:       dnsClient
-                                                 );
-
-            // The root unless somebody is putting several of these programs on
-            // one server, where the first path segment is what tells them
-            // apart. Everything below is relative to it, which is the whole
-            // reason it is settled here and read rather than repeated.
-            this.BasePath      = BasePath     ?? HTTPPath.Root;
-
-            this.httpRootPath  = HTTPRootPath ?? this.BasePath + CSMSHTTPAPI.DefaultAPIPath;
-
-            this.WebInterfaceURL = URL.Parse($"http://{address}:{port}{this.BasePath.ToString().TrimEnd('/')}/");
-
-            // From the server rather than from the web interface's URL: the API's
-            // root path already carries the base path, and behind a URL that ends
-            // in the base path it would be named twice.
-            this.APIURL          = URL.Parse($"http://{address}:{port}/{this.httpRootPath.ToString().Trim('/')}/");
-
-            // The HTTPExt API builds the paths of its files by putting strings
-            // together rather than with Path.Combine, so a directory that does
-            // not end in a separator would give it "...accountsUsersAPI" and
-            // not "...accounts/UsersAPI". Ending it here is cheaper than
-            // finding that out from the name of a file nobody meant to write.
-
-            // 1) The HTTPExt API at "/ext". First of the three, because it is
-            //    the one with a database behind it: whatever it finds wrong
-            //    with its files, it should say so before a port is opened and
-            //    before a charging station is let in against accounts that
-            //    were not read.
-            this.OwnsExtAPI    = ExtAPI is null;
-
-            this.ExtAPI        = ExtAPI ?? new HTTPExtAPI(
-                                     HTTPServer:             httpServer,
-                                     RootPath:               this.BasePath + (HTTPExtAPIPath ?? ExtAPIPath),
-                                     HTTPServerName:         $"OpenChargingCloud CSMS v{Version}",
-                                     HTTPServiceName:        $"OpenChargingCloud CSMS v{Version}",
-                                     APIRobotEMailAddress:   EMailAddress.Parse("OpenChargingCloud CSMS Robot <robot@charging.cloud>"),
-                                     APIRobotGPGPassphrase:  "",
-
-                                     // Nothing here sends mail. A CSMS that
-                                     // notifies by e-mail is told so by its
-                                     // operator, with a submission client of
-                                     // their own; until then a mailer that
-                                     // swallows what it is given is better
-                                     // than one that quietly retries against
-                                     // a host nobody configured.
-                                     SMTPSubmissionClient:   new NullMailer(),
-                                     DisableNotifications:   true,
-
-                                     // The cookie has to reach "/api", and its
-                                     // path would otherwise be the root path of
-                                     // this API - "/ext" - so a browser signed
-                                     // in at /ext/login would send nothing to
-                                     // the API and look signed out everywhere
-                                     // else.
-                                     HTTPCookiePath:         "/",
-
-                                     // A secure cookie is dropped by a browser
-                                     // over plain HTTP, and a CSMS on a bench is
-                                     // reached over plain HTTP. Tied to the TLS
-                                     // the server is actually using rather than
-                                     // switched off: on a CSMS with a
-                                     // certificate this stays on.
-                                     UseSecureCookies:       false,
-
-                                     // The shortest name a role of this CSMS has,
-                                     // because that is what a group identification
-                                     // has to be allowed to be. Hermod's own floor
-                                     // is four characters and "cpo" is three, so
-                                     // the group would be refused - and the role it
-                                     // carries could never be held by anybody, with
-                                     // every route asking for it refusing everybody
-                                     // and nothing anywhere saying why.
-                                     MinUserGroupIdLength:   (Byte) UserRole.All.Min(role => role.Name.Length),
-
-                                     LoggingPath:            AccountsPath,
-                                     DatabaseFileName:       DefaultAccountsDatabaseFile,
-
-                                     // Left on, and that is what makes the
-                                     // directory above: switching it off skips
-                                     // the CreateDirectory that the accounts
-                                     // file is written into, and the first
-                                     // account created would fail on a path
-                                     // that was never made.
-                                     DisableLogging:         false
-                                 );
+            #region The JSON API
 
             this.Log.Info(
                 OwnsExtAPI
@@ -773,115 +303,18 @@ namespace cloud.charging.open.CSMS
                 "web", "http"
             );
 
-            // 2) The JSON API at "/api". Before the web interface, so that it
-            //    is the more specific API and an unknown /api path never
-            //    reaches the single-page-application stub below.
+            // The JSON API at "/api", beside the web interface the node below
+            // has already put at "/". The more specific of the two, so that an
+            // unknown /api path never reaches the single-page-application
+            // stub.
             this.API           = new CSMSHTTPAPI(
-                                     HTTPServer:  httpServer,
+                                     HTTPServer:  this.HTTPServer,
                                      CSMS:        this,
                                      ExtAPI:      this.ExtAPI,
                                      Log:         this.Log,
-                                     APIPath:     httpRootPath,
+                                     APIPath:     this.HTTPRootPath,
                                      Version:     Version
                                  );
-
-            // 3) The web interface at "/": the files of the bundle, and the
-            //    single-page-application stub for every other page URL, so
-            //    that a reload on /logs and a bookmark to it both work.
-            this.Frontend      = Frontend ?? new EmbeddedContentSource(HTTPRoot, typeof(CSMS).Assembly);
-
-            if (this.Frontend.TryGet(IndexFile, out _))
-            {
-
-                this.WebInterface = httpServer.AddHTTPAPI(this.BasePath);
-
-                this.WebInterface.MapSinglePageApplication(
-                    this.Frontend,
-                    new SinglePageAppOptions {
-
-                        // Three placeholders and not one. The bundle reads
-                        // where it is and where its API is out of <meta> tags
-                        // rather than assuming "/" and "/api/v1", because
-                        // under a base path both of those are wrong - and a
-                        // single-page application that guesses its own base
-                        // path is one that works until somebody mounts it
-                        // somewhere.
-                        IndexTransform = html => html.
-                                                     Replace("{{ServerVersion}}", $"v{Version}",         StringComparison.Ordinal).
-                                                     Replace("{{BasePath}}",      BasePathText,          StringComparison.Ordinal).
-                                                     Replace("{{APIBase}}",       $"{httpRootPath.ToString().TrimEnd('/')}/v1", StringComparison.Ordinal).
-                                                     Replace("{{ExtBase}}",       this.ExtAPI.RootPath.ToString().TrimEnd('/'), StringComparison.Ordinal)
-
-                    }
-                );
-
-                // Browsers ask for /favicon.ico whatever the page says, and a
-                // bundle built by webpack carries an SVG. A literal route wins
-                // over the catch-all, so this answers before the stub would -
-                // and beats a 404 on every visit, which is a line in the log
-                // and a broken icon in the tab.
-                if (this.Frontend.TryGet(FaviconSVG, out _))
-                    this.WebInterface.AddHandler(
-                        HTTPPath.Parse("/favicon.ico"),
-                        request => Task.FromResult(
-                                       new HTTPResponse.Builder(request) {
-                                           HTTPStatusCode  = HTTPStatusCode.TemporaryRedirect,
-                                           Location        = Location.From(HTTPPath.Parse($"{BasePathText}/{FaviconSVG}")),
-                                           CacheControl    = "public, max-age=3600"
-                                       }.AsImmutable
-                                   ),
-                        HTTPMethod.GET
-                    );
-
-            }
-
-            else
-                this.Log.Error(
-                    $"No web interface to serve ({this.Frontend.Description}): the JSON API answers, the browser gets nothing. " +
-                    "Build the frontend (npm run build in Frontend/) or point the CSMS at a directory with --frontend.",
-                    "web"
-                );
-
-            #region Every request, into the log
-
-            httpServer.OnHTTPRequest  += (server, request, cancellationToken) => {
-
-                // The event stream is one request that stays open for as long
-                // as a browser has the page open; logging it would say nothing
-                // and logging its response would say it at the wrong moment.
-                if (!IsEventStream(request))
-                    this.Log.Debug($"{request.HTTPMethod} {request.Path} from {request.RemoteSocket}", "http");
-
-                return Task.CompletedTask;
-
-            };
-
-            // Only OnHTTPResponse, and not OnHTTPError beside it: Hermod raises
-            // both for the same response, and one line per request is what a
-            // log is for.
-            httpServer.OnHTTPResponse += (server, request, response, cancellationToken) => {
-
-                if (IsEventStream(request))
-                    return Task.CompletedTask;
-
-                var code = response.HTTPStatusCode.Code;
-
-                this.Log.Log(
-                    code >= 500 ? LogLevel.Error
-                        // A 401 is how the web interface asks whether anybody
-                        // is signed in, and the answer "nobody" is not a fault.
-                        : code == 401 ? LogLevel.Debug
-                        : code >= 400 ? LogLevel.Warning
-                        : LogLevel.Debug,
-                    $"{code} {response.HTTPStatusCode.Name} for {request.HTTPMethod} {request.Path}",
-                    "http"
-                );
-
-                return Task.CompletedTask;
-
-            };
-
-            #endregion
 
             #endregion
 
@@ -889,9 +322,6 @@ namespace cloud.charging.open.CSMS
 
             csms01 = BuildOCPPNode(this.OCPP);
 
-            // "this." and not for tidiness: the parameters of this constructor
-            // shadow the properties of the same name, and the "Log" parameter
-            // is null whenever the caller did not bring an event log of its own.
             this.Log.Info($"OCPP 2.1 CSMS '{csms01.Id}' is set up as {csms01.VendorName} {csms01.Model}.", "ocpp");
 
             #endregion
@@ -900,8 +330,9 @@ namespace cloud.charging.open.CSMS
 
             // After the node, because it is attached to it, and after the
             // configuration file, because what it listens on is written there.
-            // Nothing listens yet: Start() does.
-            BuildOCPPServer(configuration?.OCPPServer);
+            // Nothing listens yet: OnListening does, once the node below has
+            // its own port.
+            BuildOCPPServer(configuration.OCPPServer);
 
             #endregion
 
@@ -914,7 +345,7 @@ namespace cloud.charging.open.CSMS
             // operator is one address to point a partner at - and not the
             // port the charging stations dial into, which is the other
             // protocol entirely.
-            BuildOCPI(configuration?.OCPI ?? OCPI);
+            BuildOCPI(configuration.OCPI ?? OCPI);
 
             #endregion
 
@@ -923,383 +354,163 @@ namespace cloud.charging.open.CSMS
         #endregion
 
 
-        #region Start()
+        #region (protected override) OnListening()
 
         /// <summary>
-        /// Start listening.
+        /// The charging stations' port, once the web interface has its own.
         /// </summary>
-        public async Task Start()
+        /// <remarks>
+        /// Before this CSMS calls itself started, so that a charging station
+        /// server that cannot have its port ends the start rather than leaving
+        /// a CSMS that says it is listening and that no station can reach. The
+        /// socket layer throws the same exception for both servers, and its own
+        /// words for it name neither the port nor what the port was for; both
+        /// are known here. The node below lets go of the web interface's port
+        /// again on the way out.
+        /// </remarks>
+        protected override async Task OnListening()
         {
 
-            if (started)
-                return;
+            try
+            {
+                await StartOCPPServer();
+            }
+            catch (SocketException problem)
+            {
+                throw new PortUnavailableException(
+                          ocppServerSettings.TCPPort ?? OCPPServerConfiguration.DefaultTCPPort,
+                          problem,
+                          StationServerPort
+                      );
+            }
 
-            // Before the port opens, and that order is the point: a web
-            // interface reachable before its accounts exist is a door with
-            // nobody behind it.
-            await EnsureAccounts();
+        }
 
-            // Only where it is ours: a shared server is started by whoever
-            // made it, and starting it again would take the same socket twice.
-            if (OwnsHTTPServer)
-                await httpServer.Start();
+        #endregion
 
-            await StartOCPPServer();
+        #region (protected override) OnStarted()
 
-            StartCheckingTheClock();
+        /// <summary>
+        /// What a CSMS says once it is up: where its API is, and where its
+        /// roaming partners find it.
+        /// </summary>
+        protected override Task OnStarted()
+        {
 
-            started = true;
-
-            Log.Notice($"The web interface is listening on {WebInterfaceURL}", "web", "http");
             Log.Info   ($"The JSON API is at {APIURL}v1/status", "web", "http");
             Log.Notice ($"Roaming partners find this operator at {OCPIVersionsURL} " +
                         $"(OCPI {String.Join(", ", OCPIVersions.Select(version => version.Label))}, " +
                         $"{RemotePartyCount} partner(s), {LocationCount} location(s)).",
                         "ocpi");
 
+            return Task.CompletedTask;
+
         }
 
         #endregion
 
-        #region Stop()
+        #region (protected override) OnStopping()
 
         /// <summary>
-        /// Stop listening.
+        /// End what this CSMS holds open beyond the web interface, before the
+        /// server stops.
         /// </summary>
-        public async Task Stop()
+        protected override async Task OnStopping()
         {
-
-            if (!started)
-                return;
-
-            Log.Notice("The CSMS is shutting down.", "csms");
-
-            timeCheckTimer?.Dispose();
-            timeCheckTimer = null;
 
             // Before the server, and that order is the whole point: every
             // browser with the Logs page open holds a request that is waiting
             // for the next log entry rather than for its socket, and the HTTP
             // server waits for every request it started. Closing the sockets
-            // does not wake those, so they are ended here first.
+            // does not wake those, so they are ended here first - whoever owns
+            // the server, because the streams are this CSMS's.
             API.CloseEventStreams();
 
             await StopOCPPServer();
 
-            // The event streams above are ended whoever owns the server,
-            // because they are this CSMS's; the socket is closed only where it
-            // is this CSMS's too.
-            if (OwnsHTTPServer)
-                await httpServer.Stop();
-
-            started = false;
-
         }
 
         #endregion
 
-        #region (private) EnsureAccounts()
-
-        /// <summary>
-        /// Make the three groups and, at a first start, the one account that
-        /// is in the last of them.
-        /// </summary>
-        /// <remarks>
-        /// <para>
-        /// The groups are made every start rather than only the first, because
-        /// they are this CSMS's vocabulary and not somebody's data: a
-        /// group deleted by hand would otherwise leave a role that can never be
-        /// held again, and the routes asking for it would refuse everybody with
-        /// no way to put it right.
-        /// </para>
-        /// <para>
-        /// The account is made only when there is none at all. Nobody can sign
-        /// in to a web interface whose accounts are empty, and an
-        /// unauthenticated setup page would be a door of its own - so the
-        /// password is made up here and shown once, on the console, to whoever
-        /// started the process. It is never written down: what the accounts
-        /// hold is the hash the HTTPExt API makes of it.
-        /// </para>
-        /// </remarks>
-        private async Task EnsureAccounts()
-        {
-
-            // Read what is on disk first. The HTTPExt API writes its accounts
-            // as it goes but does not read them back when it is built, so a
-            // CSMS that skipped this would find no accounts at every
-            // start, make a second root beside the first, and refuse the
-            // password its owner already has.
-            await ExtAPI.LoadDatabase();
-
-            var firstStart  = !ExtAPI.Users.Any();
-
-            IUser?  admin   = null;
-
-            #region The one account, when there is none
-
-            if (firstStart)
-            {
-
-                var password  = RandomExtensions.RandomString(24);
-                var userId    = User_Id.Parse(DefaultAdminUser);
-
-                // An account in no organization is refused at the sign-in -
-                // "You do not have access to any organization!" - however right
-                // its password is. Hence the single organization, which a box
-                // in a car park has no other use for.
-                var organization  = await ExtAPI.CreateOrganizationIfNotExists(
-                                              Organization_Id.Parse(DefaultOrganization),
-                                              I18NString.Create(Languages.en, DefaultOrganization)
-                                          );
-
-                if (organization is not Organization csmsOrganization)
-                    throw new InvalidOperationException("The organization of this CSMS could not be created, and an account outside one cannot sign in.");
-
-                // CreateUser rather than AddUser: the password is set from
-                // inside the OnAdded callback, where the user already has its
-                // API back-reference, and that is the only place the password
-                // store can be reached. AddUser followed by ChangePassword
-                // looks equivalent and writes the account without one - which
-                // is an account nobody can sign in to, and nothing says so.
-                admin         = await ExtAPI.CreateUser(
-                                          userId,
-                                          I18NString.Create(Languages.en, DefaultAdminUser),
-                                          SimpleEMailAddress.Parse($"{DefaultAdminUser}@localhost"),
-                                          User2OrganizationEdgeLabel.IsAdmin,
-                                          csmsOrganization,
-                                          Password:                  password,
-
-                                          // Nothing is sent and nobody is told:
-                                          // a CSMS has no mail server, no
-                                          // second user to notify, and the one
-                                          // account it makes is announced on the
-                                          // console it was started from.
-                                          SkipDefaultNotifications:  true,
-                                          SkipNewUserEMail:          true,
-                                          SkipNewUserNotifications:  true,
-
-                                          // Without this nobody can sign in, and
-                                          // nothing says why: the sign-in paths
-                                          // require an accepted EULA and refuse a
-                                          // correct password without one. There is
-                                          // no agreement to show here - whoever
-                                          // started the process owns the box - so
-                                          // it is accepted at the moment the
-                                          // account is made.
-                                          AcceptedEULA:              TimeProvider.GetUtcNow().AddSeconds(-1),
-
-                                          IsAuthenticated:           true
-                                      );
-
-                if (admin is null)
-                    throw new InvalidOperationException("The account of this CSMS could not be created, so nobody could sign in to it.");
-
-                GeneratedPassword = password;
-
-                Log.Notice($"No accounts were found, so '{DefaultAdminUser}' was made up and put in the {UserRole.SystemAdmin.Name} group.",
-                           "web", "auth");
-
-            }
-
-            #endregion
-
-            #region The three groups
-
-            foreach (var role in UserRole.All)
-            {
-
-                if (ExtAPI.TryGetUserGroup(role.GroupId, out _))
-                    continue;
-
-                var added = await ExtAPI.AddUserGroup(
-                                      new UserGroup(
-                                          role.GroupId,
-                                          I18NString.Create(Languages.en, role.Name)
-                                      )
-                                  );
-
-                // Looked at, and that is the point: this answers with a result
-                // rather than throwing, so a group it declined to make would
-                // otherwise leave a role nobody can ever hold - and every route
-                // asking for it refusing everybody, with nothing anywhere to
-                // say why. Better to stop before the port opens.
-                if (added.Result != CommandResult.Success)
-                    throw new InvalidOperationException(
-                              $"The user group '{role.GroupId}' of this CSMS could not be made: " +
-                              $"{added.Description.FirstText()} A role without its group is a role nobody can hold."
-                          );
-
-            }
-
-            #endregion
-
-            #region The one account joins the one group that can fix the rest
-
-            // Through AddUserToUserGroup, which writes a command of its own.
-            // Putting the edge on the group object before storing it looks
-            // equivalent and is not: what AddUserGroup writes is the group,
-            // and a group's stored form does not carry its members - so the
-            // membership was there until the next start and gone after it,
-            // which is the worst shape a permission can have.
-            if (admin is not null)
-            {
-
-                if (!ExtAPI.TryGetUser     (admin.Id,                     out var storedAdmin) ||
-                    !ExtAPI.TryGetUserGroup(UserRole.SystemAdmin.GroupId, out var adminGroup)  ||
-                     storedAdmin is not User      user ||
-                     adminGroup  is not UserGroup group)
-                {
-                    throw new InvalidOperationException(
-                              $"The account of this CSMS could not be put in the {UserRole.SystemAdmin.Name} group, " +
-                               "so the one account it has would be allowed to do nothing at all."
-                          );
-                }
-
-                var joined = await ExtAPI.AddUserToUserGroup(
-                                       user,
-                                       User2UserGroupEdgeLabel.IsAdmin,
-                                       group
-                                   );
-
-                // Looked at for the same reason as the group above: this
-                // answers with a result too, and a membership it declined to
-                // write leaves the one account able to do nothing at all -
-                // with a password about to be printed that opens nothing.
-                // A different result type from AddUserGroup's, and so a
-                // different question: IsSuccess rather than Result.
-                if (!joined.IsSuccess)
-                    throw new InvalidOperationException(
-                              $"The account '{DefaultAdminUser}' could not be put in the {UserRole.SystemAdmin.Name} group: " +
-                              $"{joined.ErrorDescription?.FirstText()} It would be able to do nothing at all."
-                          );
-
-            }
-
-            #endregion
-
-        }
-
-        #endregion
 
         #region ConfigurationJSON()
 
         /// <summary>
-        /// What this CSMS is made of, as the Configuration page of
-        /// the web interface reads it.
+        /// What this CSMS is made of, as the Configuration page of the web
+        /// interface reads it: what the node below says of itself, and on top
+        /// the CSMS, its OCPP node, the server the charging stations connect
+        /// to, the operator it is in OCPI and the assemblies it was built from.
         /// </summary>
         /// <remarks>
         /// Read-only: it answers "what am I running", not "change it". Nothing
         /// here is a secret - the accounts appear as the path they live at and
         /// the route to sign in, and never as anything about a password.
         /// </remarks>
-        public JObject ConfigurationJSON()
+        public override JObject ConfigurationJSON()
+        {
 
-            => new (
+            var json = base.ConfigurationJSON();
 
-                   new JProperty("CSMS", new JObject(
-                       new JProperty("version",        Version),
-                       new JProperty("createdAt",      CreatedAt.ToString("o")),
-                       new JProperty("machine",        Environment.MachineName),
-                       new JProperty("runtime",        Environment.Version.ToString()),
-                       new JProperty("os",             Environment.OSVersion.ToString())
-                   )),
+            // First, because it is the card the page leads with.
+            json.AddFirst(new JProperty("CSMS", new JObject(
+                              new JProperty("version",        Version),
+                              new JProperty("createdAt",      CreatedAt.ToString("o")),
+                              new JProperty("machine",        Environment.MachineName),
+                              new JProperty("runtime",        Environment.Version.ToString()),
+                              new JProperty("os",             Environment.OSVersion.ToString())
+                          )));
 
-                   new JProperty("http",       new JObject(
-                       new JProperty("serverName",     httpServer.HTTPServerName),
-                       new JProperty("url",            WebInterfaceURL.ToString()),
-                       new JProperty("apiPath",        httpRootPath.ToString()),
-                       new JProperty("running",        started),
-                       new JProperty("frontend",       Frontend.Description),
-                       new JProperty("webInterface",   WebInterface is not null)
-                   )),
+            json.Add(new JProperty("ocpp",       new JObject(
+                         new JProperty("version",          "2.1"),
+                         new JProperty("role",             "CSMS"),
+                         new JProperty("id",               csms01.Id.ToString()),
+                         new JProperty("vendor",           csms01.VendorName),
+                         new JProperty("model",            csms01.Model),
+                         new JProperty("serialNumber",     csms01.SerialNumber),
+                         new JProperty("softwareVersion",  csms01.SoftwareVersion),
+                         new JProperty("file",             ConfigFile.Path)
+                     )));
 
-                   new JProperty("web",        new JObject(
-                       new JProperty("accountsPath",   AccountsPath),
-                       new JProperty("sharedAccounts", !OwnsExtAPI),
-                       new JProperty("signInAt",       $"{ExtAPI.RootPath.ToString().TrimEnd('/')}/login"),
-                       new JProperty("users",          ExtAPI.Users.     Count()),
-                       new JProperty("groups",         ExtAPI.UserGroups.Count()),
-                       new JProperty("cookie",         ExtAPI.SessionCookieName.ToString()),
-                       new JProperty("maxLifetime",    ExtAPI.MaxSignInSessionLifetime.ToString())
-                   )),
+            json.Add(new JProperty("stationServer", new JObject(
+                         new JProperty("enabled",          OCPPServerEnabled),
+                         new JProperty("running",          ocppServerStarted),
+                         new JProperty("tls",              ocppServerTLS),
+                         new JProperty("url",              OCPPServerURL),
+                         new JProperty("securityProfiles", new JArray((ocppServerSettings.SecurityProfiles ?? []).Select(profile => (Int32) profile))),
+                         new JProperty("stationLogins",    StationLogins.EnabledCount),
+                         new JProperty("trustedChains",    ClientTrust.EnabledCount),
+                         new JProperty("certificates",     ServerCertificates.Entries.Count)
+                     )));
 
-                   new JProperty("log",        new JObject(
-                       new JProperty("capacity",       Log.Capacity),
-                       new JProperty("entries",        Log.Count),
-                       new JProperty("lastId",         Log.LastId),
-                       new JProperty("debugBridge",    traceBridge is not null),
-                       new JProperty("console",        consoleLog is not null),
-                       new JProperty("tags",           new JArray(Log.KnownTags))
-                   )),
+            json.Add(new JProperty("ocpi",       new JObject(
+                         new JProperty("role",             "CPO"),
+                         new JProperty("partyId",          PartyIdText),
+                         new JProperty("countryCode",      PartyId.CountryCode.ToString()),
+                         new JProperty("party",            PartyId.PartyId.ToString()),
+                         new JProperty("name",             BusinessDetails.Name),
+                         new JProperty("website",          BusinessDetails.Website?.ToString()),
+                         new JProperty("versions",         new JArray(OCPIVersions.Select(version => version.Label))),
+                         new JProperty("versionsURL",      OCPIVersionsURL.ToString()),
+                         new JProperty("partners",         RemotePartyCount),
+                         new JProperty("locations",        LocationCount),
+                         new JProperty("tokens",           TokenCount),
+                         new JProperty("file",             ConfigFile.Path)
+                     )));
 
-                   // The group, which is what the clock is checked against. This
-                   // card used to lead with "nts" and the host of the single
-                   // client the detailed test starts from - one server, above the
-                   // four that are actually asked, and with its root dot - and it
-                   // left out every server that was switched off. The servers are
-                   // now named the way the log names them when they change.
-                   //
-                   // And the last synchronisation - the button's, the prompt's
-                   // or the clock check's - when it happened and how it went,
-                   // or nothing while there has been none.
-                   new JProperty("time",       new JObject(
-                       new JProperty("ntsEnabled",     NTSEnabled),
-                       new JProperty("timeServers",    Described(timeSources)),
-                       new JProperty("minServers",     timeSources.MinServers),
-                       new JProperty("checkedEvery",   TimeCheckEvery.ToString()),
-                       new JProperty("lastSync",       lastTimeSync?.Value<String>("at")),
-                       new JProperty("lastSyncResult", LastSyncSaid(lastTimeSync)),
-                       new JProperty("now",            TimeProvider.GetUtcNow().ToString("o"))
-                   )),
+            json.Add(new JProperty("assemblies", new JArray(
+                         AssemblyJSON<HTTPServer>                              ("Hermod"),
+                         AssemblyJSON<NTSClient>                               ("Norn"),
+                         AssemblyJSON<WWCPNode>                                ("WWCP Node"),
+                         AssemblyJSON<OCPPv2_1_CSMS.TestCSMSNode>              ("OCPP 2.1"),
+                         AssemblyJSON<protocols.OCPI.CommonHTTPAPI>            ("OCPI"),
+                         AssemblyJSON<protocols.OCPIv2_1_1.CommonAPI>          ("OCPI 2.1.1"),
+                         AssemblyJSON<protocols.OCPIv2_2_1.CommonAPI>          ("OCPI 2.2.1"),
+                         AssemblyJSON<protocols.OCPIv2_3_0.CommonAPI>          ("OCPI 2.3.0")
+                     )));
 
-                   new JProperty("ocpp",       new JObject(
-                       new JProperty("version",          "2.1"),
-                       new JProperty("role",             "CSMS"),
-                       new JProperty("id",               csms01.Id.ToString()),
-                       new JProperty("vendor",           csms01.VendorName),
-                       new JProperty("model",            csms01.Model),
-                       new JProperty("serialNumber",     csms01.SerialNumber),
-                       new JProperty("softwareVersion",  csms01.SoftwareVersion),
-                       new JProperty("file",             ConfigFile.Path)
-                   )),
+            return json;
 
-                   new JProperty("stationServer", new JObject(
-                       new JProperty("enabled",          OCPPServerEnabled),
-                       new JProperty("running",          ocppServerStarted),
-                       new JProperty("tls",              ocppServerTLS),
-                       new JProperty("url",              OCPPServerURL),
-                       new JProperty("securityProfiles", new JArray((ocppServerSettings.SecurityProfiles ?? []).Select(profile => (Int32) profile))),
-                       new JProperty("stationLogins",    StationLogins.EnabledCount),
-                       new JProperty("trustedChains",    ClientTrust.EnabledCount),
-                       new JProperty("certificates",     ServerCertificates.Entries.Count)
-                   )),
-
-                   new JProperty("ocpi",       new JObject(
-                       new JProperty("role",             "CPO"),
-                       new JProperty("partyId",          PartyIdText),
-                       new JProperty("countryCode",      PartyId.CountryCode.ToString()),
-                       new JProperty("party",            PartyId.PartyId.ToString()),
-                       new JProperty("name",             BusinessDetails.Name),
-                       new JProperty("website",          BusinessDetails.Website?.ToString()),
-                       new JProperty("versions",         new JArray(OCPIVersions.Select(version => version.Label))),
-                       new JProperty("versionsURL",      OCPIVersionsURL.ToString()),
-                       new JProperty("partners",         RemotePartyCount),
-                       new JProperty("locations",        LocationCount),
-                       new JProperty("tokens",           TokenCount),
-                       new JProperty("file",             ConfigFile.Path)
-                   )),
-
-                   new JProperty("assemblies", new JArray(
-                       AssemblyJSON<HTTPServer>                              ("Hermod"),
-                       AssemblyJSON<NTSClient>                               ("Norn"),
-                       AssemblyJSON<OCPPv2_1_CSMS.TestCSMSNode>     ("OCPP 2.1"),
-                       AssemblyJSON<protocols.OCPI.CommonHTTPAPI>            ("OCPI"),
-                       AssemblyJSON<protocols.OCPIv2_1_1.CommonAPI>          ("OCPI 2.1.1"),
-                       AssemblyJSON<protocols.OCPIv2_2_1.CommonAPI>          ("OCPI 2.2.1"),
-                       AssemblyJSON<protocols.OCPIv2_3_0.CommonAPI>          ("OCPI 2.3.0")
-                   ))
-
-               );
+        }
 
         #endregion
 
@@ -1314,11 +525,11 @@ namespace cloud.charging.open.CSMS
         /// is the one place where this differs from letting an
         /// <c>ACSMSNode</c> look after itself: left alone it would build a
         /// second HTTP server and a second HTTPExt API, on a port it picked,
-        /// beside the ones this class already made. One CSMS is one address to
-        /// point a browser at - so the server and the HTTPExt API are made
-        /// above, where the listening address, the port and the moment of
-        /// starting are decided, and the node is handed a role rather than a
-        /// socket.
+        /// beside the ones the node below already made. One CSMS is one address
+        /// to point a browser at - so the server and the HTTPExt API are the
+        /// node's, made where the listening address, the port and the moment of
+        /// starting are decided, and the OCPP node is handed a role rather than
+        /// a socket.
         ///
         /// Nothing listens here either. Building the node and opening the port
         /// the charging stations come through are two different things, and the
@@ -1347,7 +558,7 @@ namespace cloud.charging.open.CSMS
                    DisableSendHeartbeats:          true,
                    DisableMaintenanceTasks:        true,
 
-                   DNSClient:                      dnsClient
+                   DNSClient:                      this.DNSClient
 
                );
 
@@ -1370,68 +581,24 @@ namespace cloud.charging.open.CSMS
 
         #endregion
 
-        #region (private static) IsEventStream(Request)
-
-        /// <summary>
-        /// Whether this request is a browser hanging on the event stream.
-        /// </summary>
-        private static Boolean IsEventStream(HTTPRequest Request)
-            => Request.Path.ToString().EndsWith("/events", StringComparison.Ordinal);
-
-        #endregion
-
-        #region ShareConsoleWith(WriteBlock)
-
-        /// <summary>
-        /// Let somebody else decide when this CSMS's log may write on the
-        /// console, because they are writing on it too.
-        /// </summary>
-        /// <remarks>
-        /// A CSMS at a console assumes the console is its own and writes an
-        /// entry whenever one happens, from whichever thread it happened on.
-        /// That assumption stops holding the moment somebody is typing a command
-        /// on the same screen: an entry arriving mid-word puts half a log line
-        /// into the middle of a half-typed command and ruins both.
-        ///
-        /// So the writing is handed over rather than suppressed. Whoever owns
-        /// the line takes the entry, clears what is being typed, writes the
-        /// entry as one piece and puts the line back. Nothing is lost and
-        /// nothing is delayed, which is what makes this better than the obvious
-        /// alternative of going quiet while a command line is open.
-        ///
-        /// Has no effect on a CSMS whose log does not reach the console.
-        /// </remarks>
-        /// <param name="WriteBlock">Runs what it is given with the console to itself.</param>
-        public void ShareConsoleWith(Action<Action> WriteBlock)
-        {
-
-            if (consoleLog is not null)
-                consoleLog.WriteBlock = WriteBlock;
-
-        }
-
-        #endregion
-
         #region DisposeAsync()
 
         /// <summary>
-        /// Stop listening and let go of the console and the debug bridge.
+        /// Stop listening, let go of the stores of the charging station server,
+        /// and then of what the node below holds.
         /// </summary>
-        public async ValueTask DisposeAsync()
+        public override async ValueTask DisposeAsync()
         {
 
+            // Stopped first, so that no charging station is still being let in
+            // against a store that has already been let go of. The node below
+            // stops again, which does no harm.
             await Stop();
-
-            traceBridge?.Dispose();
-            consoleLog? .Dispose();
-            fileLog?    .Dispose();
 
             ServerCertificates?.Dispose();
             ClientTrust?       .Dispose();
 
-            reconfigureLock.Dispose();
-
-            GC.SuppressFinalize(this);
+            await base.DisposeAsync();
 
         }
 

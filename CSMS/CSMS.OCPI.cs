@@ -27,6 +27,7 @@ using org.GraphDefined.Vanaheimr.Aegir;
 using org.GraphDefined.Vanaheimr.Hermod.HTTP;
 
 using cloud.charging.open.protocols.OCPI;
+using cloud.charging.open.protocols.WWCP.Node.Logging;
 
 using cloud.charging.open.CSMS.Configuration;
 using cloud.charging.open.CSMS.OCPI;
@@ -578,7 +579,7 @@ namespace cloud.charging.open.CSMS
             var result = await version.Register(remotePartyId);
 
             Log.Log(
-                result.Success ? Logging.LogLevel.Notice : Logging.LogLevel.Warning,
+                result.Success ? LogLevel.Notice : LogLevel.Warning,
                 result.Message,
                 "ocpi", "credentials", "partner"
             );

@@ -24,7 +24,7 @@ using Newtonsoft.Json.Linq;
 
 using org.GraphDefined.Vanaheimr.Hermod;
 
-using cloud.charging.open.CSMS.Configuration;
+using cloud.charging.open.protocols.WWCP.Node.Configuration;
 using cloud.charging.open.CSMS.Web;
 
 #endregion
@@ -78,7 +78,7 @@ namespace cloud.charging.open.CSMS.Tests
             return new CSMS(
                        HTTPPort:         IPPort.Parse(FreePort()),
                        AccountsPath:     Path.Combine(Directory, "accounts"),
-                       ConfigFile:       new CSMSConfigFile(configFile),
+                       ConfigFile:       new WWCPConfigFile(configFile),
                        LogToConsole:     LogToConsole,
                        BridgeDebugLog:   false,
                        TimeProvider:     Clock

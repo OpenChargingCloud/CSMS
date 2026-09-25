@@ -25,7 +25,7 @@ using org.GraphDefined.Vanaheimr.Hermod;
 using org.GraphDefined.Vanaheimr.Hermod.DNS;
 using org.GraphDefined.Vanaheimr.Norn.NTS;
 
-using cloud.charging.open.CSMS.Configuration;
+using cloud.charging.open.protocols.WWCP.Node.Configuration;
 
 #endregion
 
@@ -430,7 +430,7 @@ namespace cloud.charging.open.CSMS.Tests
                                        NTSClient:       new NTSClient(DomainName.Parse("time.example"), NTSKE_Port: IPPort.Parse(4461)),
                                        HTTPPort:        IPPort.Parse(TestCSMSs.FreePort()),
                                        AccountsPath:    Path.Combine(directory, "accounts"),
-                                       ConfigFile:      new CSMSConfigFile(Path.Combine(directory, "configuration.json")),
+                                       ConfigFile:      new WWCPConfigFile(Path.Combine(directory, "configuration.json")),
                                        LogToConsole:    false,
                                        BridgeDebugLog:  false
                                    );

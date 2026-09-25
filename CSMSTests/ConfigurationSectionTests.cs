@@ -22,6 +22,7 @@ using Newtonsoft.Json.Linq;
 using NUnit.Framework;
 
 using cloud.charging.open.CSMS.Configuration;
+using cloud.charging.open.protocols.WWCP.Node.Configuration;
 
 #endregion
 
@@ -366,6 +367,11 @@ namespace cloud.charging.open.CSMS.Tests
 
         #region The whole document
 
+        /// <summary>
+        /// One document and two readers: the node below reads the sections
+        /// every node has, the CSMS reads its own, and each passes over what
+        /// is the other's.
+        /// </summary>
         [Test]
         public void ADocumentReportsWhichSectionsSpoke()
         {
@@ -375,15 +381,21 @@ namespace cloud.charging.open.CSMS.Tests
                            new JProperty("ocpp", new JObject(new JProperty("nodeId",  "lc007")))
                        );
 
-            Assert.That(CSMSConfiguration.TryParse(json, out var configuration, out var error), Is.True, error);
+            Assert.That(WWCPConfiguration.TryParse(json, out var node, out var nodeError), Is.True, nodeError);
+            Assert.That(CSMSConfiguration.TryParse(json, out var csms, out var csmsError), Is.True, csmsError);
 
             Assert.Multiple(() => {
-                Assert.That(configuration!.DNS,        Is.Not.Null);
-                Assert.That(configuration.NTS,         Is.Null);
-                Assert.That(configuration.OCPP,        Is.Not.Null);
-                Assert.That(configuration.IsEmpty,     Is.False);
-                Assert.That(configuration.ToString(),  Does.Contain("DNS"));
-                Assert.That(configuration.ToString(),  Does.Contain("lc007"));
+
+                Assert.That(node!.DNS,                 Is.Not.Null);
+                Assert.That(node.NTS,                  Is.Null);
+                Assert.That(node.ToString(),           Does.Contain("DNS"));
+                Assert.That(node.ToString(),           Does.Not.Contain("lc007"), "The node read the section of the CSMS.");
+
+                Assert.That(csms!.OCPP,                Is.Not.Null);
+                Assert.That(csms.IsEmpty,              Is.False);
+                Assert.That(csms.ToString(),           Does.Contain("lc007"));
+                Assert.That(csms.ToString(),           Does.Not.Contain("DNS"),   "The CSMS read a section of the node.");
+
             });
 
         }
