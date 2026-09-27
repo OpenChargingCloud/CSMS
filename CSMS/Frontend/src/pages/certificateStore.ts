@@ -4,6 +4,7 @@ import { html, must, render } from '../html';
 import type { Page } from '../router';
 import { shell } from '../shell';
 import { errorMessage, whileSaving } from '../ui';
+import { typedSinceDrawn, unsaved } from '../unsaved';
 import { hasUsages as storeHasUsages, usageName, usagesOf } from './certificateUsages';
 
 /**
@@ -60,7 +61,13 @@ export const certificateStorePage: Page = {
 
         render(content, html`<div class="loading">Loading ...</div>`);
 
-        must<HTMLButtonElement>(root, '#reload').addEventListener('click', () => { void load(); });
+        // Reload throws what is typed into a form away as thoroughly as leaving
+        // the page does, and from the opposite corner of the screen, so it
+        // asks first.
+        must<HTMLButtonElement>(root, '#reload').addEventListener('click', () => {
+            if (unsaved.mayBeLost())
+                void load();
+        });
 
         const mayChange = auth.can('certificates', 'edit');
 
@@ -179,6 +186,11 @@ export const certificateStorePage: Page = {
         function importCard() {
 
             const store = current!;
+
+            // Drawn as the kind chosen, as the browser would choose it anyway,
+            // so that an untouched form is one: a select with no option drawn
+            // as selected counts as typed into - see typedSinceDrawn - and
+            // leaving the page asked about a draft nobody had begun.
             const first = kindsShown()[0];
 
             return html`
@@ -200,7 +212,7 @@ export const certificateStorePage: Page = {
                         <label>What it is for
                             <select name="kind" id="import-kind" ${busy ? html`disabled` : ''}>
                                 ${kindsShown().map(kind => html`
-                                    <option value="${kind}">${store.kinds[kind].description}</option>
+                                    <option value="${kind}" ${kind === first ? html`selected` : ''}>${store.kinds[kind].description}</option>
                                 `)}
                             </select>
                         </label>
@@ -665,9 +677,14 @@ export const certificateStorePage: Page = {
 
         }
 
+        // A file chosen, or a name typed, for an import not yet made is a
+        // draft like any other page's: leaving asks first.
+        const release = unsaved.heldBy(() => Array.from(content.querySelectorAll<HTMLFormElement>('form')).
+                                                   some(form => typedSinceDrawn(form)));
+
         void load();
 
-        return () => { cancelled = true; };
+        return () => { cancelled = true; release(); };
 
     }
 

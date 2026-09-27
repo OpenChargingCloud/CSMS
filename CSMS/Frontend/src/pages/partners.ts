@@ -4,6 +4,7 @@ import { html, must, render, type HTMLFragment } from '../html';
 import type { Page } from '../router';
 import { shell } from '../shell';
 import { errorMessage, field, formatTimestamp } from '../ui';
+import { typedSinceDrawn, unsaved } from '../unsaved';
 
 /**
  * The roaming partners: the e-mobility service providers whose customers may
@@ -36,7 +37,13 @@ export const partnersPage: Page = {
 
         render(content, html`<div class="loading">Loading ...</div>`);
 
-        must<HTMLButtonElement>(root, '#reload').addEventListener('click', () => void load());
+        // Reload throws what is typed into a form away as thoroughly as leaving
+        // the page does, and from the opposite corner of the screen, so it
+        // asks first.
+        must<HTMLButtonElement>(root, '#reload').addEventListener('click', () => {
+            if (unsaved.mayBeLost())
+                void load();
+        });
 
         const mayManage = auth.can('roaming', 'edit');
 
@@ -480,9 +487,14 @@ export const partnersPage: Page = {
 
         }
 
+        // A partner being added is a draft until it is added. Register and
+        // Remove in the list are in no form: they act when they are clicked.
+        const release = unsaved.heldBy(() => Array.from(content.querySelectorAll<HTMLFormElement>('form')).
+                                                   some(form => typedSinceDrawn(form)));
+
         void load();
 
-        return () => { cancelled = true; };
+        return () => { cancelled = true; release(); };
 
     }
 

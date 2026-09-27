@@ -4,6 +4,7 @@ import { html, must, render, type HTMLFragment } from '../html';
 import type { Page } from '../router';
 import { shell } from '../shell';
 import { errorMessage, field, formatTimestamp } from '../ui';
+import { typedSinceDrawn, unsaved } from '../unsaved';
 
 /**
  * The charging locations this operator publishes: where its stations stand,
@@ -33,7 +34,13 @@ export const locationsPage: Page = {
 
         render(content, html`<div class="loading">Loading ...</div>`);
 
-        must<HTMLButtonElement>(root, '#reload').addEventListener('click', () => void load());
+        // Reload throws what is typed into a form away as thoroughly as leaving
+        // the page does, and from the opposite corner of the screen, so it
+        // asks first.
+        must<HTMLButtonElement>(root, '#reload').addEventListener('click', () => {
+            if (unsaved.mayBeLost())
+                void load();
+        });
 
         const mayManage = auth.can('locations', 'edit');
 
@@ -323,9 +330,14 @@ export const locationsPage: Page = {
 
         }
 
+        // A location being published is a draft until it is published. Remove
+        // in the list is in no form: it acts when it is clicked.
+        const release = unsaved.heldBy(() => Array.from(content.querySelectorAll<HTMLFormElement>('form')).
+                                                   some(form => typedSinceDrawn(form)));
+
         void load();
 
-        return () => { cancelled = true; };
+        return () => { cancelled = true; release(); };
 
     }
 
