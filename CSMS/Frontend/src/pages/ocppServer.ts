@@ -34,7 +34,7 @@ export const ocppServerPage: Page = {
 
         must<HTMLButtonElement>(root, '#reload').addEventListener('click', () => void load());
 
-        const mayChange = auth.can('changeStationSettings');
+        const mayChange = auth.can('stations', 'edit');
 
         let cancelled = false;
         let server:   OCPPServerConfiguration | null = null;

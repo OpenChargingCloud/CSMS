@@ -93,18 +93,23 @@ handed a role rather than a socket.
 
 | Page | What it changes | Permission |
 |------|-----------------|------------|
-| Configuration | nothing - it answers "what am I running" | `readConfiguration` |
-| DNS client | the name servers and how they are asked; a test lookup | `changeNetworkSettings`, `runDiagnostics` |
-| NTS client | the time servers of the group and what it is held to; a synchronisation, and a test of each server | `changeNetworkSettings`, `runDiagnostics` |
-| Charging station server | the port, TLS, the security profiles it accepts | `changeStationSettings` |
-| Server certificates | the keys and chains this CSMS presents | `manageCertificates` |
-| Client trust | the chains a station's certificate may come from | `manageCertificates` |
-| Station logins | who may sign in, and with what | `changeStationSettings` |
-| OCPI | nothing - who this operator is and where its partners find it | `readConfiguration` |
-| Roaming partners | the EMSPs it is peered with, and the peering itself | `manageRoamingPartners` |
-| Locations | the charging locations it publishes | `manageLocations` |
-| Roaming data | nothing - what travels between it and its partners | `readConfiguration` |
-| Logs | nothing - it reads | `readConfiguration` |
+| Configuration | nothing - it answers "what am I running" | `configuration:read` |
+| DNS client | the name servers and how they are asked; a test lookup | `dns:edit`, `dns:run` |
+| NTS client | the time servers of the group and what it is held to; a synchronisation, and a test of each server | `nts:edit`, `nts:run` |
+| Charging station server | the port, TLS, the security profiles it accepts | `stations:edit` |
+| Server certificates | the keys and chains this CSMS presents | `certificates:edit` |
+| Client trust | the chains a station's certificate may come from | `certificates:edit` |
+| Station logins | who may sign in, and with what | `stations:edit` |
+| OCPI | nothing - who this operator is and where its partners find it | `roaming:read` |
+| Roaming partners | the EMSPs it is peered with, and the peering itself | `roaming:edit` |
+| Locations | the charging locations it publishes | `locations:edit` |
+| Roaming data | nothing - what travels between it and its partners | `roaming:read` |
+| Logs | nothing - it reads | anybody signed in |
+
+Looking at a page takes `read` on the resource in its column: `dns:read` for
+the DNS client, `stations:read` for the charging station server. The clock, the
+log and the event stream are for anybody signed in. Which roles hold what is
+under "Who may open it" below.
 
 Everything on the DNS and NTS pages takes effect the moment it is saved, for
 everything inside the CSMS that resolves a name or reads a clock, and is written
@@ -373,22 +378,46 @@ under `accounts/`, with every password kept as a PBKDF2-SHA256 PHC string and
 never in the clear. Signing in happens there; this CSMS's own API only reads
 what that door set.
 
-What somebody may do comes from the groups they are in, one per role:
+What somebody may do comes from the groups they are in. Each group is one role,
+under the same name, and a role is a list of permissions, each an operation on a
+resource - written `dns:edit`. That is the model of every node, described in
+[WWCP_Node](https://github.com/OpenChargingCloud/WWCP_Node) under "Who may sign
+in"; the operations are `read`, `edit` and `run`, and the resources are the
+node's `configuration`, `dns`, `nts` and `certificates` and the three a CSMS
+adds: `stations`, the charging station server and which stations may sign in;
+`locations`, the locations it publishes; and `roaming`, who it is in OCPI and
+the partners it is peered with.
 
 | Role | May |
 |------|-----|
-| `viewer` | read the configuration and the log |
-| `cpo` | that, and change the name and time servers, and test them |
-| `systemadmin` | everything this CSMS can be told |
+| `viewer` | read everything: `*:read` |
+| `cpo` | that, and run the charging stations: change the name and time servers and ask them (`dns` and `nts`, `edit` and `run`), and change the charging stations and the locations (`stations:edit`, `locations:edit`) |
+| `systemadmin` | everything this CSMS can be told, the certificates and the roaming included |
+
+The viewer and the administrators are the node's, the CPO is the CSMS's - see
+`CSMSAccess.cs`. The certificates and the roaming are the two resources only
+the administrators may change: somebody who can add a certificate authority can
+let in a charging station that nobody issued a password to, and who this
+operator is peered with is a contract with somebody else.
+
+The `roles` section of `configuration.json` adds roles, or says differently what
+one of them may do - and a role there that names a resource this CSMS does not
+have stops the start, rather than quietly granting nothing:
+
+```json
+"roles": { "support": [ "dns:read", "stations:read" ] }
+```
 
 The groups are made at every start rather than only the first, because they are
 this CSMS's vocabulary and not somebody's data: a group deleted by hand would
-otherwise leave a role nobody could ever hold again. Membership is asked of the
-groups on every request rather than remembered at the sign-in, so taking
-somebody out of one takes effect on their next request instead of at their next
-sign-in. The permissions travel to the browser so a page can grey out what
-somebody may not do - a courtesy, not a lock: every request is checked again on
-arrival.
+otherwise leave a role nobody could ever hold again. A group that is none of
+these, and none the file names, grants nothing - a role this CSMS has never
+heard of is a role it cannot enforce. Membership is asked of the groups on every
+request rather than remembered at the sign-in, so taking somebody out of one
+takes effect on their next request instead of at their next sign-in. The
+permissions travel to the browser, spelt out resource by resource, so a page can
+grey out what somebody may not do - a courtesy, not a lock: every request is
+checked again on arrival.
 
 
 ## Your participation

@@ -21,7 +21,7 @@ using Newtonsoft.Json.Linq;
 
 using org.GraphDefined.Vanaheimr.Hermod.HTTP;
 
-using cloud.charging.open.CSMS.Web;
+using cloud.charging.open.protocols.WWCP.Node.Web;
 
 #endregion
 
@@ -39,7 +39,7 @@ namespace cloud.charging.open.CSMS
     /// else's customer, but so is the log. Publishing a location is the
     /// operator's daily work. Adding a partner hands a foreign system the
     /// right to push into this operator and to start charging sessions at its
-    /// stations, and is the highest of the three. See <see cref="Permissions"/>.
+    /// stations, and is the highest of the three. See <see cref="CSMSAccess"/>.
     ///
     /// A partner's tokens travel to the browser only for whoever may manage
     /// partners: the token this operator handed out is what somebody has to
@@ -87,7 +87,7 @@ namespace cloud.charging.open.CSMS
         private Task<HTTPResponse> GetOCPIConfiguration(HTTPRequest Request)
         {
 
-            if (!TryAuthorize(Request, Permissions.ReadConfiguration, false, out _, out var refused))
+            if (!TryAuthorize(Request, Permission.Read(CSMSAccess.Roaming), false, out _, out var refused))
                 return Task.FromResult(refused);
 
             return Task.FromResult(
@@ -107,10 +107,10 @@ namespace cloud.charging.open.CSMS
         private Task<HTTPResponse> GetPartners(HTTPRequest Request)
         {
 
-            if (!TryAuthorize(Request, Permissions.ReadConfiguration, false, out var user, out var refused))
+            if (!TryAuthorize(Request, Permission.Read(CSMSAccess.Roaming), false, out var user, out var refused))
                 return Task.FromResult(refused);
 
-            var mayManage = PermissionsOf(user).HasFlag(Permissions.ManageRoamingPartners);
+            var mayManage = CSMS.IsAllowed(user, CSMSAccess.Roaming, Operation.Edit);
 
             return Task.FromResult(
                        JSONResponse(Request, HTTPStatusCode.OK, CSMS.RemotePartiesJSON(IncludeSecrets: mayManage))
@@ -133,7 +133,7 @@ namespace cloud.charging.open.CSMS
         private async Task<HTTPResponse> PostPartner(HTTPRequest Request)
         {
 
-            if (!TryAuthorize(Request, Permissions.ManageRoamingPartners, true, out var user, out var refused))
+            if (!TryAuthorize(Request, Permission.Edit(CSMSAccess.Roaming), true, out var user, out var refused))
                 return refused;
 
             if (!TryParseJSONObject(Request, out var json, out var errorResponse))
@@ -171,7 +171,7 @@ namespace cloud.charging.open.CSMS
         private async Task<HTTPResponse> PostPartnerRegister(HTTPRequest Request)
         {
 
-            if (!TryAuthorize(Request, Permissions.ManageRoamingPartners, true, out var user, out var refused))
+            if (!TryAuthorize(Request, Permission.Edit(CSMSAccess.Roaming), true, out var user, out var refused))
                 return refused;
 
             if (!TryGetVersionAndId(Request, out var version, out var id, out var badRequest))
@@ -200,7 +200,7 @@ namespace cloud.charging.open.CSMS
         private async Task<HTTPResponse> DeletePartner(HTTPRequest Request)
         {
 
-            if (!TryAuthorize(Request, Permissions.ManageRoamingPartners, true, out var user, out var refused))
+            if (!TryAuthorize(Request, Permission.Edit(CSMSAccess.Roaming), true, out var user, out var refused))
                 return refused;
 
             if (!TryGetVersionAndId(Request, out var version, out var id, out var badRequest))
@@ -227,7 +227,7 @@ namespace cloud.charging.open.CSMS
         private Task<HTTPResponse> GetLocations(HTTPRequest Request)
         {
 
-            if (!TryAuthorize(Request, Permissions.ReadConfiguration, false, out _, out var refused))
+            if (!TryAuthorize(Request, Permission.Read(CSMSAccess.Locations), false, out _, out var refused))
                 return Task.FromResult(refused);
 
             return Task.FromResult(
@@ -244,7 +244,7 @@ namespace cloud.charging.open.CSMS
         private async Task<HTTPResponse> PostLocation(HTTPRequest Request)
         {
 
-            if (!TryAuthorize(Request, Permissions.ManageLocations, true, out var user, out var refused))
+            if (!TryAuthorize(Request, Permission.Edit(CSMSAccess.Locations), true, out var user, out var refused))
                 return refused;
 
             if (!TryParseJSONObject(Request, out var json, out var errorResponse))
@@ -276,7 +276,7 @@ namespace cloud.charging.open.CSMS
         private async Task<HTTPResponse> DeleteLocation(HTTPRequest Request)
         {
 
-            if (!TryAuthorize(Request, Permissions.ManageLocations, true, out var user, out var refused))
+            if (!TryAuthorize(Request, Permission.Edit(CSMSAccess.Locations), true, out var user, out var refused))
                 return refused;
 
             if (!TryGetVersionAndId(Request, out var version, out var id, out var badRequest))
@@ -304,7 +304,7 @@ namespace cloud.charging.open.CSMS
         private Task<HTTPResponse> GetRoamingData(HTTPRequest Request, String Kind)
         {
 
-            if (!TryAuthorize(Request, Permissions.ReadConfiguration, false, out _, out var refused))
+            if (!TryAuthorize(Request, Permission.Read(CSMSAccess.Roaming), false, out _, out var refused))
                 return Task.FromResult(refused);
 
             return Task.FromResult(

@@ -35,7 +35,7 @@ export const locationsPage: Page = {
 
         must<HTMLButtonElement>(root, '#reload').addEventListener('click', () => void load());
 
-        const mayManage = auth.can('manageLocations');
+        const mayManage = auth.can('locations', 'edit');
 
         let cancelled = false;
         let store: Locations | null = null;

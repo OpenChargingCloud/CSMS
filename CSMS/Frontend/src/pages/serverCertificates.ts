@@ -35,7 +35,7 @@ export const serverCertificatesPage: Page = {
 
         must<HTMLButtonElement>(root, '#reload').addEventListener('click', () => void load());
 
-        const mayManage = auth.can('manageCertificates');
+        const mayManage = auth.can('certificates', 'edit');
 
         let cancelled = false;
         let store:  ServerCertificates      | null = null;

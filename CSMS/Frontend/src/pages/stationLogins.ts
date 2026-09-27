@@ -33,7 +33,7 @@ export const stationLoginsPage: Page = {
 
         must<HTMLButtonElement>(root, '#reload').addEventListener('click', () => void load());
 
-        const mayChange = auth.can('changeStationSettings');
+        const mayChange = auth.can('stations', 'edit');
 
         let cancelled = false;
         let store: StationLogins | null = null;

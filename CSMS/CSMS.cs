@@ -35,7 +35,6 @@ using cloud.charging.open.protocols.WWCP.Node.Logging;
 using OCPPv2_1_CSMS = cloud.charging.open.protocols.OCPPv2_1.CSMS;
 
 using cloud.charging.open.CSMS.Configuration;
-using cloud.charging.open.CSMS.Web;
 
 #endregion
 
@@ -240,7 +239,8 @@ namespace cloud.charging.open.CSMS
                    HTTPRootPath:      HTTPRootPath,
                    ExtAPI:            ExtAPI,
                    AccountsPath:      AccountsPath,
-                   Roles:             UserRole.All.Select(role => role.Name),
+                   Resources:         CSMSAccess.Resources,
+                   RoleDefinitions:   CSMSAccess.Roles,
                    ConfigFile:        ConfigFile,
                    DNSClient:         DNSClient,
                    NTSClient:         NTSClient,

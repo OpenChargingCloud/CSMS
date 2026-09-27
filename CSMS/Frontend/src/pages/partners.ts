@@ -38,7 +38,7 @@ export const partnersPage: Page = {
 
         must<HTMLButtonElement>(root, '#reload').addEventListener('click', () => void load());
 
-        const mayManage = auth.can('manageRoamingPartners');
+        const mayManage = auth.can('roaming', 'edit');
 
         let cancelled = false;
         let store: Partners | null = null;

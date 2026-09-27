@@ -34,8 +34,8 @@ export const dnsPage: Page = {
 
         must<HTMLButtonElement>(root, '#reload').addEventListener('click', () => void load());
 
-        const mayChange  = auth.can('changeNetworkSettings');
-        const mayTest    = auth.can('runDiagnostics');
+        const mayChange  = auth.can('dns', 'edit');
+        const mayTest    = auth.can('dns', 'run');
 
         let cancelled    = false;
         let current: DNSConfiguration | null = null;

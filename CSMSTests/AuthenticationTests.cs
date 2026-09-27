@@ -23,8 +23,6 @@ using Newtonsoft.Json.Linq;
 
 using NUnit.Framework;
 
-using cloud.charging.open.CSMS.Web;
-
 #endregion
 
 namespace cloud.charging.open.CSMS.Tests
@@ -125,7 +123,7 @@ namespace cloud.charging.open.CSMS.Tests
 
             Assert.Multiple(() => {
 
-                foreach (var role in UserRole.All)
+                foreach (var role in CSMS.Access.Roles)
                     Assert.That(CSMS.ExtAPI.TryGetUserGroup(role.GroupId, out _), Is.True,
                                 $"The '{role.Name}' role has no user group, so nobody can ever hold it.");
 
@@ -275,7 +273,7 @@ namespace cloud.charging.open.CSMS.Tests
         /// A first start signs in as the system administrator, because there is
         /// nobody else yet to hand the rest to. What the browser is told is a
         /// copy of what the CSMS enforces and not the enforcement itself;
-        /// this is the copy.
+        /// this is the copy - every operation on every resource, spelt out.
         /// </summary>
         [Test]
         public async Task TheSessionSaysWhatItMayDo()
@@ -290,13 +288,9 @@ namespace cloud.charging.open.CSMS.Tests
 
             Assert.Multiple(() => {
                 Assert.That(roles,       Is.EquivalentTo(new[] { "systemadmin" }));
-                Assert.That(permissions, Is.EquivalentTo(new[] { "readConfiguration",
-                                                                 "changeNetworkSettings",
-                                                                 "runDiagnostics",
-                                                                 "changeStationSettings",
-                                                                 "manageCertificates",
-                                                                 "manageLocations",
-                                                                 "manageRoamingPartners" }));
+                Assert.That(permissions, Is.EquivalentTo(from resource  in new[] { "configuration", "dns", "nts", "certificates", "stations", "locations", "roaming" }
+                                                         from operation in new[] { "read", "edit", "run" }
+                                                         select $"{resource}:{operation}"));
             });
 
         }
