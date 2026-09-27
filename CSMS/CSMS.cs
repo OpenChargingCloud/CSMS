@@ -29,6 +29,7 @@ using org.GraphDefined.Vanaheimr.Norn.NTS;
 
 using cloud.charging.open.protocols.WWCP.NetworkingNode;
 using cloud.charging.open.protocols.WWCP.Node;
+using cloud.charging.open.protocols.WWCP.Node.Certificates;
 using cloud.charging.open.protocols.WWCP.Node.Configuration;
 using cloud.charging.open.protocols.WWCP.Node.Logging;
 
@@ -98,6 +99,37 @@ namespace cloud.charging.open.CSMS
         /// listens for, beside <see cref="NodePort.WebInterface"/>.
         /// </summary>
         public static readonly NodePort  StationServerPort  = new ("The charging station server");
+
+        /// <summary>
+        /// The kinds of certificate this CSMS keeps in the store of the node
+        /// below.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// The kinds of TLS in general: the roots a server it connects to may
+        /// chain to - a time server's, a name server's over TLS - the roots a
+        /// client connecting to it has to chain to, the server certificates it
+        /// recognises by their fingerprints, and what it presents itself.
+        /// </para>
+        /// <para>
+        /// And the three roots of the PKI of ISO 15118 a CSMS stands in: the
+        /// V2G root its charging stations' certificates chain to, the Mobility
+        /// Operator roots of the contracts charged under, and the OEM roots of
+        /// the vehicles that ask for one. None of a vehicle's own credentials: a
+        /// CSMS is no vehicle, and has no contract of its own to present.
+        /// </para>
+        /// <para>
+        /// Not the charging station server's own keys, nor the chains it
+        /// accepts charging stations by, which are stores of their own beside
+        /// the configuration file: ocpp-server-keys and ocpp-client-trust.
+        /// </para>
+        /// </remarks>
+        public static readonly IReadOnlyList<CertificateKind>  CertificateKinds = [
+            CertificateKind.V2GRoot,
+            CertificateKind.MORoot,
+            CertificateKind.OEMRoot,
+            .. CertificateKindExtensions.TLS
+        ];
 
         /// <summary>
         /// What a line the libraries below write has to contain to be tagged,
@@ -190,6 +222,7 @@ namespace cloud.charging.open.CSMS
         /// <param name="OCPP">Who this CSMS says it is in OCPP, unless the configuration file says otherwise.</param>
         /// <param name="OCPI">Who this CSMS is in OCPI, unless the configuration file says otherwise.</param>
         /// <param name="Frontend">Where the web interface comes from; the bundle embedded in this assembly by default.</param>
+        /// <param name="CertificatesPath">The directory the certificate store of the node below lives in between starts; what the file says, or "certificates" beside it, by default.</param>
         /// <param name="Log">The event log; a new one by default.</param>
         /// <param name="LogToConsole">Whether the event log is also written to the console.</param>
         /// <param name="ConsoleLogLevel">What the console shows of it.</param>
@@ -209,6 +242,7 @@ namespace cloud.charging.open.CSMS
                     OCPPConfiguration?     OCPP               = null,
                     OCPIConfiguration?     OCPI               = null,
                     IStaticContentSource?  Frontend           = null,
+                    String?                CertificatesPath   = null,
                     EventLog?              Log                = null,
                     Boolean                LogToConsole       = true,
                     LogLevel               ConsoleLogLevel    = LogLevel.Info,
@@ -246,13 +280,8 @@ namespace cloud.charging.open.CSMS
                    NTSClient:         NTSClient,
                    Frontend:          Frontend ?? new EmbeddedContentSource(HTTPRoot, typeof(CSMS).Assembly),
 
-                   // None of the kinds the node's store keeps - those are
-                   // ISO 15118's. What a CSMS presents and believes is its
-                   // charging station server's, in stores of its own:
-                   // ocpp-server-keys and ocpp-client-trust. So there is no
-                   // store directory of the node's beside the configuration
-                   // file either.
-                   CertificateKinds:  [],
+                   CertificatesPath:  CertificatesPath,
+                   CertificateKinds:  CertificateKinds,
 
                    Log:               Log,
                    LogToConsole:      LogToConsole,

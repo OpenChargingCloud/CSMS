@@ -236,6 +236,11 @@ namespace cloud.charging.open.CSMS
             // CSMSHTTPAPI.OCPI.cs.
             RegisterOCPIRoutes();
 
+            // The certificate store of the node below: what this CSMS
+            // believes of the servers it connects to, what it presents, and
+            // the roots of the PKI of ISO 15118; see CSMSHTTPAPI.Certificates.cs.
+            RegisterCertificateRoutes();
+
             AddHandler(HTTPPath.Root + "v1/logs",          GetLogs,           HTTPMethod.GET);
 
             AddHandler(HTTPMethod.GET,
@@ -245,7 +250,8 @@ namespace cloud.charging.open.CSMS
 
             // Everything else below /api answers with a JSON 404 instead of
             // the single-page-application stub of the web interface.
-            foreach (var method in new[] { HTTPMethod.GET, HTTPMethod.HEAD, HTTPMethod.POST, HTTPMethod.PUT, HTTPMethod.DELETE })
+            foreach (var method in new[] { HTTPMethod.GET, HTTPMethod.HEAD, HTTPMethod.POST, HTTPMethod.PUT,
+                                           HTTPMethod.PATCH, HTTPMethod.DELETE })
                 AddHandler(HTTPPath.Root + "{path..}", UnknownPath, method);
 
         }
@@ -407,14 +413,22 @@ namespace cloud.charging.open.CSMS
         }
 
         /// <summary>
-        /// POST /api/v1/configuration/dns/query with {"name", "recordTypes"}:
-        /// make this CSMS look a name up and say what came back.
+        /// POST /api/v1/configuration/dns/query with {"name", "recordTypes"}
+        /// and an optional {"server"}: make this CSMS look a name up and say
+        /// what came back.
         /// </summary>
         /// <remarks>
         /// A POST although it changes nothing here, because it makes this
         /// CSMS send traffic to a host somebody named - which is not
         /// something to leave sitting in a URL that a browser may repeat,
         /// prefetch or put in a history.
+        ///
+        /// The server is the place of one of the configured name servers in
+        /// the list, counted from 0, and asks that one and nothing else, and
+        /// without the cache. Left out, the question is put the way this CSMS
+        /// resolves anything: to all of its name servers at once. A place with
+        /// no server at it is said in the answer; one that is not a place at
+        /// all is refused here, rather than read as "all of them".
         /// </remarks>
         private async Task<HTTPResponse> PostDNSQuery(HTTPRequest Request)
         {
@@ -433,6 +447,22 @@ namespace cloud.charging.open.CSMS
             if (!CSMS.TryParseRecordTypes(json["recordTypes"], out var recordTypes, out var problem))
                 return ErrorJSON(Request, HTTPStatusCode.BadRequest, problem);
 
+            Int32? server = null;
+
+            if (json["server"] is JToken serverToken && serverToken.Type != JTokenType.Null)
+            {
+
+                if (serverToken.Type != JTokenType.Integer ||
+                    serverToken.Value<Int64>() is < 0 or > Int32.MaxValue)
+                {
+                    return ErrorJSON(Request, HTTPStatusCode.BadRequest,
+                                     "'server' must be the place of a name server in the list, counted from 0.");
+                }
+
+                server = serverToken.Value<Int32>();
+
+            }
+
             Log.Info($"'{user.Id}' asked this CSMS to resolve '{name}'.", "dns", "test", "web");
 
             return JSONResponse(
@@ -440,7 +470,8 @@ namespace cloud.charging.open.CSMS
                        HTTPStatusCode.OK,
                        await CSMS.ResolveAsync(name,
                                                recordTypes,
-                                               CancellationToken: Request.CancellationToken)
+                                               server,
+                                               Request.CancellationToken)
                    );
 
         }
@@ -540,7 +571,15 @@ namespace cloud.charging.open.CSMS
             if (!TryParseJSONObject(Request, out var json, out var errorResponse))
                 return errorResponse;
 
+            // Refused rather than read as a name: a number here would otherwise
+            // become the host "42", and be asked for.
+            if (json["host"] is JToken hostToken && hostToken.Type is not (JTokenType.String or JTokenType.Null))
+                return ErrorJSON(Request, HTTPStatusCode.BadRequest, "'host' must be the name or the address of a time server.");
+
             var host = json.Value<String>("host")?.Trim();
+
+            if (host?.Length == 0)
+                host = null;
 
             Log.Info($"'{user.Id}' asked this CSMS to test {(host is null ? "its time server" : $"the time server '{host}'")}.",
                      "nts", "test", "web");

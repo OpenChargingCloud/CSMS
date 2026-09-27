@@ -94,8 +94,9 @@ handed a role rather than a socket.
 | Page | What it changes | Permission |
 |------|-----------------|------------|
 | Configuration | nothing - it answers "what am I running" | `configuration:read` |
-| DNS client | the name servers and how they are asked; a test lookup | `dns:edit`, `dns:run` |
-| NTS client | the time servers of the group and what it is held to; a synchronisation, and a test of each server | `nts:edit`, `nts:run` |
+| DNS client | the name servers, how they are asked and what each is held to; a test lookup, of all of them or of one | `dns:edit`, `dns:run` |
+| NTS client | the time servers of the group, what it and each of them is held to; a synchronisation, and a test of each server | `nts:edit`, `nts:run` |
+| Certificate store | the roots and the server certificates this CSMS believes, and what each is for | `certificates:edit` |
 | Charging station server | the port, TLS, the security profiles it accepts | `stations:edit` |
 | Server certificates | the keys and chains this CSMS presents | `certificates:edit` |
 | Client trust | the chains a station's certificate may come from | `certificates:edit` |
@@ -119,11 +120,11 @@ anybody noticing.
 
 The node below reads the sections every one of these programs has - `dns`,
 `nts` and `certificates` - and the CSMS reads its own - `ocpp`, `ocppServer`
-and `ocpi` - from the same document; each passes over what is the other's. The
-node's certificate store keeps none of its kinds for a CSMS - they are ISO
-15118's - so there is no store directory of the node's beside the file. What
-the CSMS presents and believes is its charging station server's, in stores of
-its own beside the file: the keys it presents to the charging stations in
+and `ocpi` - from the same document; each passes over what is the other's.
+Beside the file the node keeps its certificate store, in `certificates/`, and
+what it believed each server with, in `known-servers.json`. What the CSMS
+presents to the charging stations and believes of them is its charging station
+server's, in stores of its own beside the file: the keys it presents in
 `ocpp-server-keys/`, and the chains it trusts them by in `ocpp-client-trust/`.
 
 What this CSMS says it is in OCPP - its node id, vendor, model, serial number -
@@ -139,6 +140,51 @@ OCPP identification above. The partners themselves are *not* in that file: the
 OCPI library keeps them, and what they sent, in append-only files of its own
 below an `ocpi/` directory beside the configuration, one set per version, and
 reads them back at every start.
+
+
+## Certificates, and where they live
+
+Two sets of stores, because they face two different ways. What this CSMS
+presents to the charging stations, and the chains it lets them in by, are its
+charging station server's: `ocpp-server-keys/` and `ocpp-client-trust/`, the
+Server certificates and the Accepted chains pages. Everything else it believes
+is in the node's store below - WWCP_Node's `CertificateStore`, a directory of
+files with an `index.json` beside them, in `certificates/` beside the
+configuration file - and is addressed by a short handle rather than by a path.
+The Certificate store page manages it, and so do CSMSCLI's
+`--import-certificate` and `--list-certificates`.
+
+A CSMS keeps seven of the node's eleven kinds, `CSMS.CertificateKinds`: the
+vehicle's credentials are no business of the back end's.
+
+A **root** is what this CSMS believes. `tlsRoot` is for a server it connects
+to - a time server, or a name server over TLS or HTTPS - and is believed beside
+the roots of the machine it runs on, not instead of them. `v2gRoot`, `moRoot`
+and `oemRoot` are ISO 15118's, for a station's chain, a contract's and a
+provisioning chain. They are kept apart because one bag of roots would let an
+OEM root vouch for a contract, and they are kept for what is to come: nothing
+in this CSMS checks a chain against them yet. Any number of each may be
+switched on at once, and all of them are believed.
+
+A **server certificate** - `tlsServer` - is what a server this CSMS connects to
+shows, kept so that the server can be held to it by its fingerprint, and never
+with a private key, which would be that server's key in the wrong place. The
+page shows these as a third group, what the CSMS *recognises*. `clientRoot` and
+`tlsIdentity` are kept as well, and nothing in the CSMS uses them yet.
+
+A TLS root and a server certificate are told what they are for: the time
+servers (`nts`), the name servers (`dns`), or - with nothing said - every use.
+The page asks at the upload and again with **Uses**, because one root may vouch
+for both, and a root kept for the name servers alone vouches for no time. What
+a server is held to is said in its own entry, on the NTS and the DNS page,
+where its dialog offers the ones kept for it.
+
+The store holds private keys **unencrypted** - of these kinds only a
+`tlsIdentity` has one: a PKCS#12 is opened with its password once, at import,
+and written back without one. The file system is what guards them, and the
+CSMS says so at every start and at every import. A file copied into the
+directory by hand is adopted at the next start, or at once with **Reload** on
+the page.
 
 
 ## Running it
@@ -203,7 +249,10 @@ dotnet test libs/CSMS/CSMSTests
 They start real CSMSs and talk to them over HTTP the way the browser does: the
 bundle is served, the sign-in works, a change to the name servers reaches both
 the shared DNS client and the file, the log filters, the event stream delivers,
-and a CSMS that is told to stop stops. What the node below does on its own -
+and a CSMS that is told to stop stops. `CSMSAccessTests` reads the one permission
+every route of the API asks for off the refusal an account in no role is given,
+and the certificate store is filled, told what a root is for and told again
+over the API, as the page does it. What the node below does on its own -
 the file's sections, the log, the time servers, the certificate store, the
 accounts' roles and the ports - is tested once more in WWCP_Node's own
 `WWCP_Node_Tests`, against a node of no particular kind.
@@ -216,9 +265,9 @@ somebody has running on 2351 while they work.
 
 **They never touch the network.** The configuration written before each CSMS is
 built switches the time client off, which is what stops the clock check from
-being scheduled at all, and the DNS client is only ever asked what it is
-configured as. A test suite that needs a name server to answer is a test suite
-that fails on a train.
+being scheduled at all, and the DNS client is asked what it is configured as -
+or, once, a name server on the loopback address that nothing listens at. A test
+suite that needs a name server to answer is a test suite that fails on a train.
 
 
 ## The clock
@@ -325,6 +374,42 @@ small difference. Any of those missing and the answer says `unverified` and name
 which one in `why`.
 
 
+## One server at a time
+
+A time server, and a name server asked over TLS or HTTPS, can be held to a
+certificate or a root, and the NTS and the DNS page are where that is said: a
+server's dialog takes SHA-256 fingerprints one to a line, adds the one the
+server showed last or one the certificate store keeps for it with a click, and
+says what a mismatch comes to and whether the server is held to what it is
+first believed with. Its row says what was made of its certificate the last
+time - believed, used although it did not match, or refused, and why - what it
+is held to, and when it showed another certificate than before. How a
+certificate is judged, what trust on first use learns and what
+`known-servers.json` remembers are the node's, and written down once in
+[WWCP_Node's README](https://github.com/OpenChargingCloud/WWCP_Node#name-resolution-and-the-time).
+
+Each server can be asked on its own, too. The NTS page tests one time server
+step by step, down to the SHA-256 fingerprint of the certificate it showed -
+`POST /api/v1/configuration/nts/test` with a `host` - and measures the clock
+without stepping it. The DNS page asks the name servers the way everything in
+the CSMS does, or one of them alone - `POST /api/v1/configuration/dns/query`
+with a `server`, its place in the list counted from 0 - because the lookup
+that fails for everybody is the one where somebody wants to know which server
+is not answering. A place with no server at it is an answer that says so, and
+something that is not a place is refused rather than read as "all of them".
+
+The whole list goes to the CSMS at every save, so every server goes with what
+it is held to, and the pages' `ntsServers.ts`, `dnsServers.ts` and `pins.ts`
+are where that is decided and tested: a list sent without the pins of the
+servers nobody touched would let go of them, the ones learned on first use
+included. A name server switched to a transport that shows no certificate lets
+go of its pins when it is saved - the CSMS would refuse them - and its row says
+so first. Holding a server to a fingerprint is `dns:edit` or `nts:edit`, with
+the rest of the server, and so the CPO's: a pin cannot make the CSMS believe a
+certificate that chains to nothing this machine or its store holds, and what
+goes into the store stays the administrators'.
+
+
 ## The log
 
 Every entry carries a timestamp, a level (`debug`, `info`, `notice`, `warning`,
@@ -397,8 +482,9 @@ the partners it is peered with.
 The viewer and the administrators are the node's, the CPO is the CSMS's - see
 `CSMSAccess.cs`. The certificates and the roaming are the two resources only
 the administrators may change: somebody who can add a certificate authority can
-let in a charging station that nobody issued a password to, and who this
-operator is peered with is a contract with somebody else.
+let in a charging station that nobody issued a password to, or make this CSMS
+believe a time server nobody else would, and who this operator is peered with
+is a contract with somebody else.
 
 The `roles` section of `configuration.json` adds roles, or says differently what
 one of them may do - and a role there that names a resource this CSMS does not
