@@ -915,7 +915,14 @@ namespace cloud.charging.open.CSMS.Tests
             /// <summary>The token the EMSP hands out in its credentials.</summary>
             public const String TokenC = "stub-emsp-token-c";
 
-            private readonly HTTPServer server;
+            private readonly HTTPServer  server;
+
+            /// <summary>
+            /// The port the stub's server is on, held from before it starts
+            /// until it has stopped, so that nobody asking for a free port is
+            /// given it in between - see <see cref="ClosedPort"/>.
+            /// </summary>
+            private readonly ClosedPort  port;
 
             public String    VersionsURL          { get; }
 
@@ -924,9 +931,10 @@ namespace cloud.charging.open.CSMS.Tests
             public List<String> TokensSeen        { get; } = [];
 
 
-            private StubEMSP(HTTPServer Server, String VersionsURL)
+            private StubEMSP(HTTPServer Server, ClosedPort Port, String VersionsURL)
             {
                 this.server       = Server;
+                this.port         = Port;
                 this.VersionsURL  = VersionsURL;
             }
 
@@ -934,10 +942,13 @@ namespace cloud.charging.open.CSMS.Tests
             public static async Task<StubEMSP> Start()
             {
 
-                var port    = TestCSMSs.FreePort();
-                var server  = new HTTPServer(IPAddress: IPv4Address.Localhost, TCPPort: IPPort.Parse(port));
+                var port    = new ClosedPort();
+
+                port.HandOver();
+
+                var server  = new HTTPServer(IPAddress: IPv4Address.Localhost, TCPPort: port.Number);
                 var origin  = $"http://127.0.0.1:{port}";
-                var stub    = new StubEMSP(server, $"{origin}/versions");
+                var stub    = new StubEMSP(server, port, $"{origin}/versions");
                 var api     = server.AddHTTPAPI(HTTPPath.Root);
 
                 api.AddHandler(
@@ -1042,6 +1053,7 @@ namespace cloud.charging.open.CSMS.Tests
             public async ValueTask DisposeAsync()
             {
                 await server.Stop();
+                port.Dispose();
             }
 
         }

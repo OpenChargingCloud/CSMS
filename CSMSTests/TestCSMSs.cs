@@ -123,6 +123,13 @@ namespace cloud.charging.open.CSMS.Tests
         /// There is a gap between letting the port go and binding it again, and
         /// nothing here can close it; what it buys is that the gap is
         /// milliseconds wide instead of the whole test run.
+        ///
+        /// Only for the ports a CSMS opens itself - its web interface, its
+        /// charging station server - where a port somebody else took in the gap
+        /// ends the start with a sentence that says so. A port nothing may
+        /// answer on, and one a back end of the test's own is started on, is a
+        /// <see cref="ClosedPort"/>: there somebody else in the gap would be
+        /// answered as the back end, and the test would believe it.
         /// </remarks>
         public static UInt16 FreePort()
         {

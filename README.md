@@ -265,11 +265,19 @@ accounts, its configuration file, and beside that the stores of the charging
 station server - so they neither fight with each other nor with a CSMS
 somebody has running on 2351 while they work.
 
+A port where nothing may answer, and one a test's own back end - a roaming
+partner, a time server - is started on, is held rather than found free: a
+`ClosedPort`, Hermod's, bound and not listening, so that no other test run on
+the same machine can be found there in the moment between finding the port
+and using it. `ClosedPortTests` asks this copy what the tests stand on:
+refused, nobody else can listen on it, and handed over it takes a back end.
+
 **They never touch the network.** The configuration written before each CSMS is
 built switches the time client off, which is what stops the clock check from
 being scheduled at all, and the DNS client is asked what it is configured as -
-or, once, a name server on the loopback address that nothing listens at. A test
-suite that needs a name server to answer is a test suite that fails on a train.
+or, once, a name server on the loopback address whose port is held closed. A
+test suite that needs a name server to answer is a test suite that fails on a
+train.
 
 
 ## The clock

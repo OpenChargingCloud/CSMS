@@ -79,10 +79,18 @@ namespace cloud.charging.open.CSMS.Tests
         public async Task ARefusedCertificateIsDescribedBeforeTheExchangeIsSaidToHaveFailed()
         {
 
-            var ntsKEPort  = IPPort.Parse(TestCSMSs.FreePort());
-            var ntpPort    = FreeUDPPort();
+            // The key exchange's port is held from before the server starts until
+            // the test is over, so that nobody asking for a free port is given it
+            // in between - see ClosedPort. The server binds 127.0.0.1 next to
+            // what holds it: its default, every IPv4 address, could not be bound
+            // there on Windows.
+            using var ntsKEPort  = new ClosedPort();
+            var ntpPort          = FreeUDPPort();
 
-            var server     = new NTSServer(NTSKEPort:           ntsKEPort,
+            ntsKEPort.HandOver();
+
+            var server     = new NTSServer(ListenIPAddress:     IPv4Address.Localhost,
+                                           NTSKEPort:           ntsKEPort.Number,
                                            NTSPort:             ntpPort,
                                            ExternalURLs:        [ URL.Parse($"udp://localhost:{ntpPort}") ],
                                            MasterKeysFilePath:  null);
@@ -105,7 +113,7 @@ namespace cloud.charging.open.CSMS.Tests
                                         new JProperty("nts", new JObject(
                                             new JProperty("servers", new JArray(new JObject(
                                                 new JProperty("hostname",   "localhost"),
-                                                new JProperty("ntsKEPort",  ntsKEPort.ToUInt16()),
+                                                new JProperty("ntsKEPort",  ntsKEPort.Number.ToUInt16()),
                                                 new JProperty("ntpPort",    ntpPort.  ToUInt16())
                                             ))),
                                             new JProperty("timeoutSeconds", 5)

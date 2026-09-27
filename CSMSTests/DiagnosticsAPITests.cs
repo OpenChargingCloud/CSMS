@@ -34,9 +34,14 @@ namespace cloud.charging.open.CSMS.Tests
     /// </summary>
     /// <remarks>
     /// Neither leaves this machine. The one name server configured here is on
-    /// the loopback address, on a port nothing listens on, with a timeout of
-    /// a second and no second try; and the time client stays switched off,
-    /// which a time server's test then says rather than asking anybody.
+    /// the loopback address, asked over TCP on a port this fixture holds
+    /// closed - see <see cref="ClosedPort"/> - with a timeout of a second and
+    /// no second try; and the time client stays switched off, which a time
+    /// server's test then says rather than asking anybody.
+    ///
+    /// TCP because a port can be held closed for TCP. Over UDP the port was
+    /// one nobody listened on a moment ago, and a name server of another test
+    /// run on the same machine could have been found there and answered.
     /// </remarks>
     public class DiagnosticsAPITests : ACSMSTests
     {
@@ -45,9 +50,10 @@ namespace cloud.charging.open.CSMS.Tests
 
         /// <summary>
         /// Where the one name server of this CSMS would be, if anything
-        /// listened there.
+        /// listened there: a port nobody else can listen on either, for as long
+        /// as these tests run.
         /// </summary>
-        private readonly UInt16 nameServerPort = TestCSMSs.FreePort();
+        private readonly ClosedPort nameServerPort = new ();
 
         #endregion
 
@@ -63,14 +69,25 @@ namespace cloud.charging.open.CSMS.Tests
                        new JProperty("servers",     new JArray(
                            new JObject(
                                new JProperty("address",              "127.0.0.1"),
-                               new JProperty("port",                 nameServerPort),
-                               new JProperty("transport",            "UDP"),
+                               new JProperty("port",                 nameServerPort.Number.ToUInt16()),
+                               new JProperty("transport",            "TCP"),
                                new JProperty("queryTimeoutSeconds",  1)
                            )
                        )),
                        new JProperty("maxRetries",  0)
                    ))
                );
+
+        #endregion
+
+
+        #region LetGoOfTheNameServersPort()
+
+        [OneTimeTearDown]
+        public void LetGoOfTheNameServersPort()
+        {
+            nameServerPort.Dispose();
+        }
 
         #endregion
 
@@ -146,7 +163,7 @@ namespace cloud.charging.open.CSMS.Tests
 
             Assert.Multiple(() => {
                 Assert.That(status,                        Is.EqualTo(HttpStatusCode.OK));
-                Assert.That(json?.Value<String>("asked"),  Does.StartWith($"udp://127.0.0.1:{nameServerPort}"),
+                Assert.That(json?.Value<String>("asked"),  Does.StartWith($"tcp://127.0.0.1:{nameServerPort}"),
                             "The answer does not say which name server it asked.");
                 Assert.That(json?.Value<Boolean>("ok"),    Is.False,
                             "A name server that is not there answered.");
