@@ -458,6 +458,14 @@ snapshot from `/api/v1/logs`, which says how far it reaches, and then applies
 everything newer from `/api/v1/events` - so a reconnect that replays a few cached
 events costs bytes and nothing else.
 
+The stream asks, before every entry it sends and at every heartbeat, whether
+whoever opened it would still be let in. Once the session it was opened with
+has ended - signed out, expired, or taken back with the account's others - the
+stream ends too, without the entry, and the browser's next try is answered with
+a 401. One opened with an API key ends the same way once the key is revoked or
+has run out. One opened with Basic auth has neither, and is held to its account
+instead.
+
 Three places keep it, because they answer different questions. The console
 shows it to whoever started the CSMS, at the level they chose; the Logs page
 keeps the last two thousand entries; and a `LogPath` handed to the constructor
