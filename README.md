@@ -252,13 +252,19 @@ dotnet test libs/CSMS/CSMSTests
 They start real CSMSs and talk to them over HTTP the way the browser does: the
 bundle is served, the sign-in works, a change to the name servers reaches both
 the shared DNS client and the file, the log filters, the event stream delivers,
-and a CSMS that is told to stop stops. `CSMSAccessTests` reads the one permission
-every route of the API asks for off the refusal an account in no role is given,
-and the certificate store is filled, told what a root is for and told again
-over the API, as the page does it. What the node below does on its own -
-the file's sections, the log, the time servers, the certificate store, the
-accounts' roles and the ports - is tested once more in WWCP_Node's own
-`WWCP_Node_Tests`, against a node of no particular kind.
+the certificate store is filled, told what a root is for and told again, and a
+CSMS that is told to stop stops. That much every node has to answer alike, and
+it is WWCP_Node's conformance suite, `NodeConformanceTests` in
+`WWCP_Node_TestKit`, which `CSMSConformance` runs against a CSMS - see
+[WWCP_Node's README](https://github.com/OpenChargingCloud/WWCP_Node#testing-a-kind-of-node).
+
+The rest is what only a CSMS does: its charging station server, OCPI, its OCPP
+identity, the roles and resources that are its own and the kinds its store
+keeps. `CSMSAccessTests` reads the one permission every route of the API asks
+for off the refusal an account in no role is given. What the node below does
+on its own - the file's sections, the log, the time servers, the certificate
+store, the accounts' roles and the ports - is tested once more in WWCP_Node's
+own `WWCP_Node_Tests`, against a node of no particular kind.
 
 Each test gets a CSMS of its own, on a port the operating system has just
 confirmed is free and with its own directory for what a CSMS writes: its
@@ -266,19 +272,19 @@ accounts, its configuration file, and beside that the stores of the charging
 station server - so they neither fight with each other nor with a CSMS
 somebody has running on 2351 while they work.
 
-A port where nothing may answer, and one a test's own back end - a roaming
-partner, a time server - is started on, is held rather than found free: a
-`ClosedPort`, Hermod's, bound and not listening, so that no other test run on
-the same machine can be found there in the moment between finding the port
-and using it. `ClosedPortTests` asks this copy what the tests stand on:
-refused, nobody else can listen on it, and handed over it takes a back end.
+A port a test's own back end - a roaming partner, a time server - is started
+on is held rather than found free: a `ClosedPort`, Hermod's, bound and not
+listening, so that no other test run on the same machine can be found there in
+the moment between finding the port and using it. `ClosedPortTests` asks this
+copy what the tests stand on: refused, nobody else can listen on it, and handed
+over it takes a back end.
 
 **They never touch the network.** The configuration written before each CSMS is
 built switches the time client off, which is what stops the clock check from
 being scheduled at all, and the DNS client is asked what it is configured as -
-or, once, a name server on the loopback address whose port is held closed. A
-test suite that needs a name server to answer is a test suite that fails on a
-train.
+or a name server on the loopback address that never answers, its port held for
+as long as it is asked. A test suite that needs a name server to answer is a
+test suite that fails on a train.
 
 
 ## The clock
@@ -425,9 +431,8 @@ exchange or handshake after a save - mostly with the NTS or DNS page still
 open, and the list the page sends back was loaded before. So the pages send
 every server they loaded with what they showed it held to as well, under
 `pinsAsShown`: their next save keeps what was learned in between, and still
-takes away a pin that was shown and removed there. `LearnedPinsTests` asks it
-of both pages over the API, as the local controller's does, where it was
-measured.
+takes away a pin that was shown and removed there. WWCP_Node's conformance
+suite asks it of both over the API, as of every kind of node - see "The tests".
 
 
 ## The log

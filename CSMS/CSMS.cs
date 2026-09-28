@@ -444,16 +444,13 @@ namespace cloud.charging.open.CSMS
         /// End what this CSMS holds open beyond the web interface, before the
         /// server stops.
         /// </summary>
+        /// <remarks>
+        /// The charging station server. The event streams of the JSON API are
+        /// not among what this ends - the node ends them itself before it asks
+        /// this, as it does for every kind of node.
+        /// </remarks>
         protected override async Task OnStopping()
         {
-
-            // Before the server, and that order is the whole point: every
-            // browser with the Logs page open holds a request that is waiting
-            // for the next log entry rather than for its socket, and the HTTP
-            // server waits for every request it started. Closing the sockets
-            // does not wake those, so they are ended here first - whoever owns
-            // the server, because the streams are this CSMS's.
-            API.CloseEventStreams();
 
             await StopOCPPServer();
 

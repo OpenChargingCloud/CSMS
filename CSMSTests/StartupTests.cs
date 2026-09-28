@@ -129,8 +129,9 @@ namespace cloud.charging.open.CSMS.Tests
             });
 
             // That the first password still opens it is checked over the wire
-            // in AuthenticationTests.TheAccountSurvivesARestart; here what is
-            // asked is only that nothing was made up a second time.
+            // by the conformance suite of WWCP_Node_TestKit, in
+            // TheAccountSurvivesARestart; here what is asked is only that
+            // nothing was made up a second time.
             Assert.That(firstPassword, Is.Not.Null.And.Not.Empty);
 
         }
