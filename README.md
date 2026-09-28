@@ -419,6 +419,15 @@ the rest of the server, and so the CPO's: a pin cannot make the CSMS believe a
 certificate that chains to nothing this machine or its store holds, and what
 goes into the store stays the administrators'.
 
+What a server learns on first use is written into its entry at the first key
+exchange or handshake after a save - mostly with the NTS or DNS page still
+open, and the list the page sends back was loaded before. So the pages send
+every server they loaded with what they showed it held to as well, under
+`pinsAsShown`: their next save keeps what was learned in between, and still
+takes away a pin that was shown and removed there. `LearnedPinsTests` asks it
+of both pages over the API, as the local controller's does, where it was
+measured.
+
 
 ## The log
 
