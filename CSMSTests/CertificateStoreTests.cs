@@ -164,7 +164,8 @@ namespace cloud.charging.open.CSMS.Tests
                             "the store is beside the configuration file");
 
                 Assert.That(refused,                                  Is.EqualTo(HttpStatusCode.BadRequest));
-                Assert.That(refusal.ToString(),                       Does.Contain("This CSMS keeps no certificate of that kind"));
+                Assert.That(refusal.ToString(),                       Does.Contain("'kind' has to be one of v2gRoot, moRoot, oemRoot, tlsRoot, clientRoot, tlsServer, tlsIdentity."),
+                            "the node's API names the kinds this store keeps");
 
             });
 

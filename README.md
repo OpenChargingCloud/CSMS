@@ -67,17 +67,18 @@ each still deciding for itself what a role permits - which is what
 does with `--shared`.
 
 One HTTP server, one port, three things registered on it: the accounts and the
-web interface by the node below, the JSON API by the CSMS. A request goes to the
-most specific of them, so the single-page-application catch-all only ever gets
-what neither of the other two claims - `AnUnknownAPIPathAnswersJSONAndNotTheStub`
-says so.
+web interface by the node below, and the JSON API - the routes every node
+answers, the node's `NodeHTTPAPI`, with the CSMS's own on top: the charging
+station server and OCPI. A request goes to the most specific of them, so the
+single-page-application catch-all only ever gets what neither of the other two
+claims - `AnUnknownAPIPathAnswersJSONAndNotTheStub` says so.
 
 ```csharp
 var csms = new CSMS(HTTPPort: IPPort.Parse(2351));
 
 csms.HTTPServer   // the one server everything is registered within
 csms.ExtAPI       // the accounts at /ext
-csms.API          // the JSON API at /api
+csms.API          // the JSON API at /api: the node's, and the CSMS's routes
 csms.Node         // the OCPP 2.1 CSMS node
 ```
 
@@ -377,7 +378,7 @@ Without a port, the transport's own is used. `udp://9.9.9.9:53` is how the log a
 the banner name a name server, and not a form the file takes: a file saying it is
 refused at the start, and the page refuses it the same way, with the entry named.
 
-`GET /api/v1/configuration/time` is that measurement, and the one word it never
+`GET /api/v1/clock` is that measurement, and the one word it never
 guesses is "legal": that needs a claim the operator wrote into
 `nts.legalTimeAuthority`, a check against that very server, a recent one, and a
 small difference. Any of those missing and the answer says `unverified` and names
@@ -463,8 +464,10 @@ whoever opened it would still be let in. Once the session it was opened with
 has ended - signed out, expired, or taken back with the account's others - the
 stream ends too, without the entry, and the browser's next try is answered with
 a 401. One opened with an API key ends the same way once the key is revoked or
-has run out. One opened with Basic auth has neither, and is held to its account
-instead.
+has run out, and one opened with Basic auth once its password has changed: it
+is asked about the password before every entry, as a new request with it is.
+The stream, like every route that is not the charging station server's or
+OCPI's, is the node's - see WWCP_Node's README, "The JSON API".
 
 Three places keep it, because they answer different questions. The console
 shows it to whoever started the CSMS, at the level they chose; the Logs page
