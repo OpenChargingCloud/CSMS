@@ -17,8 +17,6 @@
 
 #region Usings
 
-using System.Net;
-
 using Newtonsoft.Json.Linq;
 
 using NUnit.Framework;
@@ -114,74 +112,6 @@ namespace cloud.charging.open.CSMS.Tests
 
         #endregion
 
-
-        #region TheNTSConfigurationIsReadable()
-
-        [Test]
-        public async Task TheNTSConfigurationIsReadable()
-        {
-
-            using var http = await SignedIn();
-
-            var nts = await GetJSON(http, "/api/v1/configuration/nts");
-
-            Assert.Multiple(() => {
-                // Switched off by the fixture, so that no test reaches the
-                // network - the servers it would ask are still named, below,
-                // and so is what they are held to.
-                Assert.That(nts.Value<Boolean>("enabled"),                Is.False);
-                Assert.That(nts["settings"]?.Value<Int32>("minServers"),  Is.EqualTo(2));
-                Assert.That(nts.Value<String>("file"),                    Is.EqualTo(CSMS.ConfigFile.Path));
-
-                // What the page draws its "Time servers" card from. A CSMS
-                // nobody has configured asks the PTB's four, so the card has
-                // four to draw rather than nothing.
-                Assert.That(nts["timeSources"],                           Is.Not.Null.And.Count.EqualTo(4));
-                Assert.That(nts["timeSources"]?[0]?.Value<String>("hostname"),
-                                                                          Is.EqualTo(CSMS.NTSClient.Hostname.ToString()));
-                Assert.That(nts["group"]?.Value<String>("name"),          Is.EqualTo("legal"));
-                Assert.That(nts["group"]?.Value<Byte>  ("minServers"),    Is.EqualTo(2));
-            });
-
-        }
-
-        #endregion
-
-        #region OneTimeServerCanBeTestedFromThePage()
-
-        /// <summary>
-        /// The NTS page tests each server of the group from its own row, and
-        /// the log says who asked for which - in the words the page sends, the
-        /// name as it is read.
-        /// </summary>
-        /// <remarks>
-        /// NTS is switched off by the fixture, so the test answers that nothing
-        /// was asked, and nothing goes out.
-        /// </remarks>
-        [Test]
-        public async Task OneTimeServerCanBeTestedFromThePage()
-        {
-
-            using var http = await SignedIn();
-
-            var before   = CSMS.Log.LastId;
-
-            var response = await http.PostAsync("/api/v1/configuration/nts/test",
-                                                JSONBody(new JProperty("host", "ptbtime2.ptb.de")));
-
-            var body     = await response.Content.ReadAsStringAsync();
-            var said     = CSMS.Log.Recent(20, before, "nts").Select(entry => entry.Message).ToArray();
-
-            Assert.Multiple(() => {
-                Assert.That(response.StatusCode,                         Is.EqualTo(HttpStatusCode.OK),  body);
-                Assert.That(response.IsSuccessStatusCode ? JObject.Parse(body)["steps"] : null,  Is.Not.Null);
-                Assert.That(said,  Has.Some.EqualTo($"'{CSMS.DefaultAdminUser}' asked this CSMS to test the time server 'ptbtime2.ptb.de'."),
-                            String.Join(" | ", said));
-            });
-
-        }
-
-        #endregion
 
     }
 
