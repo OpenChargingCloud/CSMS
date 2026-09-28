@@ -24,6 +24,8 @@ using Newtonsoft.Json.Linq;
 
 using NUnit.Framework;
 
+using cloud.charging.open.protocols.WWCP.Node.TestKit;
+
 #endregion
 
 namespace cloud.charging.open.CSMS.Tests
@@ -68,7 +70,7 @@ namespace cloud.charging.open.CSMS.Tests
                    new JProperty("ocppServer", new JObject(
                        new JProperty("enabled",           true),
                        new JProperty("address",           "127.0.0.1"),
-                       new JProperty("port",              TestCSMSs.FreePort()),
+                       new JProperty("port",              TestPorts.Free()),
                        new JProperty("securityProfiles",  new JArray(1)),
                        new JProperty("subprotocols",      new JArray("ocpp2.1", "ocpp2.0.1"))
                    ))

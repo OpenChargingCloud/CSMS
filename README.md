@@ -262,22 +262,25 @@ The rest is what only a CSMS does: its charging station server, OCPI, its OCPP
 identity, the roles and resources that are its own and the kinds its store
 keeps. `CSMSAccessTests` reads the one permission every route of the API asks
 for off the refusal an account in no role is given. What the node below does
-on its own - the file's sections, the log, the time servers, the certificate
-store, the accounts' roles and the ports - is tested once more in WWCP_Node's
-own `WWCP_Node_Tests`, against a node of no particular kind.
+on its own - the log, the clock and the time servers, the configuration file
+and the node's sections of it, the start, the certificate store, the accounts'
+roles and the ports - is tested in WWCP_Node's own `WWCP_Node_Tests`, against a
+node of no particular kind, and not again here. What is left of it here is what a CSMS says: its
+section of the file beside the node's, its OCPP identity and defaults, and the
+first line of its log file.
 
-Each test gets a CSMS of its own, on a port the operating system has just
-confirmed is free and with its own directory for what a CSMS writes: its
-accounts, its configuration file, and beside that the stores of the charging
-station server - so they neither fight with each other nor with a CSMS
-somebody has running on 2351 while they work.
+Each test gets a CSMS of its own, on a port WWCP_Node_TestKit's `TestPorts`
+hands out once in a test run, and with its own directory for what a CSMS
+writes: its accounts, its configuration file, and beside that the stores of the
+charging station server - so they neither fight with each other nor with a
+CSMS somebody has running on 2351 while they work.
 
-A port a test's own back end - a roaming partner, a time server - is started
-on is held rather than found free: a `ClosedPort`, Hermod's, bound and not
+A port a test's own back end - a roaming partner - is started on is held
+rather than found free: a `ClosedPort` of WWCP_Node_TestKit, bound and not
 listening, so that no other test run on the same machine can be found there in
-the moment between finding the port and using it. `ClosedPortTests` asks this
-copy what the tests stand on: refused, nobody else can listen on it, and handed
-over it takes a back end.
+the moment between finding the port and using it. WWCP_Node_Tests asks it what
+the tests stand on: refused, nobody else can listen on it, and handed over it
+takes a back end.
 
 **They never touch the network.** The configuration written before each CSMS is
 built switches the time client off, which is what stops the clock check from

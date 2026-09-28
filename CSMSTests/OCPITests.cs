@@ -28,6 +28,8 @@ using NUnit.Framework;
 using org.GraphDefined.Vanaheimr.Hermod;
 using org.GraphDefined.Vanaheimr.Hermod.HTTP;
 
+using cloud.charging.open.protocols.WWCP.Node.TestKit;
+
 using cloud.charging.open.CSMS.Configuration;
 
 #endregion

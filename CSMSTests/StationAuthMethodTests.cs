@@ -27,6 +27,8 @@ using NUnit.Framework;
 using org.GraphDefined.Vanaheimr.Hermod;
 using org.GraphDefined.Vanaheimr.Hermod.HTTP;
 
+using cloud.charging.open.protocols.WWCP.Node.TestKit;
+
 using cloud.charging.open.CSMS.OCPP;
 
 #endregion
@@ -66,7 +68,7 @@ namespace cloud.charging.open.CSMS.Tests
                    new JProperty("ocppServer", new JObject(
                        new JProperty("enabled",           true),
                        new JProperty("address",           "127.0.0.1"),
-                       new JProperty("port",              TestCSMSs.FreePort()),
+                       new JProperty("port",              TestPorts.Free()),
                        new JProperty("securityProfiles",  new JArray(1)),
                        new JProperty("subprotocols",      new JArray("ocpp2.1"))
                    ))
