@@ -139,16 +139,17 @@ namespace cloud.charging.open.CSMS.Tests
         #endregion
 
 
-        #region ACSMSKeepsTheRootsOfISO15118AndTheKindsOfTLS()
+        #region ACSMSKeepsTheRootsOfISO15118AndTheKindsOfTLSButTheClientRoot()
 
         /// <summary>
         /// The kinds a CSMS keeps: the three roots of the PKI of ISO 15118 and
-        /// the four kinds of TLS, grouped as the page shows them, and what each
-        /// may be told it is for - and none of a vehicle's own credentials,
-        /// which is refused before anything is read.
+        /// three of the four kinds of TLS, grouped as the page shows them, and
+        /// what each may be told it is for - and none of a vehicle's own
+        /// credentials, nor a client root, each refused before anything is
+        /// read.
         /// </summary>
         [Test]
-        public async Task ACSMSKeepsTheRootsOfISO15118AndTheKindsOfTLS()
+        public async Task ACSMSKeepsTheRootsOfISO15118AndTheKindsOfTLSButTheClientRoot()
         {
 
             var (_, store)             = await Send(HttpMethod.Get, "api/v1/certificates");
@@ -158,12 +159,17 @@ namespace cloud.charging.open.CSMS.Tests
                                                         new JProperty("content",  RootPem("Not A Vehicle"))
                                                     ));
 
+            var (clientRoot, _)        = await Send(HttpMethod.Post, "api/v1/certificates", new JObject(
+                                                        new JProperty("kind",     "clientRoot"),
+                                                        new JProperty("content",  RootPem("A Client Root"))
+                                                    ));
+
             Assert.Multiple(() => {
 
                 Assert.That(((JObject) store["kinds"]!).Properties().Select(kind => kind.Name),
-                            Is.EqualTo(new[] { "v2gRoot", "moRoot", "oemRoot", "tlsRoot", "clientRoot", "tlsServer", "tlsIdentity" }));
+                            Is.EqualTo(new[] { "v2gRoot", "moRoot", "oemRoot", "tlsRoot", "tlsServer", "tlsIdentity" }));
 
-                Assert.That(store["trustAnchors"]!.Values<String>(),  Is.EqualTo(new[] { "v2gRoot", "moRoot", "oemRoot", "tlsRoot", "clientRoot" }));
+                Assert.That(store["trustAnchors"]!.Values<String>(),  Is.EqualTo(new[] { "v2gRoot", "moRoot", "oemRoot", "tlsRoot" }));
                 Assert.That(store["credentials"]!.Values<String>(),   Is.EqualTo(new[] { "tlsIdentity" }));
                 Assert.That(store["recognised"]!.Values<String>(),    Is.EqualTo(new[] { "tlsServer" }),
                             "a server certificate is recognised, neither believed nor presented");
@@ -186,8 +192,14 @@ namespace cloud.charging.open.CSMS.Tests
                             "the store is beside the configuration file");
 
                 Assert.That(refused,                                  Is.EqualTo(HttpStatusCode.BadRequest));
-                Assert.That(refusal.ToString(),                       Does.Contain("'kind' has to be one of v2gRoot, moRoot, oemRoot, tlsRoot, clientRoot, tlsServer, tlsIdentity."),
+                Assert.That(refusal.ToString(),                       Does.Contain("'kind' has to be one of v2gRoot, moRoot, oemRoot, tlsRoot, tlsServer, tlsIdentity."),
                             "the node's API names the kinds this store keeps");
+
+                // The clients of a CSMS are its charging stations, let in by
+                // the chains of its charging station server. A client root
+                // kept here would be believed on the page and read by nothing.
+                Assert.That(clientRoot,                               Is.EqualTo(HttpStatusCode.BadRequest),
+                            "the stations are let in by the Accepted chains, not by a client root in this store");
 
             });
 

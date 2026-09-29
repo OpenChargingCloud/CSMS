@@ -61,7 +61,9 @@ startNode({
     // "Certificate store", because there is a page called "Server certificates"
     // as well - the charging station server's, which the words under what
     // this CSMS presents link to. And what it believes beside the TLS roots
-    // every node keeps: the roots of ISO 15118.
+    // every node keeps: the roots of ISO 15118. Not a client root, which a CSMS
+    // does not keep: the words under what it believes link to the authorities
+    // its charging stations are vouched for by instead.
     certificates: {
         title:  'Certificate store',
         hints:  {
@@ -70,6 +72,8 @@ startNode({
                 name servers or the time servers is what a server of theirs may chain to beside the roots
                 this machine trusts; the roots of ISO 15118 are the V2G root the charging stations'
                 certificates chain to, and the roots of the contracts and the vehicles charged here.
+                Not the authorities a charging station connecting here may be vouched for by, which have a
+                page of their own: <a href="${toURL('/configuration/ocpp-server/trust')}">Accepted chains</a>.
             `,
             presents:  html`
                 What this CSMS shows in TLS, with its private key. Not the key the charging station server

@@ -155,8 +155,11 @@ configuration file - and is addressed by a short handle rather than by a path.
 The Certificate store page manages it, and so do CSMSCLI's
 `--import-certificate` and `--list-certificates`.
 
-A CSMS keeps seven of the node's eleven kinds, `CSMS.CertificateKinds`: the
-vehicle's credentials are no business of the back end's.
+A CSMS keeps six of the node's eleven kinds, `CSMS.CertificateKinds`: the
+vehicle's credentials are no business of the back end's, and neither is a
+`clientRoot` - the clients of a CSMS are its charging stations, and they are
+let in by the Accepted chains. A client root kept before stays in the index as
+it was, switched on or off and under its label.
 
 A **root** is what this CSMS believes. `tlsRoot` is for a server it connects
 to - a time server, or a name server over TLS or HTTPS - and is believed beside
@@ -170,10 +173,10 @@ switched on at once, and all of them are believed.
 A **server certificate** - `tlsServer` - is what a server this CSMS connects to
 shows, kept so that the server can be held to it by its fingerprint, and never
 with a private key, which would be that server's key in the wrong place. The
-page shows these as a third group, what the CSMS *recognises*. `clientRoot` and
-`tlsIdentity` are kept as well, and nothing in the CSMS uses them yet. An
-identity is told the listeners it is shown on where a kind of node names some;
-a CSMS names none, so the page offers an identity nothing to be told.
+page shows these as a third group, what the CSMS *recognises*. `tlsIdentity`
+is kept as well, and nothing in the CSMS uses it yet. An identity is told the
+listeners it is shown on where a kind of node names some; a CSMS names none, so
+the page offers an identity nothing to be told.
 
 A TLS root and a server certificate are told what they are for: the time
 servers (`nts`), the name servers (`dns`), or - with nothing said - every use.

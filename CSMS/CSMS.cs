@@ -106,10 +106,10 @@ namespace cloud.charging.open.CSMS
         /// </summary>
         /// <remarks>
         /// <para>
-        /// The kinds of TLS in general: the roots a server it connects to may
-        /// chain to - a time server's, a name server's over TLS - the roots a
-        /// client connecting to it has to chain to, the server certificates it
-        /// recognises by their fingerprints, and what it presents itself.
+        /// Three of the four kinds of TLS: the roots a server it connects to
+        /// may chain to - a time server's, a name server's over TLS - the
+        /// server certificates it recognises by their fingerprints, and what it
+        /// presents itself.
         /// </para>
         /// <para>
         /// And the three roots of the PKI of ISO 15118 a CSMS stands in: the
@@ -123,12 +123,22 @@ namespace cloud.charging.open.CSMS
         /// accepts charging stations by, which are stores of their own beside
         /// the configuration file: ocpp-server-keys and ocpp-client-trust.
         /// </para>
+        /// <para>
+        /// And so not the fourth kind of TLS, the client root. The clients
+        /// that connect to a CSMS are its charging stations, and they are let
+        /// in by those chains - a client root kept here was one nothing read,
+        /// shown on the Certificate store page as believed while it let no
+        /// station in. One kept before stays in the store's index as it was,
+        /// switch and label with it.
+        /// </para>
         /// </remarks>
         public static readonly IReadOnlyList<CertificateKind>  CertificateKinds = [
             CertificateKind.V2GRoot,
             CertificateKind.MORoot,
             CertificateKind.OEMRoot,
-            .. CertificateKindExtensions.TLS
+            CertificateKind.TLSRoot,
+            CertificateKind.TLSServer,
+            CertificateKind.TLSIdentity
         ];
 
         /// <summary>
