@@ -101,6 +101,30 @@ namespace cloud.charging.open.CSMS
         public static readonly NodePort  StationServerPort  = new ("The charging station server");
 
         /// <summary>
+        /// What a CSMS is to the node below it: what it calls itself in
+        /// everything it says, the tag of its own entries, its product, the one
+        /// organization of its accounts and what its log files are called.
+        /// Known before one is made, for what -h shows.
+        /// </summary>
+        /// <remarks>
+        /// Every name as it was before there was a node below: the entries
+        /// about the CSMS itself are tagged "csms", the Server header says
+        /// "OpenChargingCloud CSMS", and a day's log file is
+        /// "csms-2026-09-25.log" - so that a log directory kept since then
+        /// goes on under the same names, and nothing reading one has to learn
+        /// a second. The organization is written into the accounts at the
+        /// first start and read back at every start after it, and must never
+        /// change at all.
+        /// </remarks>
+        public static readonly NodeKind  CSMSKind  = new (
+                                                         Name:           "CSMS",
+                                                         Tag:            "csms",
+                                                         Product:        "CSMS",
+                                                         Organization:   DefaultOrganization,
+                                                         LogFilePrefix:  "csms"
+                                                     );
+
+        /// <summary>
         /// The kinds of certificate this CSMS keeps in the store of the node
         /// below.
         /// </summary>
@@ -260,21 +284,7 @@ namespace cloud.charging.open.CSMS
                     Boolean                BridgeDebugLog     = true,
                     TimeProvider?          TimeProvider       = null)
 
-            // Every name as it was before there was a node below: the entries
-            // about the CSMS itself are tagged "csms", the Server header says
-            // "OpenChargingCloud CSMS", and a day's log file is
-            // "csms-2026-09-25.log" - so that a log directory kept since then
-            // goes on under the same names, and nothing reading one has to
-            // learn a second. The organization is written into the accounts at
-            // the first start and read back at every start after it, and must
-            // never change at all.
-            : base(Kind:              new NodeKind(
-                                          Name:           "CSMS",
-                                          Tag:            "csms",
-                                          Product:        "CSMS",
-                                          Organization:   DefaultOrganization,
-                                          LogFilePrefix:  "csms"
-                                      ),
+            : base(Kind:              CSMSKind,
                    Version:           typeof(CSMS).Assembly.GetName().Version?.ToString(3) ?? "0.0.0",
                    HTTPPort:          HTTPPort ?? DefaultHTTPPort,
                    HTTPHostname:      HTTPHostname,
