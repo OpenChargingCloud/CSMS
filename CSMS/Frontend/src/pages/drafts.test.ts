@@ -12,6 +12,9 @@
  * accepts, the roaming partners, the locations - and the certificate store's
  * import did not: one click of Reload or of the menu threw what was typed
  * there away without a word.
+ *
+ * The DNS and NTS pages are every node's now, and WWCP_Node's pages.test.ts
+ * asks the same of them; what is asked here is the CSMS's own pages.
  */
 
 import { strict as assert }           from 'node:assert';
@@ -34,7 +37,7 @@ const withForms = pages.filter(page => page.source.includes('<form') && !notDraf
 describe('every page with a form', () => {
 
     it('is found at all, so that what follows is not said of nothing', () => {
-        assert.ok(withForms.length >= 9, `only ${withForms.length} page(s) with a form were found`);
+        assert.ok(withForms.length >= 7, `only ${withForms.length} page(s) with a form were found`);
     });
 
     for (const page of withForms) {

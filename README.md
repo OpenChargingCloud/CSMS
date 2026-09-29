@@ -420,15 +420,16 @@ is not answering. A place with no server at it is an answer that says so, and
 something that is not a place is refused rather than read as "all of them".
 
 The whole list goes to the CSMS at every save, so every server goes with what
-it is held to, and the pages' `ntsServers.ts`, `dnsServers.ts` and `pins.ts`
-are where that is decided and tested: a list sent without the pins of the
-servers nobody touched would let go of them, the ones learned on first use
-included. A name server switched to a transport that shows no certificate lets
-go of its pins when it is saved - the CSMS would refuse them - and its row says
-so first. Holding a server to a fingerprint is `dns:edit` or `nts:edit`, with
-the rest of the server, and so the CPO's: a pin cannot make the CSMS believe a
-certificate that chains to nothing this machine or its store holds, and what
-goes into the store stays the administrators'.
+it is held to, and the pages' `ntsServers.ts`, `dnsServers.ts` and `pins.ts` -
+WWCP_Node's, since the DNS and NTS pages are every node's - are where that is
+decided and tested: a list sent without the pins of the servers nobody touched
+would let go of them, the ones learned on first use included. A name server
+switched to a transport that shows no certificate lets go of its pins when it
+is saved - the CSMS would refuse them - and its row says so first. Holding a
+server to a fingerprint is `dns:edit` or `nts:edit`, with the rest of the
+server, and so the CPO's: a pin cannot make the CSMS believe a certificate that
+chains to nothing this machine or its store holds, and what goes into the store
+stays the administrators'.
 
 What a server learns on first use is written into its entry at the first key
 exchange or handshake after a save - mostly with the NTS or DNS page still

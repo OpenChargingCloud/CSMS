@@ -8,8 +8,6 @@ import '@fortawesome/fontawesome-free/css/solid.css';
 import { nodeMenu, startNode } from '@node/start';
 
 import { configurationPage }      from './pages/configuration';
-import { dnsPage }                from './pages/dns';
-import { ntsPage }                from './pages/nts';
 import { certificateStorePage }   from './pages/certificateStore';
 import { ocppServerPage }         from './pages/ocppServer';
 import { stationLoginsPage }      from './pages/stationLogins';
@@ -23,8 +21,9 @@ import { roamingDataPages }       from './pages/roamingData';
 // What a CSMS has pages for beside what every node has: the server its
 // charging stations connect to, and its side of OCPI - who it is to its
 // roaming partners, the partners, the locations it publishes and what travels
-// between them. The sign-in, the log, the frame and following the log while
-// somebody is signed in are every node's - see WWCP_Node's start.ts.
+// between them. The sign-in, the log, the name servers, the time servers, the
+// frame and following the log while somebody is signed in are every node's -
+// see WWCP_Node's start.ts.
 startNode({
 
     name:  'CSMS',
@@ -58,15 +57,14 @@ startNode({
         nodeMenu.logs
     ],
 
+    // "/" is every node's: the first page of the menu the person signed in may
+    // open - the configuration for whoever may read it, and the roaming data,
+    // say, for an account that may read only that, where the configuration's
+    // own page had answered 403 (found by the charging station and the
+    // gateway).
     pages: {
 
-        // "/" is the configuration, and is a page of its own rather than a
-        // redirect to /configuration: the sign-in remembers where somebody was
-        // going, and for the first visit that is "/".
-        '/':                                        configurationPage,
         '/configuration':                           configurationPage,
-        '/configuration/dns':                       dnsPage,
-        '/configuration/nts':                       ntsPage,
         '/configuration/certificates':              certificateStorePage,
 
         '/configuration/ocpp-server':               ocppServerPage,
