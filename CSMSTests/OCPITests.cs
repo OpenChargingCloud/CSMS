@@ -691,12 +691,13 @@ namespace cloud.charging.open.CSMS.Tests
 
             await CSMS.Stop();
 
-            var again = TestCSMSs.New(Directory, Configuration, Clock);
+            // Made again, on fresh ports, where another test run on this
+            // machine took one before the CSMS could bind it - in the same
+            // directory all the same, so every attempt finds the partner.
+            var again = await TestPorts.StartedOnFreshPorts(() => TestCSMSs.New(Directory, Configuration, Clock));
 
             try
             {
-
-                await again.Start();
 
                 var kept = again.OCPIVersions.SelectMany(version => version.RemoteParties).ToArray();
 

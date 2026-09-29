@@ -24,6 +24,8 @@ using Newtonsoft.Json.Linq;
 
 using NUnit.Framework;
 
+using cloud.charging.open.protocols.WWCP.Node.TestKit;
+
 #endregion
 
 namespace cloud.charging.open.CSMS.Tests
@@ -112,11 +114,11 @@ namespace cloud.charging.open.CSMS.Tests
 
             Directory   = TestCSMSs.TemporaryDirectory("tests");
 
-            CSMS  = TestCSMSs.New(Directory, Configuration, Clock);
+            // Made again, on fresh ports, where another test run on this
+            // machine took one before the CSMS could bind it.
+            CSMS        = await TestPorts.StartedOnFreshPorts(() => TestCSMSs.New(Directory, Configuration, Clock));
 
             BaseURL     = CSMS.WebInterfaceURL.ToString();
-
-            await CSMS.Start();
 
             // After Start(), because that is what makes the account. Null would
             // mean accounts were already there, and the directory is new.

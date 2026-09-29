@@ -68,7 +68,7 @@ namespace cloud.charging.open.CSMS.Tests
         #region SetUp / TearDown
 
         [SetUp]
-        public void StartAControllerThatAlreadyHasACertificate()
+        public async Task StartAControllerThatAlreadyHasACertificate()
         {
 
             directory = TestCSMSs.TemporaryDirectory("tls");
@@ -83,7 +83,6 @@ namespace cloud.charging.open.CSMS.Tests
             // deciding whether a test passes, and it is why these two came
             // and went. ServableChainTests had it right already.
             ca        = TestCA.Create($"Test CA {Guid.NewGuid()}", WithIntermediate: true);
-            port      = TestPorts.Free();
 
             #region A key and a certificate, put there before anything starts
 
@@ -102,26 +101,36 @@ namespace cloud.charging.open.CSMS.Tests
 
             #endregion
 
-            CSMS = TestCSMSs.New(
-                             directory,
-                             new JObject(
+            // Made again, on fresh ports, where another test run on this
+            // machine took one before the CSMS could bind it - the stations'
+            // port among them, so the one the tests below dial is the port of
+            // the CSMS that did start.
+            CSMS = await TestPorts.StartedOnFreshPorts(() => {
 
-                                 new JProperty("nts", new JObject(new JProperty("enabled", false))),
+                       port = TestPorts.Free();
 
-                                 new JProperty("ocppServer", new JObject(
-                                     new JProperty("enabled",           true),
-                                     new JProperty("address",           "127.0.0.1"),
-                                     new JProperty("port",              port),
-                                     new JProperty("securityProfiles",  new JArray(2)),
-                                     new JProperty("reachableAs",       new JArray("127.0.0.1"))
-                                 ))
+                       var csms = TestCSMSs.New(
+                                      directory,
+                                      new JObject(
 
-                             )
-                         );
+                                          new JProperty("nts", new JObject(new JProperty("enabled", false))),
 
-            CSMS.StationLogins.TrySetPassword("cs001", ThePassword, null, null, out _, out _);
+                                          new JProperty("ocppServer", new JObject(
+                                              new JProperty("enabled",           true),
+                                              new JProperty("address",           "127.0.0.1"),
+                                              new JProperty("port",              port),
+                                              new JProperty("securityProfiles",  new JArray(2)),
+                                              new JProperty("reachableAs",       new JArray("127.0.0.1"))
+                                          ))
 
-            CSMS.Start().GetAwaiter().GetResult();
+                                      )
+                                  );
+
+                       csms.StationLogins.TrySetPassword("cs001", ThePassword, null, null, out _, out _);
+
+                       return csms;
+
+                   });
 
         }
 

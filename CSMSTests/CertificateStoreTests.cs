@@ -27,6 +27,8 @@ using Newtonsoft.Json.Linq;
 
 using NUnit.Framework;
 
+using cloud.charging.open.protocols.WWCP.Node.TestKit;
+
 #endregion
 
 namespace cloud.charging.open.CSMS.Tests
@@ -62,10 +64,10 @@ namespace cloud.charging.open.CSMS.Tests
             directory  = TestCSMSs.TemporaryDirectory("certificates");
 
             // The store is where the node puts it when nobody says otherwise:
-            // "certificates" beside the configuration file.
-            csms       = TestCSMSs.New(directory, TestCSMSs.Offline);
-
-            await csms.Start();
+            // "certificates" beside the configuration file. Made again, on
+            // fresh ports, where another test run on this machine took one
+            // before the CSMS could bind it.
+            csms       = await TestPorts.StartedOnFreshPorts(() => TestCSMSs.New(directory, TestCSMSs.Offline));
 
             client     = new HttpClient {
                              BaseAddress  = new Uri(csms.WebInterfaceURL.ToString()),

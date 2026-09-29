@@ -474,6 +474,57 @@ namespace cloud.charging.open.CSMS.Tests
 
         #endregion
 
+        #region ACSMSWhoseStationsPortWasTakenIsStartedAgainOnFreshPorts()
+
+        /// <summary>
+        /// The charging stations' port is the one port of a CSMS the kit knows
+        /// nothing of. Taken before a CSMS could bind it - here by the CSMS of
+        /// this test, as another test run on the machine would - the start
+        /// ends in the exception the kit starts again on, and the CSMS made
+        /// next, on ports of its own, is a first start all the same.
+        /// </summary>
+        [Test]
+        public async Task ACSMSWhoseStationsPortWasTakenIsStartedAgainOnFreshPorts()
+        {
+
+            var taken      = CSMS.OCPPServerSettings.TCPPort!.Value.ToUInt16();
+            var directory  = TestCSMSs.TemporaryDirectory("taken");
+            var made       = 0;
+
+            try
+            {
+
+                await using var second = await TestPorts.StartedOnFreshPorts(() => {
+
+                                             // A port of its own each time it is read, and the
+                                             // first time the one this test's CSMS holds.
+                                             var configuration = Configuration;
+
+                                             if (made++ == 0)
+                                                 configuration["ocppServer"]!["port"] = taken;
+
+                                             return TestCSMSs.New(directory, configuration);
+
+                                         });
+
+                Assert.Multiple(() => {
+                    Assert.That(made,                                                 Is.EqualTo(2),  "the CSMS was not made again");
+                    Assert.That(second.OCPPServerRunning,                             Is.True);
+                    Assert.That(second.OCPPServerSettings.TCPPort!.Value.ToUInt16(),  Is.Not.EqualTo(taken));
+                    Assert.That(second.GeneratedPassword,                             Is.Not.Null,
+                                "the accounts the failed start made were still there, so the next start was not a first one");
+                });
+
+            }
+            finally
+            {
+                TestCSMSs.Remove(directory);
+            }
+
+        }
+
+        #endregion
+
     }
 
 }

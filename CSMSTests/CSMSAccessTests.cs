@@ -30,6 +30,7 @@ using org.GraphDefined.Vanaheimr.Hermod.Mail;
 
 using cloud.charging.open.protocols.WWCP.Node;
 using cloud.charging.open.protocols.WWCP.Node.Web;
+using cloud.charging.open.protocols.WWCP.Node.TestKit;
 
 #endregion
 
@@ -92,6 +93,19 @@ namespace cloud.charging.open.CSMS.Tests
             return csms;
 
         }
+
+        #endregion
+
+        #region (private) AStartedCSMS(Configuration = null)
+
+        /// <summary>
+        /// A CSMS as ACSMS makes it, started - and made again, on fresh ports,
+        /// where another test run on this machine took one before the CSMS
+        /// could bind it.
+        /// </summary>
+        private Task<CSMS> AStartedCSMS(JObject? Configuration = null)
+
+            => TestPorts.StartedOnFreshPorts(() => ACSMS(Configuration));
 
         #endregion
 
@@ -275,7 +289,7 @@ namespace cloud.charging.open.CSMS.Tests
         public async Task ACPOMayLookAtTheCertificatesAndIsToldWhoMayChangeThem()
         {
 
-            await ACSMS().Start();
+            await AStartedCSMS();
 
             using var cpo    = await SignedInAs("cpo1", "cpo");
 
@@ -313,12 +327,12 @@ namespace cloud.charging.open.CSMS.Tests
         public async Task ARoleFromTheConfigurationFileIsHeardByTheAPI()
         {
 
-            await ACSMS(new JObject(
-                            new JProperty("nts",    new JObject(new JProperty("enabled", false))),
-                            new JProperty("roles",  new JObject(
-                                new JProperty("support", new JArray("dns:read", "stations:read"))
-                            ))
-                        )).Start();
+            await AStartedCSMS(new JObject(
+                                   new JProperty("nts",    new JObject(new JProperty("enabled", false))),
+                                   new JProperty("roles",  new JObject(
+                                       new JProperty("support", new JArray("dns:read", "stations:read"))
+                                   ))
+                               ));
 
             using var support  = await SignedInAs("supporter", "support");
 
@@ -434,10 +448,10 @@ namespace cloud.charging.open.CSMS.Tests
                 foreach (var operation in new[] { "read", "edit", "run" })
                     roles.Add($"r-{resource}-{operation}", new JArray($"{resource}:{operation}"));
 
-            await ACSMS(new JObject(
-                            new JProperty("nts",    new JObject(new JProperty("enabled", false))),
-                            new JProperty("roles",  roles)
-                        )).Start();
+            await AStartedCSMS(new JObject(
+                                   new JProperty("nts",    new JObject(new JProperty("enabled", false))),
+                                   new JProperty("roles",  roles)
+                               ));
 
             using var nobody  = await SignedInAs("nobody1", null);
 
@@ -477,7 +491,7 @@ namespace cloud.charging.open.CSMS.Tests
         public async Task TheClockIsForAnybodySignedIn()
         {
 
-            await ACSMS().Start();
+            await AStartedCSMS();
 
             using var nobody   = await SignedInAs("nobody1", null);
 
