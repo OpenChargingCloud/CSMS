@@ -711,7 +711,12 @@ namespace cloud.charging.open.CSMS
                 return OCPIOperationResult.Failed($"'{countryText}' is not a country; OCPI wants the three-letter code, e.g. \"DEU\".");
             }
 
-            if (JSON["latitude"] is null || JSON["longitude"] is null)
+            // Null as well as left out: a coordinate emptied on the locations
+            // page is sent as null, which the indexer hands back as a token of
+            // its own rather than as no token - and was then refused as a
+            // number written wrongly.
+            if (JSON["latitude"]  is null or { Type: JTokenType.Null } ||
+                JSON["longitude"] is null or { Type: JTokenType.Null })
                 return OCPIOperationResult.Failed("A 'latitude' and a 'longitude' are required: a location nobody can find is a location nobody is sent to.");
 
             // Read as numbers rather than asked for as numbers: a browser that

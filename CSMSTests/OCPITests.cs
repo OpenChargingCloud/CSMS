@@ -478,6 +478,40 @@ namespace cloud.charging.open.CSMS.Tests
 
         #endregion
 
+        #region ALocationWhoseCoordinateIsNullIsRefusedAsOneWithout()
+
+        /// <summary>
+        /// A coordinate emptied on the locations page is sent as null, and
+        /// null is no place on the map either: refused as a location that says
+        /// nothing of where it is, and not as a number that is none.
+        /// </summary>
+        [Test]
+        public async Task ALocationWhoseCoordinateIsNullIsRefusedAsOneWithout()
+        {
+
+            using var admin = await SignedIn();
+
+            var refused = await admin.PostAsync("/api/v1/ocpi/locations", JSONBody(
+                                    new JProperty("version",     "2.2.1"),
+                                    new JProperty("id",          "LOC0011"),
+                                    new JProperty("name",        "Nowhere either"),
+                                    new JProperty("address",     "Biberweg 18"),
+                                    new JProperty("postalCode",  "07749"),
+                                    new JProperty("city",        "Jena"),
+                                    new JProperty("country",     "DEU"),
+                                    new JProperty("latitude",    JValue.CreateNull()),
+                                    new JProperty("longitude",   11.589707),
+                                    new JProperty("timeZone",    "Europe/Berlin")
+                                ));
+
+            Assert.That(refused.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+            Assert.That(await refused.Content.ReadAsStringAsync(), Does.Contain("are required"),
+                        "an emptied coordinate is not somebody who wrote the number wrongly");
+
+        }
+
+        #endregion
+
         #region ALocationInACountryNobodyHasHeardOfIsRefused()
 
         /// <summary>
