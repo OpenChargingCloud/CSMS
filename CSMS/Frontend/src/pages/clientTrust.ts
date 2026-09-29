@@ -1,5 +1,6 @@
 import { api, type ClientTrust, type OCPPServerConfiguration, type TrustedChain } from '../api/client';
 import { auth } from '../auth';
+import { toURL } from '@node/basePath';
 import { html, must, render, type HTMLFragment } from '@node/html';
 import type { Page } from '@node/router';
 import { shell } from '@node/shell';
@@ -68,7 +69,7 @@ export const clientTrustPage: Page = {
 
                 ${configuration.securityProfiles.includes(3) ? '' : html`
                     <div class="notice">
-                        <a href="/configuration/ocpp-server">Security profile 3</a> is not allowed at the moment,
+                        <a href="${toURL('/configuration/ocpp-server')}">Security profile 3</a> is not allowed at the moment,
                         so nothing here is being used: no charging station is asked for a certificate.
                     </div>
                 `}

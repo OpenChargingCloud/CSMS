@@ -1,5 +1,6 @@
 import { api, type AuthMethod, type LoginGroup, type StationLogin, type StationLogins } from '../api/client';
 import { auth } from '../auth';
+import { toURL } from '@node/basePath';
 import { html, must, render, type HTMLFragment } from '@node/html';
 import type { Page } from '@node/router';
 import { shell } from '@node/shell';
@@ -99,7 +100,7 @@ export const stationLoginsPage: Page = {
                     <p class="hint">
                         A group says how its members may prove who they are and which OCPP security profiles they
                         may come in on. It can only narrow what
-                        <a href="/configuration/ocpp-server">the server itself</a> allows, never widen it - and a
+                        <a href="${toURL('/configuration/ocpp-server')}">the server itself</a> allows, never widen it - and a
                         group with nothing ticked lets nobody in, which is how a whole site is stopped in one move.
                     </p>
 

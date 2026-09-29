@@ -1,4 +1,5 @@
 import { api, type OCPIConfiguration } from '../api/client';
+import { toURL } from '@node/basePath';
 import { html, must, render } from '@node/html';
 import type { Page } from '@node/router';
 import { shell } from '@node/shell';
@@ -89,12 +90,12 @@ export const ocpiPage: Page = {
                     <section class="card">
                         <h2><i class="fa-solid fa-database"></i> What is held</h2>
                         <div class="kv-list">
-                            <div class="kv"><span class="k">Roaming partners</span><span class="v"><a href="/configuration/ocpi/partners">${ocpi.counts.partners}</a></span></div>
-                            <div class="kv"><span class="k">Locations</span><span class="v"><a href="/configuration/ocpi/locations">${ocpi.counts.locations}</a></span></div>
-                            <div class="kv"><span class="k">Tokens</span><span class="v"><a href="/roaming/tokens">${ocpi.counts.tokens}</a></span></div>
-                            <div class="kv"><span class="k">Tariffs</span><span class="v"><a href="/roaming/tariffs">${ocpi.counts.tariffs}</a></span></div>
-                            <div class="kv"><span class="k">Charging sessions</span><span class="v"><a href="/roaming/sessions">${ocpi.counts.sessions}</a></span></div>
-                            <div class="kv"><span class="k">Charge detail records</span><span class="v"><a href="/roaming/cdrs">${ocpi.counts.cdrs}</a></span></div>
+                            <div class="kv"><span class="k">Roaming partners</span><span class="v"><a href="${toURL('/configuration/ocpi/partners')}">${ocpi.counts.partners}</a></span></div>
+                            <div class="kv"><span class="k">Locations</span><span class="v"><a href="${toURL('/configuration/ocpi/locations')}">${ocpi.counts.locations}</a></span></div>
+                            <div class="kv"><span class="k">Tokens</span><span class="v"><a href="${toURL('/roaming/tokens')}">${ocpi.counts.tokens}</a></span></div>
+                            <div class="kv"><span class="k">Tariffs</span><span class="v"><a href="${toURL('/roaming/tariffs')}">${ocpi.counts.tariffs}</a></span></div>
+                            <div class="kv"><span class="k">Charging sessions</span><span class="v"><a href="${toURL('/roaming/sessions')}">${ocpi.counts.sessions}</a></span></div>
+                            <div class="kv"><span class="k">Charge detail records</span><span class="v"><a href="${toURL('/roaming/cdrs')}">${ocpi.counts.cdrs}</a></span></div>
                             <div class="kv"><span class="k">Directory</span><span class="v">${ocpi.directory}</span></div>
                         </div>
                         <p class="hint">
