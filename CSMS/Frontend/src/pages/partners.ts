@@ -3,7 +3,7 @@ import { auth } from '../auth';
 import { html, must, render, type HTMLFragment } from '@node/html';
 import type { Page } from '@node/router';
 import { shell } from '@node/shell';
-import { errorMessage, field, formatTimestamp } from '@node/ui';
+import { errorMessage, field, formatTimestamp, isChecked } from '@node/ui';
 import { anyFormTypedSinceDrawn, unsaved } from '@node/unsaved';
 
 /**
@@ -55,9 +55,6 @@ export const partnersPage: Page = {
 
         /** What the last registration said. */
         let lastRegistration: { ok: boolean; message: string } | null = null;
-
-        /** Whether the form offers the fields for starting the peering from here. */
-        let startHere = false;
 
         /** Whether the tokens in the list are readable or dotted out. */
         let revealTokens = false;
@@ -278,7 +275,7 @@ export const partnersPage: Page = {
                         </div>
 
                         <label class="checkbox">
-                            <input type="checkbox" name="startHere" ${startHere ? html`checked` : ''} />
+                            <input type="checkbox" name="startHere" />
                             This operator starts the peering
                             <span class="hint">
                                 Tick this when the partner has already handed out a token and a versions URL. Without
@@ -286,16 +283,14 @@ export const partnersPage: Page = {
                             </span>
                         </label>
 
-                        ${startHere ? html`
-                            <div class="form-grid">
-                                <label>The token they handed out
-                                    <input type="text" name="theirToken" maxlength="255" autocomplete="off" required />
-                                </label>
-                                <label>Their versions URL
-                                    <input type="url" name="versionsURL" placeholder="https://emsp.example.org/ocpi/versions" maxlength="255" required />
-                                </label>
-                            </div>
-                        ` : ''}
+                        <div class="form-grid" id="start-here" hidden>
+                            <label>The token they handed out
+                                <input type="text" name="theirToken" maxlength="255" autocomplete="off" required disabled />
+                            </label>
+                            <label>Their versions URL
+                                <input type="url" name="versionsURL" placeholder="https://emsp.example.org/ocpi/versions" maxlength="255" required disabled />
+                            </label>
+                        </div>
 
                         <div class="form-actions">
                             <button type="submit" class="btn primary">Add the partner</button>
@@ -330,12 +325,24 @@ export const partnersPage: Page = {
             if (!form)
                 return;
 
+            // The fields for starting the peering from here are shown and
+            // hidden where they are, rather than the page drawn again with or
+            // without them: drawn again, the form lost what had been typed
+            // into it above, and nobody was asked. Hidden, they are disabled
+            // too, so that they neither hold up the form nor are sent.
             form.querySelector<HTMLInputElement>('[name="startHere"]')?.addEventListener('change', event => {
-                startHere = (event.target as HTMLInputElement).checked;
-                // The typed fields survive the redraw only if kept; the form
-                // is short, so the redraw is cheap and the fields are re-read.
-                draw();
-                content.querySelector<HTMLInputElement>('#partner-form [name="theirToken"]')?.focus();
+
+                const startHere  = (event.target as HTMLInputElement).checked;
+                const fields     = must<HTMLElement>(form, '#start-here');
+
+                fields.hidden = !startHere;
+
+                for (const input of fields.querySelectorAll<HTMLInputElement>('input'))
+                    input.disabled = !startHere;
+
+                if (startHere)
+                    fields.querySelector<HTMLInputElement>('[name="theirToken"]')?.focus();
+
             });
 
             form.addEventListener('submit', event => {
@@ -361,7 +368,7 @@ export const partnersPage: Page = {
                 ourToken:     field(form, 'ourToken') || undefined
             };
 
-            if (startHere) {
+            if (isChecked(form, 'startHere')) {
                 spec.theirToken   = field(form, 'theirToken');
                 spec.versionsURL  = field(form, 'versionsURL');
             }
@@ -377,7 +384,6 @@ export const partnersPage: Page = {
                 store             = answer.partners;
                 justAdded         = { id: answer.id, token: answer.ourToken, version: answer.version };
                 lastRegistration  = null;
-                startHere         = false;
 
                 draw();
 
