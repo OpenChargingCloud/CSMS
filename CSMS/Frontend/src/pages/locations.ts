@@ -3,7 +3,7 @@ import { auth } from '../auth';
 import { html, must, render, type HTMLFragment } from '@node/html';
 import type { Page } from '@node/router';
 import { shell } from '@node/shell';
-import { errorMessage, field, formatTimestamp } from '@node/ui';
+import { errorMessage, field, formatTimestamp, numberField } from '@node/ui';
 import { anyFormTypedSinceDrawn, unsaved } from '@node/unsaved';
 
 /**
@@ -255,8 +255,11 @@ export const locationsPage: Page = {
                 city:        field(form, 'city'),
                 country:     field(form, 'country').toUpperCase(),
                 timeZone:    field(form, 'timeZone'),
-                latitude:    Number(field(form, 'latitude')),
-                longitude:   Number(field(form, 'longitude')),
+                // Required by the form; emptied all the same, a coordinate goes
+                // as null, which the CSMS refuses - as 0, it put the location
+                // at 0, 0, in the sea off Africa.
+                latitude:    numberField(form, 'latitude'),
+                longitude:   numberField(form, 'longitude'),
                 publish:     form.querySelector<HTMLInputElement>('[name="publish"]')?.checked ?? true
             };
 
