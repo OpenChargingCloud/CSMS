@@ -1,7 +1,7 @@
 import { api, type RoamingDataKind, type RoamingItem } from '../api/client';
 import { html, must, render, type HTMLFragment } from '@node/html';
 import type { Page } from '@node/router';
-import { shell } from '../shell';
+import { shell } from '@node/shell';
 import { errorMessage, formatTimestamp, formatValue } from '@node/ui';
 
 /**

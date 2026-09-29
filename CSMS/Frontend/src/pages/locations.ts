@@ -2,7 +2,7 @@ import { api, type Location, type Locations, type LocationSpec } from '../api/cl
 import { auth } from '../auth';
 import { html, must, render, type HTMLFragment } from '@node/html';
 import type { Page } from '@node/router';
-import { shell } from '../shell';
+import { shell } from '@node/shell';
 import { errorMessage, field, formatTimestamp } from '@node/ui';
 import { typedSinceDrawn, unsaved } from '@node/unsaved';
 
