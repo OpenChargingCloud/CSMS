@@ -1,5 +1,6 @@
 import { api, type Partner, type Partners, type PartnerSpec } from '../api/client';
 import { auth } from '../auth';
+import { keepDrafts } from '@node/drafts';
 import { html, must, render, type HTMLFragment } from '@node/html';
 import type { Page } from '@node/router';
 import { mayButNot, shell } from '@node/shell';
@@ -308,7 +309,7 @@ export const partnersPage: Page = {
 
             content.querySelector<HTMLButtonElement>('#reveal')?.addEventListener('click', () => {
                 revealTokens = !revealTokens;
-                draw();
+                drawAnew(null);
             });
 
             content.querySelectorAll<HTMLButtonElement>('.partner-remove').forEach(button => {
@@ -331,16 +332,10 @@ export const partnersPage: Page = {
             // too, so that they neither hold up the form nor are sent.
             form.querySelector<HTMLInputElement>('[name="startHere"]')?.addEventListener('change', event => {
 
-                const startHere  = (event.target as HTMLInputElement).checked;
-                const fields     = must<HTMLElement>(form, '#start-here');
+                showStartHere(form);
 
-                fields.hidden = !startHere;
-
-                for (const input of fields.querySelectorAll<HTMLInputElement>('input'))
-                    input.disabled = !startHere;
-
-                if (startHere)
-                    fields.querySelector<HTMLInputElement>('[name="theirToken"]')?.focus();
+                if ((event.target as HTMLInputElement).checked)
+                    form.querySelector<HTMLInputElement>('[name="theirToken"]')?.focus();
 
             });
 
@@ -348,6 +343,40 @@ export const partnersPage: Page = {
                 event.preventDefault();
                 void add(form);
             });
+
+        }
+
+
+        /** The fields for starting the peering from here, shown and enabled while their box is ticked. */
+        function showStartHere(form: HTMLFormElement): void {
+
+            const startHere  = form.querySelector<HTMLInputElement>('[name="startHere"]')?.checked === true;
+            const fields     = must<HTMLElement>(form, '#start-here');
+
+            fields.hidden = !startHere;
+
+            for (const input of fields.querySelectorAll<HTMLInputElement>('input'))
+                input.disabled = !startHere;
+
+        }
+
+
+        /**
+         * The page drawn anew, what is typed into the form kept unless it is
+         * the one saved. keepDrafts puts the box for starting the peering from
+         * here back as it was ticked, and the fields below it back as they were
+         * filled in; but the drawing draws those hidden and disabled, as they
+         * are shown where they are, so they are shown again as the box says.
+         * Left hidden beside a ticked box, they would be neither seen nor sent.
+         */
+        function drawAnew(saved: string | null): void {
+
+            keepDrafts(content, saved, draw);
+
+            const form = content.querySelector<HTMLFormElement>('#partner-form');
+
+            if (form)
+                showStartHere(form);
 
         }
 
@@ -384,7 +413,7 @@ export const partnersPage: Page = {
                 justAdded         = { id: answer.id, token: answer.ourToken, version: answer.version };
                 lastRegistration  = null;
 
-                draw();
+                drawAnew('partner-form');
 
             }
             catch (problem)
@@ -413,7 +442,7 @@ export const partnersPage: Page = {
                 lastRegistration  = { ok: answer.ok, message: answer.message };
                 justAdded         = null;
 
-                draw();
+                drawAnew(null);
 
             }
             catch (problem)
@@ -430,7 +459,7 @@ export const partnersPage: Page = {
                     if (body.partners)
                         store = body.partners;
                     lastRegistration = { ok: false, message: body.message };
-                    draw();
+                    drawAnew(null);
                 }
                 else
                     window.alert(errorMessage(problem));
@@ -457,7 +486,7 @@ export const partnersPage: Page = {
                 justAdded         = null;
                 lastRegistration  = null;
 
-                draw();
+                drawAnew(null);
 
             }
             catch (problem)
@@ -465,14 +494,19 @@ export const partnersPage: Page = {
                 if (!cancelled)
                 {
                     window.alert(errorMessage(problem));
-                    void load();
+                    void load(true);
                 }
             }
 
         }
 
 
-        async function load(): Promise<void> {
+        /**
+         * The partners as the CSMS has them now: drawn from nothing - or,
+         * keeping, drawn anew over the page as it is, what is typed on it
+         * kept, after something done on it failed.
+         */
+        async function load(keeping = false): Promise<void> {
 
             try
             {
@@ -482,7 +516,11 @@ export const partnersPage: Page = {
                     return;
 
                 store = partners;
-                draw();
+
+                if (keeping)
+                    drawAnew(null);
+                else
+                    draw();
             }
             catch (problem)
             {

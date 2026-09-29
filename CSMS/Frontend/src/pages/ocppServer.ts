@@ -1,6 +1,7 @@
 ﻿import { api, type OCPPServerConfiguration, type OCPPServerUpdate, type StationLogins } from '../api/client';
 import { auth } from '../auth';
 import { toURL } from '@node/basePath';
+import { keepDrafts } from '@node/drafts';
 import { html, must, render, type HTMLFragment } from '@node/html';
 import type { Page } from '@node/router';
 import { mayButNot, shell } from '@node/shell';
@@ -437,7 +438,9 @@ export const ocppServerPage: Page = {
                 return;
 
             must<HTMLInputElement>(content, '#enabled').addEventListener('change', event => {
-                void save({ enabled: (event.target as HTMLInputElement).checked }, 'socket');
+                // A switch, not the form it sits beside: what is typed into
+                // the form stays.
+                void save({ enabled: (event.target as HTMLInputElement).checked }, 'socket', null);
             });
 
             must<HTMLFormElement>(content, '#socket-form').addEventListener('submit', event => {
@@ -515,7 +518,7 @@ export const ocppServerPage: Page = {
         }
 
 
-        async function save(update: OCPPServerUpdate, where: string): Promise<void> {
+        async function save(update: OCPPServerUpdate, where: string, saved: string | null = `${where}-form`): Promise<void> {
 
             const note  = content.querySelector<HTMLElement>(`#${where}-note`);
             const error = content.querySelector<HTMLElement>(`#${where}-error`);
@@ -531,7 +534,7 @@ export const ocppServerPage: Page = {
                 if (cancelled)
                     return;
 
-                draw();
+                keepDrafts(content, saved, draw);
 
             }
             catch (problem)
@@ -544,14 +547,27 @@ export const ocppServerPage: Page = {
                 if (error)  error.textContent = errorMessage(problem);
 
                 // What the CSMS refused is not what it is running, so the
-                // form has to go back to saying what is true.
-                void load(false);
+                // page goes back to saying what is true - a switch flipped back
+                // with it, what is typed into the forms kept, to be put right,
+                // and why it was refused as well. Drawn anew from the answer,
+                // the page threw all three away before anybody could read it.
+                await load(false);
+
+                const refused = content.querySelector<HTMLElement>(`#${where}-error`);
+
+                if (refused)
+                    refused.textContent = errorMessage(problem);
 
             }
 
         }
 
 
+        /**
+         * The page as the CSMS has it now: from nothing, the first time
+         * and on Reload - or, not showing that it loads, drawn anew over the
+         * page as it is, what is typed into its forms kept.
+         */
         async function load(showLoading = true): Promise<void> {
 
             if (showLoading)
@@ -571,7 +587,10 @@ export const ocppServerPage: Page = {
                 server   = configuration;
                 stations = logins;
 
-                draw();
+                if (showLoading)
+                    draw();
+                else
+                    keepDrafts(content, null, draw);
 
             }
             catch (problem)

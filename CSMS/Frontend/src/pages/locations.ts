@@ -1,5 +1,6 @@
 import { api, type Location, type Locations, type LocationSpec } from '../api/client';
 import { auth } from '../auth';
+import { keepDrafts } from '@node/drafts';
 import { html, must, render, type HTMLFragment } from '@node/html';
 import type { Page } from '@node/router';
 import { mayButNot, shell } from '@node/shell';
@@ -271,7 +272,7 @@ export const locationsPage: Page = {
                     return;
 
                 store = answer.locations;
-                draw();
+                keepDrafts(content, 'location-form', draw);
 
                 must<HTMLElement>(content, '#location-note').textContent = answer.message;
 
@@ -298,21 +299,26 @@ export const locationsPage: Page = {
                     return;
 
                 store = answer;
-                draw();
+                keepDrafts(content, null, draw);
             }
             catch (problem)
             {
                 if (!cancelled)
                 {
                     window.alert(errorMessage(problem));
-                    void load();
+                    void load(true);
                 }
             }
 
         }
 
 
-        async function load(): Promise<void> {
+        /**
+         * The locations as the CSMS has them now: drawn from nothing - or,
+         * keeping, drawn anew over the page as it is, what is typed on it
+         * kept, after something done on it failed.
+         */
+        async function load(keeping = false): Promise<void> {
 
             try
             {
@@ -322,7 +328,11 @@ export const locationsPage: Page = {
                     return;
 
                 store = locations;
-                draw();
+
+                if (keeping)
+                    keepDrafts(content, null, draw);
+                else
+                    draw();
             }
             catch (problem)
             {
