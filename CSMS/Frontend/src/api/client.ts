@@ -44,7 +44,6 @@ export interface Configuration extends NodeConfiguration {
     CSMS:        Record<string, unknown>;
     ocpp:        Record<string, unknown>;
     ocpi:        Record<string, unknown>;
-    assemblies:  Record<string, unknown>[];
 }
 
 
