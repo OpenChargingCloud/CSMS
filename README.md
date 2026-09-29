@@ -223,10 +223,11 @@ the same bench.
 
 `dotnet build` builds the frontend too: `CSMS.csproj` runs `npm ci` (only when
 `Frontend/node_modules` is missing) and `npm run build` (only when something
-under `Frontend/src` changed), then embeds every file of `Frontend/dist` as a
-manifest resource named `cloud.charging.open.CSMS.HTTPRoot.<path>` - which is
-what Hermod's `EmbeddedContentSource` reads and `MapSinglePageApplication`
-serves.
+changed under `Frontend/src`, or under `libs/WWCP_Node/Frontend/src`, which
+holds what the web interface of every kind of node shares and is bundled in as
+`@node/...`), then embeds every file of `Frontend/dist` as a manifest resource
+named `cloud.charging.open.CSMS.HTTPRoot.<path>` - which is what Hermod's
+`EmbeddedContentSource` reads and `MapSinglePageApplication` serves.
 
 ```
 dotnet build                            the whole thing

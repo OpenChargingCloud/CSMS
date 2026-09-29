@@ -1,6 +1,6 @@
 import { api, type OCPIConfiguration } from '../api/client';
-import { html, must, render } from '../html';
-import type { Page } from '../router';
+import { html, must, render } from '@node/html';
+import type { Page } from '@node/router';
 import { shell } from '../shell';
 import { errorMessage, formatValue, humanizeKey } from '../ui';
 
