@@ -463,9 +463,10 @@ namespace cloud.charging.open.CSMS
 
         /// <summary>
         /// What this CSMS is made of, as the Configuration page of the web
-        /// interface reads it: what the node below says of itself, and on top
-        /// the CSMS, its OCPP node, the server the charging stations connect
-        /// to, the operator it is in OCPI and the assemblies it was built from.
+        /// interface reads it: what the node below says of itself - the
+        /// repositories it was built from among it, one line each with its
+        /// commit - and on top the CSMS, its OCPP node, the server the charging
+        /// stations connect to and the operator it is in OCPI.
         /// </summary>
         /// <remarks>
         /// Read-only: it answers "what am I running", not "change it". Nothing
@@ -523,17 +524,6 @@ namespace cloud.charging.open.CSMS
                          new JProperty("file",             ConfigFile.Path)
                      )));
 
-            json.Add(new JProperty("assemblies", new JArray(
-                         AssemblyJSON<HTTPServer>                              ("Hermod"),
-                         AssemblyJSON<NTSClient>                               ("Norn"),
-                         AssemblyJSON<WWCPNode>                                ("WWCP Node"),
-                         AssemblyJSON<OCPPv2_1_CSMS.TestCSMSNode>              ("OCPP 2.1"),
-                         AssemblyJSON<protocols.OCPI.CommonHTTPAPI>            ("OCPI"),
-                         AssemblyJSON<protocols.OCPIv2_1_1.CommonAPI>          ("OCPI 2.1.1"),
-                         AssemblyJSON<protocols.OCPIv2_2_1.CommonAPI>          ("OCPI 2.2.1"),
-                         AssemblyJSON<protocols.OCPIv2_3_0.CommonAPI>          ("OCPI 2.3.0")
-                     )));
-
             return json;
 
         }
@@ -587,23 +577,6 @@ namespace cloud.charging.open.CSMS
                    DNSClient:                      this.DNSClient
 
                );
-
-        #endregion
-
-        #region (private static) AssemblyJSON<T>(Name)
-
-        private static JObject AssemblyJSON<T>(String Name)
-        {
-
-            var assembly = typeof(T).Assembly.GetName();
-
-            return new JObject(
-                       new JProperty("name",      Name),
-                       new JProperty("assembly",  assembly.Name),
-                       new JProperty("version",   assembly.Version?.ToString(3))
-                   );
-
-        }
 
         #endregion
 
