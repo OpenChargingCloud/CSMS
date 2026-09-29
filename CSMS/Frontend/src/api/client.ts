@@ -36,9 +36,9 @@ export interface Status extends NodeStatus {
 
 /**
  * What the CSMS is made of: every node's sections, and its own. Only the
- * shape the Configuration page relies on is named; the rest is rendered from
- * whatever the CSMS sends, so that a new section on the server needs no
- * change here.
+ * shape the Configuration page relies on is named; the fields of each
+ * section are rendered from whatever the CSMS sends, and which sections
+ * there are is the page's to say.
  */
 export interface Configuration extends NodeConfiguration {
     CSMS:        Record<string, unknown>;
