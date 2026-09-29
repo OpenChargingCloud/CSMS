@@ -112,7 +112,7 @@ export const partnersPage: Page = {
                     <h2>
                         <i class="fa-solid fa-handshake"></i> Partners
                         ${mayManage && partners.partners.some(partner => partner.hasOurToken) ? html`
-                            <button type="button" id="reveal" class="btn small" style="margin-left:auto">
+                            <button type="button" id="reveal" class="btn small heading-action">
                                 ${revealTokens ? 'Hide the tokens' : 'Show the tokens'}
                             </button>
                         ` : ''}
@@ -255,12 +255,12 @@ export const partnersPage: Page = {
 
                             <label>Country code
                                 <input type="text" name="countryCode" placeholder="DE" maxlength="2" minlength="2" required
-                                       pattern="[A-Za-z]{2}" style="text-transform:uppercase" />
+                                       pattern="[A-Za-z]{2}" class="capitals" />
                             </label>
 
                             <label>Party ID
                                 <input type="text" name="partyId" placeholder="GEF" maxlength="3" minlength="3" required
-                                       pattern="[A-Za-z0-9]{3}" style="text-transform:uppercase" />
+                                       pattern="[A-Za-z0-9]{3}" class="capitals" />
                             </label>
 
                             <label>Name

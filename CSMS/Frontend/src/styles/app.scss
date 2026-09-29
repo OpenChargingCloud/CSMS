@@ -264,3 +264,18 @@ fieldset.checks {
     grid-template-columns:  repeat(auto-fill, minmax(14rem, 1fr));
     gap:                    0.85rem 1rem;
 }
+
+// A partner's country code and party ID are capitals, and are shown in them
+// as they are typed. Said in a style attribute, where it was, it was refused:
+// the Content-Security-Policy the pages are served with allows no style that
+// is not in this stylesheet.
+input.capitals {
+    text-transform:  uppercase;
+}
+
+// "Show the tokens": an action on the whole list, at the end of its card's
+// heading, where every node's cards put a chip. Refused as a style attribute
+// as well.
+.card h2 .heading-action {
+    margin-left:  auto;
+}
