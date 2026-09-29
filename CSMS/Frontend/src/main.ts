@@ -5,10 +5,11 @@
 import '@fortawesome/fontawesome-free/css/fontawesome.css';
 import '@fortawesome/fontawesome-free/css/solid.css';
 
+import { toURL } from '@node/basePath';
+import { html } from '@node/html';
 import { nodeMenu, startNode } from '@node/start';
 
 import { configurationPage }      from './pages/configuration';
-import { certificateStorePage }   from './pages/certificateStore';
 import { ocppServerPage }         from './pages/ocppServer';
 import { stationLoginsPage }      from './pages/stationLogins';
 import { serverCertificatesPage } from './pages/serverCertificates';
@@ -22,8 +23,8 @@ import { roamingDataPages }       from './pages/roamingData';
 // charging stations connect to, and its side of OCPI - who it is to its
 // roaming partners, the partners, the locations it publishes and what travels
 // between them. The sign-in, the log, the name servers, the time servers, the
-// frame and following the log while somebody is signed in are every node's -
-// see WWCP_Node's start.ts.
+// certificate store, the frame and following the log while somebody is signed
+// in are every node's - see WWCP_Node's start.ts.
 startNode({
 
     name:  'CSMS',
@@ -57,6 +58,27 @@ startNode({
         nodeMenu.logs
     ],
 
+    // "Certificate store", because there is a page called "Server certificates"
+    // as well - the charging station server's, which the words under what
+    // this CSMS presents link to. And what it believes beside the TLS roots
+    // every node keeps: the roots of ISO 15118.
+    certificates: {
+        title:  'Certificate store',
+        hints:  {
+            believes:  html`
+                Trust anchors. Every switched-on root of a kind is believed at once. A TLS root kept for the
+                name servers or the time servers is what a server of theirs may chain to beside the roots
+                this machine trusts; the roots of ISO 15118 are the V2G root the charging stations'
+                certificates chain to, and the roots of the contracts and the vehicles charged here.
+            `,
+            presents:  html`
+                What this CSMS shows in TLS, with its private key. Not the key the charging station server
+                shows the stations, which has a page of its own:
+                <a href="${toURL('/configuration/ocpp-server/certificates')}">Server certificates</a>.
+            `
+        }
+    },
+
     // "/" is every node's: the first page of the menu the person signed in may
     // open - the configuration for whoever may read it, and the roaming data,
     // say, for an account that may read only that, where the configuration's
@@ -65,7 +87,6 @@ startNode({
     pages: {
 
         '/configuration':                           configurationPage,
-        '/configuration/certificates':              certificateStorePage,
 
         '/configuration/ocpp-server':               ocppServerPage,
         '/configuration/ocpp-server/logins':        stationLoginsPage,
