@@ -3,7 +3,7 @@ import { auth } from '../auth';
 import { html, must, render, type HTMLFragment } from '@node/html';
 import type { Page } from '@node/router';
 import { shell } from '../shell';
-import { errorMessage, field, formatTimestamp } from '../ui';
+import { errorMessage, field, formatTimestamp, isChecked } from '@node/ui';
 import { typedSinceDrawn, unsaved } from '@node/unsaved';
 
 /**
@@ -598,9 +598,4 @@ export const ocppServerPage: Page = {
 /** The values of every checked box of one name. */
 function checked(form: HTMLFormElement, name: string): string[] {
     return new FormData(form).getAll(name).map(String);
-}
-
-/** Whether one box is ticked. */
-function isChecked(form: HTMLFormElement, name: string): boolean {
-    return new FormData(form).get(name) !== null;
 }

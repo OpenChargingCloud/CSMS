@@ -2,7 +2,7 @@ import { api, type OCPIConfiguration } from '../api/client';
 import { html, must, render } from '@node/html';
 import type { Page } from '@node/router';
 import { shell } from '../shell';
-import { errorMessage, formatValue, humanizeKey } from '../ui';
+import { errorMessage, formatValue, humanizeKey } from '@node/ui';
 
 /**
  * Who this CSMS is as a charge point operator, where its partners find it, and

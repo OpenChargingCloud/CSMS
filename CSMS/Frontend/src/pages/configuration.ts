@@ -2,7 +2,7 @@ import { api, type Configuration } from '../api/client';
 import { html, must, render, type HTMLFragment } from '@node/html';
 import type { Page } from '@node/router';
 import { shell } from '../shell';
-import { errorMessage, formatSince, formatValue, humanizeKey } from '../ui';
+import { errorMessage, formatSince, formatValue, humanizeKey } from '@node/ui';
 
 /**
  * What this CSMS is made of - read-only: it answers "what am I
