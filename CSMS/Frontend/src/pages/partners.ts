@@ -4,7 +4,7 @@ import { html, must, render, type HTMLFragment } from '@node/html';
 import type { Page } from '@node/router';
 import { shell } from '@node/shell';
 import { errorMessage, field, formatTimestamp } from '@node/ui';
-import { typedSinceDrawn, unsaved } from '@node/unsaved';
+import { anyFormTypedSinceDrawn, unsaved } from '@node/unsaved';
 
 /**
  * The roaming partners: the e-mobility service providers whose customers may
@@ -489,8 +489,7 @@ export const partnersPage: Page = {
 
         // A partner being added is a draft until it is added. Register and
         // Remove in the list are in no form: they act when they are clicked.
-        const release = unsaved.heldBy(() => Array.from(content.querySelectorAll<HTMLFormElement>('form')).
-                                                   some(form => typedSinceDrawn(form)));
+        const release = unsaved.heldBy(() => anyFormTypedSinceDrawn(content));
 
         void load();
 

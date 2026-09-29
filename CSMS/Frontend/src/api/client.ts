@@ -1,8 +1,6 @@
 import { apiURL,
          nodeAPI,
          request,
-         type Certificate        as NodeCertificate,
-         type CertificateImport  as NodeCertificateImport,
          type CertificateStore   as NodeCertificateStore,
          type NodeConfiguration,
          type NodeMe,
@@ -15,8 +13,7 @@ import { apiURL,
 // who is signed in - and how it is asked are WWCP_Node's, and every page here
 // reads them from this module as before. What follows is what a CSMS adds:
 // its resources, what its status and its configuration say beyond every
-// node's, the kinds its store keeps, and its own routes - the charging station
-// server and OCPI.
+// node's, and its own routes - the charging station server and OCPI.
 export * from '@node/api/client';
 
 
@@ -448,27 +445,11 @@ export interface RoamingData {
 
 
 /**
- * What a certificate is for, of the kinds this CSMS keeps: the three roots of
- * the PKI of ISO 15118 and the four kinds of TLS. Roots are believed and a TLS
- * identity is presented; a server certificate is neither, but kept to
- * recognise a server by its fingerprint. None of a vehicle's own credentials,
- * which the node's store keeps for a vehicle and not for a CSMS.
+ * The routes every node has, typed with what a CSMS says its own of them are.
+ * The certificate store is typed as every node's: the node's page is the only
+ * one that reads it, and takes the kinds from what the store says.
  */
-export type CertificateKind = 'v2gRoot' | 'moRoot' | 'oemRoot'
-                            | 'tlsRoot' | 'clientRoot' | 'tlsServer' | 'tlsIdentity';
-
-/** One certificate in the store. */
-export type Certificate = NodeCertificate<CertificateKind>;
-
-/** What an import sends. */
-export type CertificateImport = NodeCertificateImport<CertificateKind>;
-
-/** The whole store, grouped the way it is shown. */
-export type CertificateStore = NodeCertificateStore<CertificateKind>;
-
-
-/** The routes every node has, typed with what a CSMS says its own of them are. */
-const node = nodeAPI<{ me: Me; status: Status; configuration: Configuration; kind: CertificateKind; store: CertificateStore }>();
+const node = nodeAPI<{ me: Me; status: Status; configuration: Configuration; kind: string; store: NodeCertificateStore }>();
 
 export const api = {
 
