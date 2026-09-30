@@ -18,6 +18,7 @@
 #region Usings
 
 using System.Net;
+using System.Security.Cryptography;
 
 using Newtonsoft.Json.Linq;
 
@@ -484,11 +485,13 @@ namespace cloud.charging.open.CSMS.Tests
         /// in itself, and that their files cannot be written with, is answered
         /// 500 with why, rather than with the 400 of what could have been wrong
         /// with it: nothing was. Every route that writes those files. It was the
-        /// status of the refusals, as it was on the stations file's routes.
+        /// status of the refusals, as it was on the stations file's routes. And
+        /// it changes nothing, now or when the stores are read again.
         /// </summary>
         [TestCase("POST certificates")]
         [TestCase("PUT certificates/{id}")]
         [TestCase("POST trust")]
+        [TestCase("POST trust, after its chain")]
         [TestCase("PUT trust/{id}, name")]
         [TestCase("PUT trust/{id}, enabled")]
         public async Task AChangeTheKeyOrChainFilesCannotTakeIsAServerError(String Change)
@@ -506,6 +509,10 @@ namespace cloud.charging.open.CSMS.Tests
             String? keyId    = null;
             String? pem      = null;
             String? chainId  = null;
+
+            // The handle the store gives the chain: its anchor's, and so known
+            // before the chain is there.
+            var anchorId     = Convert.ToHexStringLower(SHA256.HashData(ca.Certificate.RawData).AsSpan(0, 8));
 
             if (Change == "PUT certificates/{id}")
             {
@@ -534,30 +541,70 @@ namespace cloud.charging.open.CSMS.Tests
 
             }
 
-            // Where each change is written, something it cannot be written to.
-            switch (Change)
-            {
-                case "POST certificates":      AFileWhere     (CSMS.ServerCertificates.Path);                                                       break;
-                case "PUT certificates/{id}":  ADirectoryWhere(System.IO.Path.Combine(CSMS.ServerCertificates.Path, $"{keyId}.cert.pem"));         break;
-                case "POST trust":             AFileWhere     (CSMS.ClientTrust.Path);                                                              break;
-                default:                       ADirectoryWhere(System.IO.Path.Combine(CSMS.ClientTrust.Path,        $"{chainId}.json"));            break;
-            }
+            var keysBefore    = Keys();
+            var chainsBefore  = Chains();
 
-            var response = Change switch {
-                "POST certificates"        => await http.PostAsync($"{Root}/certificates",         JSONBody(new JProperty("algorithm",  "ecdsa-p256"))),
-                "PUT certificates/{id}"    => await http.PutAsync ($"{Root}/certificates/{keyId}",  JSONBody(new JProperty("pem",        pem))),
-                "POST trust"               => await http.PostAsync($"{Root}/trust",                JSONBody(new JProperty("pem",        TestCA.ToPEM(ca.Certificate)))),
-                "PUT trust/{id}, name"     => await http.PutAsync ($"{Root}/trust/{chainId}",       JSONBody(new JProperty("name",       "Another Charging Network"))),
-                "PUT trust/{id}, enabled"  => await http.PutAsync ($"{Root}/trust/{chainId}",       JSONBody(new JProperty("enabled",    false))),
-                _                          => throw new ArgumentException($"No change '{Change}' here.", nameof(Change))
+            // Where each change is written, something it cannot be written to.
+            var blocked = Change switch {
+                "POST certificates"            => CSMS.ServerCertificates.Path,
+                "PUT certificates/{id}"        => System.IO.Path.Combine(CSMS.ServerCertificates.Path, $"{keyId}.cert.pem"),
+                "POST trust"                   => CSMS.ClientTrust.Path,
+                // What is said of the chain, which is written after the chain.
+                "POST trust, after its chain"  => System.IO.Path.Combine(CSMS.ClientTrust.Path,        $"{anchorId}.json"),
+                _                              => System.IO.Path.Combine(CSMS.ClientTrust.Path,        $"{chainId}.json")
             };
 
-            var body = await response.Content.ReadAsStringAsync();
+            if (Change is "POST certificates" or "POST trust")
+                AFileWhere(blocked);
+            else
+                ADirectoryWhere(blocked);
+
+            var response = Change switch {
+                "POST certificates"            => await http.PostAsync($"{Root}/certificates",         JSONBody(new JProperty("algorithm",  "ecdsa-p256"))),
+                "PUT certificates/{id}"        => await http.PutAsync ($"{Root}/certificates/{keyId}",  JSONBody(new JProperty("pem",        pem))),
+                "POST trust" or
+                "POST trust, after its chain"  => await http.PostAsync($"{Root}/trust",                JSONBody(new JProperty("pem",        TestCA.ToPEM(ca.Certificate)))),
+                "PUT trust/{id}, name"         => await http.PutAsync ($"{Root}/trust/{chainId}",       JSONBody(new JProperty("name",       "Another Charging Network"))),
+                "PUT trust/{id}, enabled"      => await http.PutAsync ($"{Root}/trust/{chainId}",       JSONBody(new JProperty("enabled",    false))),
+                _                              => throw new ArgumentException($"No change '{Change}' here.", nameof(Change))
+            };
+
+            var body          = await response.Content.ReadAsStringAsync();
+
+            var keysNow       = Keys();
+            var chainsNow     = Chains();
+
+            // And as at the next start: read again, with nothing in the way.
+            NothingWhere(blocked);
+
+            CSMS.ServerCertificates.Reload();
+            CSMS.ClientTrust.       Reload();
+
+            var keysAgain     = Keys();
+            var chainsAgain   = Chains();
 
             Assert.Multiple(() => {
+
                 Assert.That(response.StatusCode,                         Is.EqualTo(HttpStatusCode.InternalServerError), body);
                 Assert.That(JObject.Parse(body).Value<String>("error"),  Does.Contain(Change.Contains("trust") ? CSMS.ClientTrust.Path : CSMS.ServerCertificates.Path));
+
+                Assert.That(keysNow,      Is.EqualTo(keysBefore),    "the keys, and whether each has its certificate");
+                Assert.That(chainsNow,    Is.EqualTo(chainsBefore),  "the chains accepted");
+                Assert.That(keysAgain,    Is.EqualTo(keysBefore),    "the keys, read again");
+                Assert.That(chainsAgain,  Is.EqualTo(chainsBefore),  "the chains accepted, read again: a chain written without what is said of it " +
+                                                                     "was accepted at the next start, switched on and named by its subject");
+
+                Assert.That(File.Exists(System.IO.Path.Combine(CSMS.ClientTrust.Path, $"{anchorId}.pem")),
+                            Is.EqualTo(Change.StartsWith("PUT trust", StringComparison.Ordinal)),
+                            "the chain's file, there only where the chain was accepted before");
+
             });
+
+            String[] Keys()
+                => [.. CSMS.ServerCertificates.Entries.Select(entry => $"{entry.Id} {(entry.Certificate is null ? "without" : "with")} a certificate")];
+
+            String[] Chains()
+                => [.. CSMS.ClientTrust.Entries.Select(entry => $"{entry.Id} '{entry.Name}' {(entry.Enabled ? "on" : "off")}")];
 
         }
 
@@ -663,7 +710,7 @@ namespace cloud.charging.open.CSMS.Tests
 
         #endregion
 
-        #region (private static) AFileWhere(Directory) / ADirectoryWhere(File)
+        #region (private static) AFileWhere(Directory) / ADirectoryWhere(File) / NothingWhere(Path)
 
         /// <summary>
         /// A file where a store keeps its directory, so that nothing can be
@@ -687,9 +734,30 @@ namespace cloud.charging.open.CSMS.Tests
         {
 
             if (System.IO.File.Exists(File))
-                System.IO.File.Delete(File);
+                System.IO.File.Move(File, File + ".aside");
 
             System.IO.Directory.CreateDirectory(File);
+
+        }
+
+        /// <summary>
+        /// Nothing in the way any more of <see cref="AFileWhere"/> or
+        /// <see cref="ADirectoryWhere"/>: what was there before is back.
+        /// </summary>
+        private static void NothingWhere(String Path)
+        {
+
+            if (System.IO.File.Exists(Path))
+                System.IO.File.Delete(Path);
+
+            else if (System.IO.Directory.Exists(Path))
+                System.IO.Directory.Delete(Path);
+
+            if (System.IO.Directory.Exists(Path + ".aside"))
+                System.IO.Directory.Move(Path + ".aside", Path);
+
+            else if (System.IO.File.Exists(Path + ".aside"))
+                System.IO.File.Move(Path + ".aside", Path);
 
         }
 

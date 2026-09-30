@@ -685,20 +685,6 @@ namespace cloud.charging.open.CSMS
                                                   out Boolean                       NotSaved);
 
         /// <summary>
-        /// The answer to a change of the server, the logins, the keys or the
-        /// chains that was not made: the status of what was wrong with it - or
-        /// 500, where nothing was, and its files could not be read, written or
-        /// removed. Both came as the status of what was wrong, and a full disk
-        /// was a station "not found".
-        /// </summary>
-        private static HTTPResponse NotChanged(HTTPRequest     Request,
-                                               HTTPStatusCode  WhatWasWrong,
-                                               String          Error,
-                                               Boolean         NotSaved)
-
-            => ErrorJSON(Request, NotSaved ? HTTPStatusCode.InternalServerError : WhatWasWrong, Error);
-
-        /// <summary>
         /// DELETE .../stations/{id}: forget a charging station.
         /// </summary>
         private Task<HTTPResponse> DeleteStation(HTTPRequest Request)

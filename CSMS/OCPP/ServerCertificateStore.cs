@@ -1185,8 +1185,10 @@ namespace cloud.charging.open.CSMS.OCPP
                 {
 
                     entry.CanBePresented      = false;
+                    // "It is kept" followed "... certificates cannot be
+                    // presented", with nothing for "it" to be.
                     entry.PresentationProblem = $"{kind.Name} certificates cannot be presented over TLS by this machine - the handshake fails. " +
-                                                 "It is kept, and will be used the day the platform underneath can serve it.";
+                                                 "This one is kept, and will be used the day the platform underneath can serve it.";
 
                 }
 

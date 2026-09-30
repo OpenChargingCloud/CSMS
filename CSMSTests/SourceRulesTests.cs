@@ -41,11 +41,18 @@ namespace cloud.charging.open.CSMS.Tests
         /// "A RSA 2048" - and put "a" before the name of a key twice more,
         /// where the platform cannot present a certificate for it.
         /// </summary>
+        /// <remarks>
+        /// The repository is found by the projects' files. Named by their
+        /// directories, a build with --artifacts-path would find its
+        /// artifacts/bin first, which has a directory of each name and not one
+        /// source in them.
+        /// </remarks>
         [Test]
         public void NoTextOfThisCSMSPutsAnArticleBeforeAName()
         {
 
-            var repository = SourceRules.RepositoryAbove(AppContext.BaseDirectory, "CSMS", "CSMSTests");
+            var repository = SourceRules.RepositoryAbove(AppContext.BaseDirectory, "CSMS/CSMS.csproj",
+                                                                                   "CSMSTests/CSMSTests.csproj");
 
             Assert.That(SourceRules.ArticlesBeforeANameIn(Path.Combine(repository, "CSMS")), Is.Empty);
 

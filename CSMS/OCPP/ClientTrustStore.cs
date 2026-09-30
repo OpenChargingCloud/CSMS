@@ -228,7 +228,7 @@ namespace cloud.charging.open.CSMS.OCPP
         /// </summary>
         /// <param name="PEM">One or more certificates, as PEM.</param>
         /// <param name="Name">What to call this chain, or null to use the subject of its anchor.</param>
-        /// <param name="NotSaved">True where the chain could not be written, or not read back once it was: see <see cref="TryRemove(String, out String?, out Boolean)"/>.</param>
+        /// <param name="NotSaved">True where the chain could not be written, or not read back once it was: see <see cref="TryRemove(String, out String?, out Boolean)"/>. What was written of a chain that could not be written whole is taken away again.</param>
         public Boolean TryAdd(String                            PEM,
                               String?                           Name,
                               [NotNullWhen(true)]  out String?  Id,
@@ -343,9 +343,17 @@ namespace cloud.charging.open.CSMS.OCPP
                 }
                 catch (Exception e)
                 {
+
                     NotSaved  = true;
                     Error     = $"The chain could not be written to '{Path}': {e.Message}";
+
+                    // Not left behind half made: a chain without what is said
+                    // of it was accepted at the next start, switched on and
+                    // named by its subject.
+                    Forget(id, "pem", "json");
+
                     return false;
+
                 }
 
                 #endregion
@@ -913,6 +921,32 @@ namespace cloud.charging.open.CSMS.OCPP
             // certificate is a public document - so the ordinary mode.
             Directory.CreateDirectory(Path);
 
+        }
+
+        #endregion
+
+        #region (private) Forget(Id, params Extensions)
+
+        /// <summary>
+        /// Take the files of one chain that were written for something that
+        /// did not go in away again - as far as that goes: one that cannot be
+        /// taken away either is left where it is.
+        /// </summary>
+        private void Forget(String Id, params String[] Extensions)
+        {
+            foreach (var extension in Extensions)
+            {
+                try
+                {
+                    var file = System.IO.Path.Combine(Path, $"{Id}.{extension}");
+                    if (File.Exists(file))
+                        File.Delete(file);
+                }
+                catch (Exception)
+                {
+                    // Left where it is, see above.
+                }
+            }
         }
 
         #endregion
