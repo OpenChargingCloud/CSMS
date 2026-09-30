@@ -1070,7 +1070,7 @@ namespace cloud.charging.open.CSMS
 
         #endregion
 
-        #region TryUpdateOCPPServerConfiguration(JSON, out Error)
+        #region TryUpdateOCPPServerConfiguration(JSON, out Error [, out NotSaved])
 
         /// <summary>
         /// Change the charging station server.
@@ -1085,7 +1085,28 @@ namespace cloud.charging.open.CSMS
         /// </remarks>
         public Boolean TryUpdateOCPPServerConfiguration(JObject                           JSON,
                                                         [NotNullWhen(false)] out String?  Error)
+
+            => TryUpdateOCPPServerConfiguration(JSON, out Error, out _);
+
+        /// <summary>
+        /// Change the charging station server - and say whether a refusal was
+        /// the configuration file's rather than the change's.
+        /// </summary>
+        /// <remarks>
+        /// A change may be refused for two reasons that are answered
+        /// differently: something about it was wrong - a security profile there
+        /// is none of, TLS alone without a certificate, a window that has
+        /// closed already - or it was fine, and the file could not be read or
+        /// written. Nothing is put into effect in either case. The web
+        /// interface answered both with the 400 of the first.
+        /// </remarks>
+        /// <param name="NotSaved">True where the configuration file could not be read or written, and nothing was changed.</param>
+        public Boolean TryUpdateOCPPServerConfiguration(JObject                           JSON,
+                                                        [NotNullWhen(false)] out String?  Error,
+                                                        out Boolean                       NotSaved)
         {
+
+            NotSaved = false;
 
             if (!OCPPServerConfiguration.TryParse(JSON, out var update, out Error))
                 return false;
@@ -1117,7 +1138,10 @@ namespace cloud.charging.open.CSMS
             {
 
                 if (!ConfigFile.TryMergeSection(OCPPServerConfiguration.SectionName, update.ToJSON(), out Error))
+                {
+                    NotSaved = true;
                     return false;
+                }
 
                 var before = ocppServerSettings;
 

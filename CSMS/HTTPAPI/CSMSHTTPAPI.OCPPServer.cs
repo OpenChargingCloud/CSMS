@@ -124,8 +124,8 @@ namespace cloud.charging.open.CSMS
             if (!TryParseJSONObject(Request, out var json, out var errorResponse))
                 return Task.FromResult(errorResponse);
 
-            if (!CSMS.TryUpdateOCPPServerConfiguration(json, out var error))
-                return Task.FromResult(ErrorJSON(Request, HTTPStatusCode.BadRequest, error));
+            if (!CSMS.TryUpdateOCPPServerConfiguration(json, out var error, out var notSaved))
+                return Task.FromResult(NotChanged(Request, HTTPStatusCode.BadRequest, error, notSaved));
 
             Log.Info($"'{user.Id}' changed the charging station server.", "ocpp", "station", "config", "web");
 
@@ -685,11 +685,11 @@ namespace cloud.charging.open.CSMS
                                                   out Boolean                       NotSaved);
 
         /// <summary>
-        /// The answer to a change of the logins, the keys or the chains that was
-        /// not made: the status of what was wrong with it - or 500, where
-        /// nothing was, and its files could not be written or removed. Both came
-        /// as the status of what was wrong, and a full disk was a station "not
-        /// found".
+        /// The answer to a change of the server, the logins, the keys or the
+        /// chains that was not made: the status of what was wrong with it - or
+        /// 500, where nothing was, and its files could not be read, written or
+        /// removed. Both came as the status of what was wrong, and a full disk
+        /// was a station "not found".
         /// </summary>
         private static HTTPResponse NotChanged(HTTPRequest     Request,
                                                HTTPStatusCode  WhatWasWrong,

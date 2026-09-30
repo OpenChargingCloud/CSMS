@@ -212,6 +212,71 @@ namespace cloud.charging.open.CSMS.Tests
         #endregion
 
 
+        #region AServerChangeTheConfigurationFileCannotTakeIsAServerError()
+
+        /// <summary>
+        /// A change of the charging station server that is fine in itself, and
+        /// that the configuration file cannot be written with, is answered 500
+        /// with why - and put into effect nowhere - rather than with the 400 of
+        /// what could have been wrong with it: nothing was. It was the status
+        /// of the refusals, as it was on the routes of the logins, the keys and
+        /// the chains.
+        /// </summary>
+        [Test]
+        public async Task AServerChangeTheConfigurationFileCannotTakeIsAServerError()
+        {
+
+            using var http = await SignedIn();
+
+            // Where the file's next version is written first is a directory.
+            System.IO.Directory.CreateDirectory(CSMS.ConfigFile.Path + ".tmp");
+
+            var response = await http.PutAsync(Root, JSONBody(new JProperty("reachableAs", new JArray("csms001.example.org"))));
+            var body     = await response.Content.ReadAsStringAsync();
+
+            Assert.Multiple(() => {
+                Assert.That(response.StatusCode,                         Is.EqualTo(HttpStatusCode.InternalServerError), body);
+                Assert.That(JObject.Parse(body).Value<String>("error"),  Does.StartWith($"'{CSMS.ConfigFile.Path}' could not be written: "));
+                Assert.That(CSMS.OCPPServerSettings.ReachableAs ?? [],   Is.Empty, "the change was put into effect all the same");
+            });
+
+        }
+
+        #endregion
+
+        #region ARefusedServerChangeIsWhatItWasWhileTheFileCannotBeWritten()
+
+        /// <summary>
+        /// What was wrong with a change of the charging station server is
+        /// answered as it was while the configuration file cannot be written:
+        /// a 500 is the file's, and only where it was the file that refused.
+        /// </summary>
+        [Test]
+        public async Task ARefusedServerChangeIsWhatItWasWhileTheFileCannotBeWritten()
+        {
+
+            using var http = await SignedIn();
+
+            System.IO.Directory.CreateDirectory(CSMS.ConfigFile.Path + ".tmp");
+
+            var noSuchProfile  = await http.PutAsync(Root, JSONBody(new JProperty("securityProfiles", new JArray(4))));
+            var tlsAlone       = await http.PutAsync(Root, JSONBody(new JProperty("securityProfiles", new JArray(2, 3))));
+            var pastWindow     = await http.PutAsync(Root, JSONBody(new JProperty("logging", new JObject(
+                                                                  new JProperty("payloads",       true),
+                                                                  new JProperty("payloadsUntil",  DateTimeOffset.UtcNow.AddHours(-1).ToString("o"))
+                                                              ))));
+
+            Assert.Multiple(() => {
+                Assert.That(noSuchProfile.StatusCode,  Is.EqualTo(HttpStatusCode.BadRequest),  "a security profile there is none of");
+                Assert.That(tlsAlone.     StatusCode,  Is.EqualTo(HttpStatusCode.BadRequest),  "TLS alone, and no certificate to speak it with");
+                Assert.That(pastWindow.   StatusCode,  Is.EqualTo(HttpStatusCode.BadRequest),  "message contents logged until a time gone by");
+            });
+
+        }
+
+        #endregion
+
+
         #region AKeyIsMadeAndItsRequestCanBeFetched()
 
         [Test]
