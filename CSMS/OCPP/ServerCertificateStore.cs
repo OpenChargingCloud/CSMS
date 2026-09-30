@@ -186,6 +186,30 @@ namespace cloud.charging.open.CSMS.OCPP
             }
         }
 
+        /// <summary>
+        /// Called with the full path of every file this store writes, just
+        /// before it is written.
+        /// </summary>
+        /// <remarks>
+        /// For the tests, and for nothing else: they make a write fail there,
+        /// or fail partway through as on a full disk. Nothing on the outside of
+        /// this store can: a key is named after its public key, so no test can
+        /// put something in the way of its files beforehand, and no test can
+        /// make a write stop halfway.
+        /// </remarks>
+        internal Action<String>? BeforeWriting { get; set; }
+
+        /// <summary>
+        /// Called with the full path of every file this store moves aside,
+        /// moves back or deletes when it takes a key away, just before it does.
+        /// </summary>
+        /// <remarks>
+        /// For the tests, and for nothing else: they make one of them fail
+        /// there, as a file somebody holds open does on Windows - on every
+        /// system, and at the step they choose.
+        /// </remarks>
+        internal Action<String>? BeforeRemoving { get; set; }
+
         #endregion
 
         #region Events
@@ -316,7 +340,7 @@ namespace cloud.charging.open.CSMS.OCPP
         /// <param name="Subject">The common name to ask for, e.g. "csms001.example.org".</param>
         /// <param name="ReachableAs">The names and addresses the charging stations reach this CSMS under.</param>
         /// <param name="Algorithm">One of <see cref="Algorithms"/>.</param>
-        /// <param name="NotSaved">True where the key could not be written: see <see cref="TryRemove(String, out String?, out Boolean)"/>.</param>
+        /// <param name="NotSaved">True where the key could not be written: see <see cref="TryRemove(String, out String?, out Boolean)"/>. What was written of a key that could not be written whole is taken away again.</param>
         public Boolean TryCreateKey(String                            Subject,
                                     IEnumerable<String>               ReachableAs,
                                     String?                           Algorithm,
@@ -456,17 +480,18 @@ namespace cloud.charging.open.CSMS.OCPP
 
                     CreateDirectory();
 
-                    OwnerOnlyFile.Write(
+                    WriteFile(
                         FilePath(id, "key.pem"),
                         PemEncoding.WriteString(
                             "PRIVATE KEY",
                             PrivateKeyInfoFactory.CreatePrivateKeyInfo(pair.Private).GetDerEncoded()
-                        ) + Environment.NewLine
+                        ) + Environment.NewLine,
+                        OwnerOnly: true
                     );
 
-                    File.WriteAllText(FilePath(id, "csr.pem"), csr);
+                    WriteFile(FilePath(id, "csr.pem"), csr);
 
-                    File.WriteAllText(
+                    WriteFile(
                         FilePath(id, "json"),
                         new JObject(
                             new JProperty("id",         id),
@@ -480,9 +505,19 @@ namespace cloud.charging.open.CSMS.OCPP
                 }
                 catch (Exception e)
                 {
+
                     NotSaved  = true;
                     Error     = $"The key could not be written to '{Path}': {e.Message}";
+
+                    // Not left behind half made: a key whose request or whose
+                    // description was not written in full was read at the next
+                    // start as a key nobody had asked for - made "now", of the
+                    // default algorithm and for no subject - or could not be
+                    // read, and said so at every start.
+                    Forget(id, "key.pem", "csr.pem", "json");
+
                     return false;
+
                 }
 
                 #endregion
@@ -584,7 +619,7 @@ namespace cloud.charging.open.CSMS.OCPP
         /// </summary>
         /// <param name="PEM">The certificate, and any intermediates, as PEM.</param>
         /// <param name="ReachableAs">What the certificate ought to be valid for.</param>
-        /// <param name="NotSaved">True where the certificate could not be written, or not read back once it was: see <see cref="TryRemove(String, out String?, out Boolean)"/>.</param>
+        /// <param name="NotSaved">True where the certificate could not be written, or not read back once it was: see <see cref="TryRemove(String, out String?, out Boolean)"/>. One that could not be written leaves the certificate it was to replace the key's, now and at the next start.</param>
         public Boolean TryAddCertificate(String                              PEM,
                                          IEnumerable<String>                 ReachableAs,
                                          [NotNullWhen(true)]  out String?    Id,
@@ -695,14 +730,26 @@ namespace cloud.charging.open.CSMS.OCPP
                                       Select(certificate => PemEncoding.WriteString("CERTIFICATE", certificate.RawData))
                               ) + Environment.NewLine;
 
-                    File.WriteAllText(FilePath(leafId, "cert.pem"), pem);
+                    // Beside the certificate it replaces, and moved over it in
+                    // one step: written in its place, a renewal the disk ran
+                    // out in cut the one before it off, and at the next start
+                    // the key was not read at all.
+                    WriteFile(FilePath(leafId, "cert.pem.tmp"), pem);
+
+                    File.Move(FilePath(leafId, "cert.pem.tmp"), FilePath(leafId, "cert.pem"), overwrite: true);
 
                 }
                 catch (Exception e)
                 {
+
                     NotSaved  = true;
                     Error     = $"The certificate could not be written to '{Path}': {e.Message}";
+
+                    // What was written of it, beside the one it was to replace.
+                    Forget(leafId, "cert.pem.tmp");
+
                     return false;
+
                 }
 
                 #endregion
@@ -773,7 +820,7 @@ namespace cloud.charging.open.CSMS.OCPP
         /// it did for the stations file, where a full disk was a station "not
         /// found".
         /// </remarks>
-        /// <param name="NotSaved">True where the files could not be written, read back or removed - nothing was wrong with the change itself.</param>
+        /// <param name="NotSaved">True where the files could not be written, read back or removed - nothing was wrong with the change itself. A key one of whose files could not be taken away stays here, whole.</param>
         public Boolean TryRemove(String                            Id,
                                  [NotNullWhen(false)] out String?  Error,
                                  out Boolean                       NotSaved)
@@ -781,6 +828,8 @@ namespace cloud.charging.open.CSMS.OCPP
 
             Error     = null;
             NotSaved  = false;
+
+            var leftOver = new List<String>();
 
             lock (updateLock)
             {
@@ -798,27 +847,30 @@ namespace cloud.charging.open.CSMS.OCPP
                     return false;
                 }
 
-                try
-                {
-                    foreach (var extension in new[] { "key.pem", "csr.pem", "cert.pem", "json" })
-                    {
-                        var path = FilePath(Id, extension);
-                        if (File.Exists(path))
-                            File.Delete(path);
-                    }
-                }
-                catch (Exception e)
+                if (!TrySetAside(Id, [ "key.pem", "csr.pem", "cert.pem", "json" ], leftOver, out var setAside, out var problem))
                 {
                     NotSaved  = true;
-                    Error     = $"'{Id}' could not be removed from '{Path}': {e.Message}";
-                    return false;
+                    Error     = $"'{Id}' could not be removed from '{Path}': {problem}";
                 }
 
-                entry.Dispose();
-                entries.Remove(Id);
-                publicKeys.Remove(Id);
+                else
+                {
+
+                    entry.Dispose();
+                    entries.Remove(Id);
+                    publicKeys.Remove(Id);
+
+                    Delete(setAside, leftOver);
+
+                }
 
             }
+
+            foreach (var file in leftOver)
+                OnNotice?.Invoke(LogLevel.Warning, $"'{file}' could not be {(Error is null ? "deleted" : "put back")}, and is left over.");
+
+            if (Error is not null)
+                return false;
 
             OnNotice?.Invoke(LogLevel.Notice, $"The key '{Id}' and everything belonging to it was removed from '{Path}'.");
 
@@ -1455,7 +1507,7 @@ namespace cloud.charging.open.CSMS.OCPP
 
         #endregion
 
-        #region (private) FilePath / Known / CreateDirectory
+        #region (private) FilePath / Known / CreateDirectory / WriteFile
 
         private String FilePath(String Id, String Extension)
             => System.IO.Path.Combine(Path, $"{Id}.{Extension}");
@@ -1484,6 +1536,142 @@ namespace cloud.charging.open.CSMS.OCPP
                     UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute
                 );
 
+        }
+
+        /// <summary>
+        /// One file of this store written, readable by its owner alone where
+        /// that is asked for - past <see cref="BeforeWriting"/> first.
+        /// </summary>
+        private void WriteFile(String   Target,
+                               String   Content,
+                               Boolean  OwnerOnly = false)
+        {
+
+            BeforeWriting?.Invoke(Target);
+
+            if (OwnerOnly)
+                OwnerOnlyFile.Write(Target, Content);
+
+            else
+                File.WriteAllText(Target, Content);
+
+        }
+
+        #endregion
+
+        #region (private) Forget(Id, params Extensions)
+
+        /// <summary>
+        /// Take the files of one key that were written for something that did
+        /// not go in away again - as far as that goes: one that cannot be
+        /// taken away either is left where it is.
+        /// </summary>
+        private void Forget(String Id, params String[] Extensions)
+        {
+            foreach (var extension in Extensions)
+            {
+                try
+                {
+                    var file = FilePath(Id, extension);
+                    if (File.Exists(file))
+                        File.Delete(file);
+                }
+                catch (Exception)
+                {
+                    // Left where it is, see above.
+                }
+            }
+        }
+
+        #endregion
+
+        #region (private) TrySetAside(Id, Extensions, LeftOver, out SetAside, out Problem) / Delete(SetAside, LeftOver)
+
+        /// <summary>
+        /// The files of one key moved aside, as "*.removed", all of them or
+        /// none: where one cannot be, those moved already are moved back.
+        /// </summary>
+        /// <remarks>
+        /// So that a key is taken away whole or not at all. Deleted one after
+        /// the other, a file somebody held open left the ones before it gone:
+        /// the key was listed until the next start, and gone or half there
+        /// after it (found by the charging station). What cannot be moved back
+        /// is left over under its "*.removed" name, which the next start does
+        /// not read, and said in the log.
+        /// </remarks>
+        private Boolean TrySetAside(String                            Id,
+                                    String[]                          Extensions,
+                                    List<String>                      LeftOver,
+                                    out List<String>                  SetAside,
+                                    [NotNullWhen(false)] out String?  Problem)
+        {
+
+            SetAside  = [];
+            Problem   = null;
+
+            foreach (var extension in Extensions)
+            {
+
+                var file = FilePath(Id, extension);
+
+                if (!File.Exists(file))
+                    continue;
+
+                try
+                {
+                    BeforeRemoving?.Invoke(file);
+                    File.Move(file, file + ".removed", overwrite: true);
+                    SetAside.Add(file);
+                }
+                catch (Exception e)
+                {
+
+                    Problem = e.Message;
+
+                    foreach (var moved in SetAside)
+                    {
+                        try
+                        {
+                            BeforeRemoving?.Invoke(moved + ".removed");
+                            File.Move(moved + ".removed", moved);
+                        }
+                        catch (Exception)
+                        {
+                            LeftOver.Add(moved + ".removed");
+                        }
+                    }
+
+                    SetAside.Clear();
+
+                    return false;
+
+                }
+
+            }
+
+            return true;
+
+        }
+
+        /// <summary>
+        /// The files moved aside deleted; what cannot be is left over under its
+        /// "*.removed" name, which the next start does not read.
+        /// </summary>
+        private void Delete(List<String>  SetAside,
+                            List<String>  LeftOver)
+        {
+            foreach (var file in SetAside)
+            {
+                try
+                {
+                    BeforeRemoving?.Invoke(file + ".removed");
+                    File.Delete(file + ".removed");
+                }
+                catch (Exception)
+                {
+                    LeftOver.Add(file + ".removed");
+                }
+            }
         }
 
         #endregion

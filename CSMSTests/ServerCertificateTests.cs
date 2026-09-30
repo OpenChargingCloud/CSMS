@@ -73,7 +73,7 @@ namespace cloud.charging.open.CSMS.Tests
 
         #endregion
 
-        #region (private) NewKey(...) / Issue(...)
+        #region (private) NewKey(...) / Issue(...) / CutOff(...)
 
         /// <summary>
         /// A key and its signing request.
@@ -107,6 +107,25 @@ namespace cloud.charging.open.CSMS.Tests
 
             return id;
 
+        }
+
+        /// <summary>
+        /// The store's writes of a file with this in its name fail partway
+        /// through, as on a full disk: the file is there, with the beginning
+        /// of what was to go into it, and the write throws.
+        /// </summary>
+        private void CutOff(String Name, String Beginning)
+        {
+            store.BeforeWriting = path => {
+
+                if (!Path.GetFileName(path).Contains(Name, StringComparison.Ordinal))
+                    return;
+
+                File.WriteAllText(path, Beginning);
+
+                throw new IOException("There is not enough space on the disk.");
+
+            };
         }
 
         #endregion
@@ -615,6 +634,196 @@ namespace cloud.charging.open.CSMS.Tests
                     Assert.That(File.Exists(Path.Combine(directory, $"{id}.{extension}")), Is.False,
                                 $"'{id}.{extension}' was left behind.");
 
+                Assert.That(Directory.GetFiles(directory, $"{id}.*"), Is.Empty, "what was left behind, set aside or not");
+
+            });
+
+        }
+
+        #endregion
+
+        #region AKeyOneOfWhoseFilesCannotBeTakenAwayStaysWhole(Extension)
+
+        /// <summary>
+        /// A key one of whose files cannot be taken away - held open by
+        /// somebody, as Windows keeps a file then - stays, whole, now and when
+        /// the store is read again: its files are set aside before any of them
+        /// is deleted, and put back where one cannot be. Deleted one after the
+        /// other, a file held open left the ones before it gone, and the key
+        /// listed until the next start and gone after it (found by the charging
+        /// station).
+        /// </summary>
+        [TestCase("key.pem")]
+        [TestCase("csr.pem")]
+        [TestCase("json")]
+        public void AKeyOneOfWhoseFilesCannotBeTakenAwayStaysWhole(String Extension)
+        {
+
+            var (id, _)   = NewKey();
+            var before    = FilesOf(id);
+
+            store.BeforeRemoving = path => {
+                if (path.EndsWith($".{Extension}", StringComparison.Ordinal))
+                    throw new IOException("The process cannot access the file because it is being used by another process.");
+            };
+
+            var removed   = store.TryRemove(id, out var error, out var notSaved);
+
+            store.BeforeRemoving = null;
+
+            var after     = FilesOf(id);
+
+            store.Reload();
+
+            Assert.Multiple(() => {
+
+                Assert.That(removed,   Is.False);
+                Assert.That(notSaved,  Is.True);
+                Assert.That(error,     Does.StartWith($"'{id}' could not be removed from '{store.Path}': "));
+
+                Assert.That(after,     Is.EqualTo(before),  "its files");
+                Assert.That(store.Entries.Select(entry => entry.Id), Does.Contain(id), "the key, read again");
+
+            });
+
+        }
+
+        /// <summary>
+        /// The files of a key, by name, with what is in them.
+        /// </summary>
+        private (String Name, String Content)[] FilesOf(String Id)
+
+            => Directory.GetFiles(directory, $"{Id}.*").
+                         Order(StringComparer.Ordinal).
+                         Select(file => (Path.GetFileName(file), File.ReadAllText(file))).
+                         ToArray();
+
+        #endregion
+
+        #region AFileOfAKeyThatCannotBePutBackIsSaidAndLeftOver()
+
+        /// <summary>
+        /// A file of a key that cannot be moved back, once another could not be
+        /// set aside, is said in the log and left over under its "*.removed"
+        /// name, which the next start does not read; the key is refused all the
+        /// same, and the files that could be moved back are.
+        /// </summary>
+        [Test]
+        public void AFileOfAKeyThatCannotBePutBackIsSaidAndLeftOver()
+        {
+
+            var (id, _)   = NewKey();
+            var said      = new List<String>();
+
+            store.OnNotice += (level, message) => said.Add($"{level}: {message}");
+
+            store.BeforeRemoving = path => {
+                if (path.EndsWith(".json", StringComparison.Ordinal) || path.EndsWith(".key.pem.removed", StringComparison.Ordinal))
+                    throw new IOException("The process cannot access the file because it is being used by another process.");
+            };
+
+            var removed   = store.TryRemove(id, out var error, out var notSaved);
+
+            store.BeforeRemoving = null;
+
+            var leftOver  = Path.Combine(directory, $"{id}.key.pem.removed");
+
+            Assert.Multiple(() => {
+                Assert.That(removed,   Is.False);
+                Assert.That(notSaved,  Is.True);
+                Assert.That(said,      Has.One.EqualTo($"Warning: '{leftOver}' could not be put back, and is left over."));
+                Assert.That(FilesOf(id).Select(file => file.Name),
+                            Is.EqualTo(new[] { $"{id}.csr.pem", $"{id}.json", $"{id}.key.pem.removed" }),
+                            "the request put back, the description never moved, the key left over");
+            });
+
+        }
+
+        #endregion
+
+        #region AFileOfAKeyThatCannotBeDeletedOnceAsideIsSaidAndLeftOver()
+
+        /// <summary>
+        /// A file of a key that cannot be deleted once all of them are set aside
+        /// is said in the log and left over under its "*.removed" name, which
+        /// the next start does not read: the key is gone, now and then.
+        /// </summary>
+        [Test]
+        public void AFileOfAKeyThatCannotBeDeletedOnceAsideIsSaidAndLeftOver()
+        {
+
+            var (id, _)   = NewKey();
+            var said      = new List<String>();
+
+            store.OnNotice += (level, message) => said.Add($"{level}: {message}");
+
+            store.BeforeRemoving = path => {
+                if (path.EndsWith(".csr.pem.removed", StringComparison.Ordinal))
+                    throw new IOException("The process cannot access the file because it is being used by another process.");
+            };
+
+            var removed   = store.TryRemove(id, out var error, out _);
+
+            store.BeforeRemoving = null;
+
+            var leftOver  = Path.Combine(directory, $"{id}.csr.pem.removed");
+
+            store.Reload();
+
+            Assert.Multiple(() => {
+                Assert.That(removed,   Is.True, error);
+                Assert.That(said,      Has.One.EqualTo($"Warning: '{leftOver}' could not be deleted, and is left over."));
+                Assert.That(FilesOf(id).Select(file => file.Name), Is.EqualTo(new[] { $"{id}.csr.pem.removed" }), "what is left over");
+                Assert.That(store.Entries.Select(entry => entry.Id), Does.Not.Contain(id), "the key, read again");
+            });
+
+        }
+
+        #endregion
+
+        #region AKeyWhoseFilesCannotBeWrittenLeavesNothingBehind(Extension, Beginning)
+
+        /// <summary>
+        /// A key is three files - itself, its signing request and what is said
+        /// of it - and one that could not be written in full was left behind.
+        /// At the next start it was a key nobody had asked for, made "now", of
+        /// the default algorithm and for no subject, or one that could not be
+        /// read and said so at every start. Whichever of the three the disk
+        /// runs out in, nothing of the key stays, now or when the store is read
+        /// again.
+        /// </summary>
+        [TestCase("key.pem",  "-----BEGIN PRIVATE KEY-----")]
+        [TestCase("csr.pem",  "-----BEGIN CERTIFICATE REQUEST-----")]
+        [TestCase("json",     "{")]
+        public void AKeyWhoseFilesCannotBeWrittenLeavesNothingBehind(String Extension, String Beginning)
+        {
+
+            CutOff($".{Extension}", Beginning);
+
+            var made        = store.TryCreateKey("csms001.example.org", ReachableAs, null, out _, out _, out var error, out var notSaved);
+
+            store.BeforeWriting = null;
+
+            var keys        = store.Entries.Select(entry => entry.Id).ToArray();
+            var left        = Directory.GetFiles(directory).Select(Path.GetFileName).ToArray();
+
+            var said        = new List<String>();
+            store.OnNotice += (level, message) => said.Add($"{level}: {message}");
+
+            store.Reload();
+
+            Assert.Multiple(() => {
+
+                Assert.That(made,      Is.False);
+                Assert.That(notSaved,  Is.True);
+                Assert.That(error,     Does.StartWith($"The key could not be written to '{store.Path}': "));
+
+                Assert.That(keys,      Is.Empty,  "the keys");
+                Assert.That(left,      Is.Empty,  "what was left behind");
+
+                Assert.That(store.Entries.Select(entry => entry.Id), Is.Empty, "the keys, read again");
+                Assert.That(said,      Is.Empty,  "what reading them again said");
+
             });
 
         }
@@ -646,6 +855,107 @@ namespace cloud.charging.open.CSMS.Tests
                             "The certificate came back without the private key, so it cannot be used for TLS.");
                 Assert.That(entry.Intermediates.Count,    Is.EqualTo(1));
                 Assert.That(entry.CreatedAt,              Is.EqualTo(clock.Now));
+            });
+
+        }
+
+        #endregion
+
+        #region ARenewalTakesThePlaceOfTheCertificateBeforeIt()
+
+        /// <summary>
+        /// A certificate for a key that has one already - its renewal - takes
+        /// the place of the one before it, now and when the store is read
+        /// again, and nothing of how it was written is left beside it.
+        /// </summary>
+        [Test]
+        public void ARenewalTakesThePlaceOfTheCertificateBeforeIt()
+        {
+
+            using var ca       = TestCA.Create("Test CA");
+
+            var id             = Issue(ca, clock.Now.AddYears(-1), clock.Now.AddYears(1));
+
+            Assert.That(store.TryReadCSR(id, out var csr, out var csrError), Is.True, csrError);
+
+            using var renewal  = ca.Sign(csr!, clock.Now, clock.Now.AddYears(2));
+
+            Assert.That(store.TryAddCertificate(ca.ChainPEM(renewal), ReachableAs, out var taken, out _, out var error),
+                        Is.True, error);
+
+            var inEffect       = store.Entries.Single().Certificate?.Thumbprint;
+            var files          = Directory.GetFiles(directory).Select(Path.GetFileName).Order(StringComparer.Ordinal).ToArray();
+
+            store.Reload();
+
+            Assert.Multiple(() => {
+
+                Assert.That(taken,     Is.EqualTo(id));
+                Assert.That(inEffect,  Is.EqualTo(renewal.Thumbprint),  "the certificate in effect");
+                Assert.That(files,     Is.EqualTo(new[] { $"{id}.cert.pem", $"{id}.csr.pem", $"{id}.json", $"{id}.key.pem" }),
+                                       "the files of the key");
+
+                Assert.That(store.Entries.SingleOrDefault(entry => entry.Id == id)?.Certificate?.Thumbprint,
+                            Is.EqualTo(renewal.Thumbprint),
+                            "the certificate, read again");
+
+            });
+
+        }
+
+        #endregion
+
+        #region ARenewalThatCannotBeWrittenKeepsTheCertificateBeforeIt()
+
+        /// <summary>
+        /// A renewal the disk runs out in halfway through is not taken in, and
+        /// the certificate before it is still the key's, now and when the store
+        /// is read again. It was cut off: the key went on presenting it until
+        /// the next start, and was not read at all then.
+        /// </summary>
+        [Test]
+        public void ARenewalThatCannotBeWrittenKeepsTheCertificateBeforeIt()
+        {
+
+            using var ca       = TestCA.Create("Test CA");
+
+            var id             = Issue(ca, clock.Now.AddYears(-1), clock.Now.AddYears(1));
+            var before         = store.Entries.Single().Certificate!.Thumbprint;
+
+            Assert.That(store.TryReadCSR(id, out var csr, out var csrError), Is.True, csrError);
+
+            using var renewal  = ca.Sign(csr!, clock.Now, clock.Now.AddYears(2));
+            var pem            = ca.ChainPEM(renewal);
+
+            // Its file, under whatever name it is written first.
+            CutOff($"{id}.cert.pem", pem[..(pem.Length / 2)]);
+
+            var taken          = store.TryAddCertificate(pem, ReachableAs, out _, out _, out var error, out var notSaved);
+
+            store.BeforeWriting = null;
+
+            var inEffect       = store.Entries.Single().Certificate?.Thumbprint;
+            var files          = Directory.GetFiles(directory).Select(Path.GetFileName).Order(StringComparer.Ordinal).ToArray();
+
+            var said           = new List<String>();
+            store.OnNotice    += (level, message) => said.Add($"{level}: {message}");
+
+            store.Reload();
+
+            Assert.Multiple(() => {
+
+                Assert.That(taken,     Is.False);
+                Assert.That(notSaved,  Is.True);
+                Assert.That(error,     Does.StartWith($"The certificate could not be written to '{store.Path}': "));
+
+                Assert.That(inEffect,  Is.EqualTo(before),  "the certificate in effect");
+                Assert.That(files,     Is.EqualTo(new[] { $"{id}.cert.pem", $"{id}.csr.pem", $"{id}.json", $"{id}.key.pem" }),
+                                       "the files of the key");
+
+                Assert.That(store.Entries.SingleOrDefault(entry => entry.Id == id)?.Certificate?.Thumbprint,
+                            Is.EqualTo(before),
+                            $"the certificate, read again: {String.Join(" | ", said)}");
+
             });
 
         }

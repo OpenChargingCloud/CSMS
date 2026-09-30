@@ -192,6 +192,20 @@ CSMS says so at every start and at every import. A file copied into the
 directory by hand is adopted at the next start, or at once with **Reload** on
 the page.
 
+The charging station server's keys and chains are kept whole. A change their
+files cannot take is answered 500 with why, and what is in effect stays as it
+was: a key whose files could not all be written - itself, its signing request
+and its description - is taken away again, and so is a chain whose description
+could not be written after its certificates. A certificate is written beside
+the one it replaces and moved over it, and so is what is said of a chain when
+it is renamed or switched on or off, so that a renewal or a change the disk
+runs out in leaves what was there whole. A key or a chain is taken away whole
+or not at all: its files are set aside, as `*.removed`, before any of them is
+deleted, and put back where one of them cannot be - held open by somebody, as
+Windows keeps a file then. A file that cannot be put back, or deleted once all
+are aside, is left over under its `*.removed` name, which the next start does
+not read, and said in the log.
+
 
 ## Running it
 

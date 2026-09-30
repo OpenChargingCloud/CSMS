@@ -123,6 +123,30 @@ namespace cloud.charging.open.CSMS.OCPP
             }
         }
 
+        /// <summary>
+        /// Called with the full path of every file this store writes, just
+        /// before it is written.
+        /// </summary>
+        /// <remarks>
+        /// For the tests, and for nothing else: they make a write fail there,
+        /// or fail partway through as on a full disk. Something put in the way
+        /// of a file refuses its write before it begins; nothing on the outside
+        /// of this store can make one stop halfway.
+        /// </remarks>
+        internal Action<String>? BeforeWriting { get; set; }
+
+        /// <summary>
+        /// Called with the full path of every file this store moves aside,
+        /// moves back or deletes when it takes a chain away, just before it
+        /// does.
+        /// </summary>
+        /// <remarks>
+        /// For the tests, and for nothing else: they make one of them fail
+        /// there, as a file somebody holds open does on Windows - on every
+        /// system, and at the step they choose.
+        /// </remarks>
+        internal Action<String>? BeforeRemoving { get; set; }
+
         #endregion
 
         #region Events
@@ -322,7 +346,7 @@ namespace cloud.charging.open.CSMS.OCPP
 
                     var ordered = new[] { anchor }.Concat(pool.Where(certificate => !ReferenceEquals(certificate, anchor)));
 
-                    File.WriteAllText(
+                    WriteFile(
                         System.IO.Path.Combine(Path, $"{id}.pem"),
                         String.Join(
                             Environment.NewLine,
@@ -330,7 +354,7 @@ namespace cloud.charging.open.CSMS.OCPP
                         ) + Environment.NewLine
                     );
 
-                    File.WriteAllText(
+                    WriteFile(
                         System.IO.Path.Combine(Path, $"{id}.json"),
                         new JObject(
                             new JProperty("id",       id),
@@ -399,7 +423,7 @@ namespace cloud.charging.open.CSMS.OCPP
         /// Switch a chain on or off - and say whether a refusal was the files'
         /// rather than the change's.
         /// </summary>
-        /// <param name="NotSaved">True where the chain's file could not be written: see <see cref="TryRemove(String, out String?, out Boolean)"/>.</param>
+        /// <param name="NotSaved">True where the chain's file could not be written: see <see cref="TryRemove(String, out String?, out Boolean)"/>. The chain is then on or off as it was, now and at the next start.</param>
         public Boolean TrySetEnabled(String                            Id,
                                      Boolean                           Enabled,
                                      [NotNullWhen(false)] out String?  Error,
@@ -456,7 +480,7 @@ namespace cloud.charging.open.CSMS.OCPP
         /// Give a chain another name - and say whether a refusal was the files'
         /// rather than the change's.
         /// </summary>
-        /// <param name="NotSaved">True where the chain's file could not be written: see <see cref="TryRemove(String, out String?, out Boolean)"/>.</param>
+        /// <param name="NotSaved">True where the chain's file could not be written: see <see cref="TryRemove(String, out String?, out Boolean)"/>. The chain then keeps the name it had, now and at the next start.</param>
         public Boolean TryRename(String                            Id,
                                  String                            Name,
                                  [NotNullWhen(false)] out String?  Error,
@@ -531,7 +555,7 @@ namespace cloud.charging.open.CSMS.OCPP
         /// answered both with the 400 or 404 of the first, as it did for the
         /// stations file, where a full disk was a station "not found".
         /// </remarks>
-        /// <param name="NotSaved">True where the files could not be written, read back or removed - nothing was wrong with the change itself.</param>
+        /// <param name="NotSaved">True where the files could not be written, read back or removed - nothing was wrong with the change itself. A chain one of whose files could not be taken away stays, whole, and is still accepted.</param>
         public Boolean TryRemove(String                            Id,
                                  [NotNullWhen(false)] out String?  Error,
                                  out Boolean                       NotSaved)
@@ -539,6 +563,8 @@ namespace cloud.charging.open.CSMS.OCPP
 
             Error     = null;
             NotSaved  = false;
+
+            var leftOver = new List<String>();
 
             lock (updateLock)
             {
@@ -549,28 +575,31 @@ namespace cloud.charging.open.CSMS.OCPP
                     return false;
                 }
 
-                try
-                {
-                    foreach (var extension in new[] { "pem", "json" })
-                    {
-                        var path = System.IO.Path.Combine(Path, $"{Id}.{extension}");
-                        if (File.Exists(path))
-                            File.Delete(path);
-                    }
-                }
-                catch (Exception e)
+                if (!TrySetAside(Id, [ "pem", "json" ], leftOver, out var setAside, out var problem))
                 {
                     NotSaved  = true;
-                    Error     = $"'{Id}' could not be removed from '{Path}': {e.Message}";
-                    return false;
+                    Error     = $"'{Id}' could not be removed from '{Path}': {problem}";
                 }
 
-                OnNotice?.Invoke(LogLevel.Notice, $"'{entry.Name}' is no longer accepted; charging stations whose certificate leads to it will be turned away.");
+                else
+                {
 
-                entry.Dispose();
-                entries.Remove(Id);
+                    OnNotice?.Invoke(LogLevel.Notice, $"'{entry.Name}' is no longer accepted; charging stations whose certificate leads to it will be turned away.");
+
+                    entry.Dispose();
+                    entries.Remove(Id);
+
+                    Delete(setAside, leftOver);
+
+                }
 
             }
+
+            foreach (var file in leftOver)
+                OnNotice?.Invoke(LogLevel.Warning, $"'{file}' could not be {(Error is null ? "deleted" : "put back")}, and is left over.");
+
+            if (Error is not null)
+                return false;
 
             return true;
 
@@ -883,11 +912,17 @@ namespace cloud.charging.open.CSMS.OCPP
 
             Error = null;
 
+            var file = System.IO.Path.Combine(Path, $"{Entry.Id}.json");
+
             try
             {
 
-                File.WriteAllText(
-                    System.IO.Path.Combine(Path, $"{Entry.Id}.json"),
+                // Beside what it replaces, and moved over it in one step:
+                // written in its place, a change the disk ran out in cut what
+                // was said of the chain off, and at the next start the chain
+                // was not read at all - its charging stations turned away.
+                WriteFile(
+                    file + ".tmp",
                     new JObject(
                         new JProperty("id",       Entry.Id),
                         new JProperty("name",     Entry.Name),
@@ -896,20 +931,28 @@ namespace cloud.charging.open.CSMS.OCPP
                     ).ToString(Formatting.Indented) + Environment.NewLine
                 );
 
+                File.Move(file + ".tmp", file, overwrite: true);
+
                 return true;
 
             }
             catch (Exception e)
             {
+
                 Error = $"'{Entry.Id}' could not be written to '{Path}': {e.Message}";
+
+                // What was written of it, beside what it was to replace.
+                Forget(Entry.Id, "json.tmp");
+
                 return false;
+
             }
 
         }
 
         #endregion
 
-        #region (private) CreateDirectory()
+        #region (private) CreateDirectory() / WriteFile(Target, Content)
 
         private void CreateDirectory()
         {
@@ -920,6 +963,19 @@ namespace cloud.charging.open.CSMS.OCPP
             // Nothing in here is secret - these are certificates, and a
             // certificate is a public document - so the ordinary mode.
             Directory.CreateDirectory(Path);
+
+        }
+
+        /// <summary>
+        /// One file of this store written - past <see cref="BeforeWriting"/>
+        /// first.
+        /// </summary>
+        private void WriteFile(String Target, String Content)
+        {
+
+            BeforeWriting?.Invoke(Target);
+
+            File.WriteAllText(Target, Content);
 
         }
 
@@ -945,6 +1001,97 @@ namespace cloud.charging.open.CSMS.OCPP
                 catch (Exception)
                 {
                     // Left where it is, see above.
+                }
+            }
+        }
+
+        #endregion
+
+        #region (private) TrySetAside(Id, Extensions, LeftOver, out SetAside, out Problem) / Delete(SetAside, LeftOver)
+
+        /// <summary>
+        /// The files of one chain moved aside, as "*.removed", all of them or
+        /// none: where one cannot be, those moved already are moved back.
+        /// </summary>
+        /// <remarks>
+        /// So that a chain is taken away whole or not at all. Deleted one after
+        /// the other, a description somebody held open left its certificates
+        /// gone: the chain was accepted until the next start and gone after it
+        /// (found by the charging station). What cannot be moved back is left
+        /// over under its "*.removed" name, which the next start does not read,
+        /// and said in the log.
+        /// </remarks>
+        private Boolean TrySetAside(String                            Id,
+                                    String[]                          Extensions,
+                                    List<String>                      LeftOver,
+                                    out List<String>                  SetAside,
+                                    [NotNullWhen(false)] out String?  Problem)
+        {
+
+            SetAside  = [];
+            Problem   = null;
+
+            foreach (var extension in Extensions)
+            {
+
+                var file = System.IO.Path.Combine(Path, $"{Id}.{extension}");
+
+                if (!File.Exists(file))
+                    continue;
+
+                try
+                {
+                    BeforeRemoving?.Invoke(file);
+                    File.Move(file, file + ".removed", overwrite: true);
+                    SetAside.Add(file);
+                }
+                catch (Exception e)
+                {
+
+                    Problem = e.Message;
+
+                    foreach (var moved in SetAside)
+                    {
+                        try
+                        {
+                            BeforeRemoving?.Invoke(moved + ".removed");
+                            File.Move(moved + ".removed", moved);
+                        }
+                        catch (Exception)
+                        {
+                            LeftOver.Add(moved + ".removed");
+                        }
+                    }
+
+                    SetAside.Clear();
+
+                    return false;
+
+                }
+
+            }
+
+            return true;
+
+        }
+
+        /// <summary>
+        /// The files moved aside deleted; what cannot be is left over under its
+        /// "*.removed" name, which the next start does not read.
+        /// </summary>
+        private void Delete(List<String>  SetAside,
+                            List<String>  LeftOver)
+        {
+            foreach (var file in SetAside)
+            {
+                try
+                {
+                    BeforeRemoving?.Invoke(file + ".removed");
+                    File.Delete(file + ".removed");
+                }
+                catch (Exception)
+                {
+                    LeftOver.Add(file + ".removed");
                 }
             }
         }

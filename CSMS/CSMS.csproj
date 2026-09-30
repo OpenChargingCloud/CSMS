@@ -26,6 +26,15 @@
     <ProjectReference Include="..\..\WWCP_OCPI\WWCP_OCPIv2.3.0\WWCP_OCPIv2.3.0.csproj" />
   </ItemGroup>
 
+  <!-- For the tests: a write of the charging station server's keys and
+       certificates, or of the chains it accepts, that fails where they say,
+       and one of their files that cannot be taken away - which nothing on
+       the outside can bring about on every system; see BeforeWriting and
+       BeforeRemoving in ServerCertificateStore and ClientTrustStore. -->
+  <ItemGroup>
+    <InternalsVisibleTo Include="CSMSTests" />
+  </ItemGroup>
+
   <!--
     PKISetup.cs is the former CSMS.cs: the bench script that built a test PKI -
     root, server, client and firmware CAs, ECC and RSA - and wired up an OCPP
