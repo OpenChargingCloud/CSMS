@@ -412,6 +412,224 @@ namespace cloud.charging.open.CSMS.Tests
 
         #endregion
 
+        #region AChangeTheKeyOrChainFilesCannotTakeIsAServerError(Change)
+
+        /// <summary>
+        /// A change of the server's keys or of the accepted chains that is fine
+        /// in itself, and that their files cannot be written with, is answered
+        /// 500 with why, rather than with the 400 of what could have been wrong
+        /// with it: nothing was. Every route that writes those files. It was the
+        /// status of the refusals, as it was on the stations file's routes.
+        /// </summary>
+        [TestCase("POST certificates")]
+        [TestCase("PUT certificates/{id}")]
+        [TestCase("POST trust")]
+        [TestCase("PUT trust/{id}, name")]
+        [TestCase("PUT trust/{id}, enabled")]
+        public async Task AChangeTheKeyOrChainFilesCannotTakeIsAServerError(String Change)
+        {
+
+            using var http = await SignedIn();
+            using var ca   = TestCA.Create("Some Charging Network");
+
+            var reachable = await http.PutAsync(Root, JSONBody(new JProperty("reachableAs", new JArray("csms001.example.org"))));
+
+            Assert.That(reachable.IsSuccessStatusCode, Is.True, await reachable.Content.ReadAsStringAsync());
+
+            // What makes each change a fine one: a key and the certificate that
+            // answers its request, or a chain accepted already.
+            String? keyId    = null;
+            String? pem      = null;
+            String? chainId  = null;
+
+            if (Change == "PUT certificates/{id}")
+            {
+
+                var key = JObject.Parse(await (await http.PostAsync($"{Root}/certificates",
+                              JSONBody(new JProperty("algorithm", "ecdsa-p256")))).Content.ReadAsStringAsync());
+
+                keyId = key.Value<String>("id")!;
+
+                using var certificate = ca.Sign(key.Value<String>("csr")!,
+                                                DateTimeOffset.UtcNow.AddDays(-1),
+                                                DateTimeOffset.UtcNow.AddYears(1));
+
+                pem = ca.ChainPEM(certificate);
+
+            }
+
+            if (Change.StartsWith("PUT trust", StringComparison.Ordinal))
+            {
+
+                var added = await http.PostAsync($"{Root}/trust", JSONBody(new JProperty("pem", TestCA.ToPEM(ca.Certificate))));
+
+                Assert.That(added.StatusCode, Is.EqualTo(HttpStatusCode.Created), await added.Content.ReadAsStringAsync());
+
+                chainId = JObject.Parse(await added.Content.ReadAsStringAsync()).Value<String>("id")!;
+
+            }
+
+            // Where each change is written, something it cannot be written to.
+            switch (Change)
+            {
+                case "POST certificates":      AFileWhere     (CSMS.ServerCertificates.Path);                                                       break;
+                case "PUT certificates/{id}":  ADirectoryWhere(System.IO.Path.Combine(CSMS.ServerCertificates.Path, $"{keyId}.cert.pem"));         break;
+                case "POST trust":             AFileWhere     (CSMS.ClientTrust.Path);                                                              break;
+                default:                       ADirectoryWhere(System.IO.Path.Combine(CSMS.ClientTrust.Path,        $"{chainId}.json"));            break;
+            }
+
+            var response = Change switch {
+                "POST certificates"        => await http.PostAsync($"{Root}/certificates",         JSONBody(new JProperty("algorithm",  "ecdsa-p256"))),
+                "PUT certificates/{id}"    => await http.PutAsync ($"{Root}/certificates/{keyId}",  JSONBody(new JProperty("pem",        pem))),
+                "POST trust"               => await http.PostAsync($"{Root}/trust",                JSONBody(new JProperty("pem",        TestCA.ToPEM(ca.Certificate)))),
+                "PUT trust/{id}, name"     => await http.PutAsync ($"{Root}/trust/{chainId}",       JSONBody(new JProperty("name",       "Another Charging Network"))),
+                "PUT trust/{id}, enabled"  => await http.PutAsync ($"{Root}/trust/{chainId}",       JSONBody(new JProperty("enabled",    false))),
+                _                          => throw new ArgumentException($"No change '{Change}' here.", nameof(Change))
+            };
+
+            var body = await response.Content.ReadAsStringAsync();
+
+            Assert.Multiple(() => {
+                Assert.That(response.StatusCode,                         Is.EqualTo(HttpStatusCode.InternalServerError), body);
+                Assert.That(JObject.Parse(body).Value<String>("error"),  Does.Contain(Change.Contains("trust") ? CSMS.ClientTrust.Path : CSMS.ServerCertificates.Path));
+            });
+
+        }
+
+        #endregion
+
+        #region AKeyOrAChainWhoseFilesCannotBeRemovedIsAServerError(Change)
+
+        /// <summary>
+        /// A key or a chain that is here, but whose files cannot be removed, is
+        /// answered 500 with why, rather than with the 409 or the 404 of one
+        /// that is not here.
+        /// </summary>
+        /// <remarks>
+        /// Windows's alone: a file held open without leave to delete it stays
+        /// there on Windows, where Linux lets it go all the same - and root
+        /// takes it out of a directory it may not write to as well.
+        /// </remarks>
+        [TestCase("DELETE certificates/{id}")]
+        [TestCase("DELETE trust/{id}")]
+        [Platform("Win")]
+        public async Task AKeyOrAChainWhoseFilesCannotBeRemovedIsAServerError(String Change)
+        {
+
+            using var http = await SignedIn();
+            using var ca   = TestCA.Create("Some Charging Network");
+
+            String id, file, route;
+
+            if (Change == "DELETE certificates/{id}")
+            {
+
+                await http.PutAsync(Root, JSONBody(new JProperty("reachableAs", new JArray("csms001.example.org"))));
+
+                id     = JObject.Parse(await (await http.PostAsync($"{Root}/certificates",
+                             JSONBody(new JProperty("algorithm", "ecdsa-p256")))).Content.ReadAsStringAsync()).Value<String>("id")!;
+
+                file   = System.IO.Path.Combine(CSMS.ServerCertificates.Path, $"{id}.key.pem");
+                route  = $"{Root}/certificates/{id}";
+
+            }
+            else
+            {
+
+                id     = JObject.Parse(await (await http.PostAsync($"{Root}/trust",
+                             JSONBody(new JProperty("pem", TestCA.ToPEM(ca.Certificate))))).Content.ReadAsStringAsync()).Value<String>("id")!;
+
+                file   = System.IO.Path.Combine(CSMS.ClientTrust.Path, $"{id}.pem");
+                route  = $"{Root}/trust/{id}";
+
+            }
+
+            HttpResponseMessage response;
+
+            using (new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.Read))
+                response = await http.DeleteAsync(route);
+
+            var body = await response.Content.ReadAsStringAsync();
+
+            Assert.Multiple(() => {
+                Assert.That(response.StatusCode,                         Is.EqualTo(HttpStatusCode.InternalServerError), body);
+                Assert.That(JObject.Parse(body).Value<String>("error"),  Does.StartWith($"'{id}' could not be removed from "));
+            });
+
+        }
+
+        #endregion
+
+        #region ARefusalOfAKeyOrAChainIsWhatItWasWhileTheirFilesCannotBeWritten()
+
+        /// <summary>
+        /// What was wrong with a change of the keys or the chains is answered as
+        /// it was while their files cannot be written: a 500 is the files', and
+        /// only where it was the files that refused.
+        /// </summary>
+        [Test]
+        public async Task ARefusalOfAKeyOrAChainIsWhatItWasWhileTheirFilesCannotBeWritten()
+        {
+
+            using var http = await SignedIn();
+
+            await http.PutAsync(Root, JSONBody(new JProperty("reachableAs", new JArray("csms001.example.org"))));
+
+            AFileWhere(CSMS.ServerCertificates.Path);
+            AFileWhere(CSMS.ClientTrust.Path);
+
+            var unknownAlgorithm  = await http.PostAsync  ($"{Root}/certificates",                  JSONBody(new JProperty("algorithm", "rot13")));
+            var notACertificate   = await http.PutAsync   ($"{Root}/certificates/0123456789abcdef", JSONBody(new JProperty("pem",       "a certificate, honestly")));
+            var noSuchKey         = await http.DeleteAsync($"{Root}/certificates/0123456789abcdef");
+            var notAChain         = await http.PostAsync  ($"{Root}/trust",                         JSONBody(new JProperty("pem",       "trust us, we are a charging network")));
+            var noChainToName     = await http.PutAsync   ($"{Root}/trust/0123456789abcdef",        JSONBody(new JProperty("name",      "Another Charging Network")));
+            var noSuchChain       = await http.DeleteAsync($"{Root}/trust/0123456789abcdef");
+
+            Assert.Multiple(() => {
+                Assert.That(unknownAlgorithm.StatusCode,  Is.EqualTo(HttpStatusCode.BadRequest),  "a key this CSMS does not make");
+                Assert.That(notACertificate. StatusCode,  Is.EqualTo(HttpStatusCode.BadRequest),  "a certificate that is none");
+                Assert.That(noSuchKey.       StatusCode,  Is.EqualTo(HttpStatusCode.Conflict),    "a key that is not here");
+                Assert.That(notAChain.       StatusCode,  Is.EqualTo(HttpStatusCode.BadRequest),  "a chain that is none");
+                Assert.That(noChainToName.   StatusCode,  Is.EqualTo(HttpStatusCode.BadRequest),  "a chain that is not here, to name");
+                Assert.That(noSuchChain.     StatusCode,  Is.EqualTo(HttpStatusCode.NotFound),    "a chain that is not here");
+            });
+
+        }
+
+        #endregion
+
+        #region (private static) AFileWhere(Directory) / ADirectoryWhere(File)
+
+        /// <summary>
+        /// A file where a store keeps its directory, so that nothing can be
+        /// written below it - on Linux as on Windows, and for root as for
+        /// anybody else, which a directory without write permission is not.
+        /// </summary>
+        private static void AFileWhere(String Directory)
+        {
+
+            if (System.IO.Directory.Exists(Directory))
+                System.IO.Directory.Move(Directory, Directory + ".aside");
+
+            System.IO.File.WriteAllText(Directory, "");
+
+        }
+
+        /// <summary>
+        /// A directory where a store writes one of its files.
+        /// </summary>
+        private static void ADirectoryWhere(String File)
+        {
+
+            if (System.IO.File.Exists(File))
+                System.IO.File.Delete(File);
+
+            System.IO.Directory.CreateDirectory(File);
+
+        }
+
+        #endregion
+
 
         #region AStationIsAddedWithAPasswordShownOnce()
 

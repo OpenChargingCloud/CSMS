@@ -285,7 +285,7 @@ namespace cloud.charging.open.CSMS.OCPP
 
         #endregion
 
-        #region TryCreateKey(Subject, ReachableAs, Algorithm, out Id, out CSR, out Error)
+        #region TryCreateKey(Subject, ReachableAs, Algorithm, out Id, out CSR, out Error [, out NotSaved])
 
         /// <summary>
         /// Generate a key pair and the signing request that goes with it.
@@ -306,11 +306,30 @@ namespace cloud.charging.open.CSMS.OCPP
                                     [NotNullWhen(true)]  out String?  Id,
                                     [NotNullWhen(true)]  out String?  CSR,
                                     [NotNullWhen(false)] out String?  Error)
+
+            => TryCreateKey(Subject, ReachableAs, Algorithm, out Id, out CSR, out Error, out _);
+
+        /// <summary>
+        /// Generate a key pair and the signing request that goes with it - and
+        /// say whether a refusal was the files' rather than the request's.
+        /// </summary>
+        /// <param name="Subject">The common name to ask for, e.g. "csms001.example.org".</param>
+        /// <param name="ReachableAs">The names and addresses the charging stations reach this CSMS under.</param>
+        /// <param name="Algorithm">One of <see cref="Algorithms"/>.</param>
+        /// <param name="NotSaved">True where the key could not be written: see <see cref="TryRemove(String, out String?, out Boolean)"/>.</param>
+        public Boolean TryCreateKey(String                            Subject,
+                                    IEnumerable<String>               ReachableAs,
+                                    String?                           Algorithm,
+                                    [NotNullWhen(true)]  out String?  Id,
+                                    [NotNullWhen(true)]  out String?  CSR,
+                                    [NotNullWhen(false)] out String?  Error,
+                                    out Boolean                       NotSaved)
         {
 
-            Id     = null;
-            CSR    = null;
-            Error  = null;
+            Id        = null;
+            CSR       = null;
+            Error     = null;
+            NotSaved  = false;
 
             #region What was asked for
 
@@ -461,7 +480,8 @@ namespace cloud.charging.open.CSMS.OCPP
                 }
                 catch (Exception e)
                 {
-                    Error = $"The key could not be written to '{Path}': {e.Message}";
+                    NotSaved  = true;
+                    Error     = $"The key could not be written to '{Path}': {e.Message}";
                     return false;
                 }
 
@@ -528,7 +548,7 @@ namespace cloud.charging.open.CSMS.OCPP
 
         #endregion
 
-        #region TryAddCertificate(PEM, ReachableAs, out Id, out Warnings, out Error)
+        #region TryAddCertificate(PEM, ReachableAs, out Id, out Warnings, out Error [, out NotSaved])
 
         /// <summary>
         /// Take a certificate that came back from a certificate authority,
@@ -555,11 +575,28 @@ namespace cloud.charging.open.CSMS.OCPP
                                          [NotNullWhen(true)]  out String?    Id,
                                          out IReadOnlyList<String>           Warnings,
                                          [NotNullWhen(false)] out String?    Error)
+
+            => TryAddCertificate(PEM, ReachableAs, out Id, out Warnings, out Error, out _);
+
+        /// <summary>
+        /// Take a certificate that came back from a certificate authority - and
+        /// say whether a refusal was the files' rather than the certificate's.
+        /// </summary>
+        /// <param name="PEM">The certificate, and any intermediates, as PEM.</param>
+        /// <param name="ReachableAs">What the certificate ought to be valid for.</param>
+        /// <param name="NotSaved">True where the certificate could not be written, or not read back once it was: see <see cref="TryRemove(String, out String?, out Boolean)"/>.</param>
+        public Boolean TryAddCertificate(String                              PEM,
+                                         IEnumerable<String>                 ReachableAs,
+                                         [NotNullWhen(true)]  out String?    Id,
+                                         out IReadOnlyList<String>           Warnings,
+                                         [NotNullWhen(false)] out String?    Error,
+                                         out Boolean                         NotSaved)
         {
 
             Id        = null;
             Warnings  = [];
             Error     = null;
+            NotSaved  = false;
 
             #region What was uploaded
 
@@ -663,7 +700,8 @@ namespace cloud.charging.open.CSMS.OCPP
                 }
                 catch (Exception e)
                 {
-                    Error = $"The certificate could not be written to '{Path}': {e.Message}";
+                    NotSaved  = true;
+                    Error     = $"The certificate could not be written to '{Path}': {e.Message}";
                     return false;
                 }
 
@@ -675,7 +713,8 @@ namespace cloud.charging.open.CSMS.OCPP
                 // after a restart, and that is worth finding out now.
                 if (!TryLoadEntry(leafId, out var entry, out var publicKey, out var problem))
                 {
-                    Error = $"The certificate was written but cannot be read back: {problem}";
+                    NotSaved  = true;
+                    Error     = $"The certificate was written but cannot be read back: {problem}";
                     return false;
                 }
 
@@ -705,7 +744,7 @@ namespace cloud.charging.open.CSMS.OCPP
 
         #endregion
 
-        #region TryRemove(Id, out Error)
+        #region TryRemove(Id, out Error [, out NotSaved])
 
         /// <summary>
         /// Throw a key, its request and its certificate away.
@@ -718,9 +757,30 @@ namespace cloud.charging.open.CSMS.OCPP
         /// </remarks>
         public Boolean TryRemove(String                            Id,
                                  [NotNullWhen(false)] out String?  Error)
+
+            => TryRemove(Id, out Error, out _);
+
+        /// <summary>
+        /// Throw a key, its request and its certificate away - and say whether
+        /// a refusal was the files' rather than the change's.
+        /// </summary>
+        /// <remarks>
+        /// Every change here says so, where it may be refused for two reasons
+        /// that are answered differently: something about it was wrong - no
+        /// such key, the one being presented, a certificate for no key of this
+        /// CSMS - or it was fine, and the files could not be written or removed.
+        /// The web interface answered both with the 400 or 409 of the first, as
+        /// it did for the stations file, where a full disk was a station "not
+        /// found".
+        /// </remarks>
+        /// <param name="NotSaved">True where the files could not be written, read back or removed - nothing was wrong with the change itself.</param>
+        public Boolean TryRemove(String                            Id,
+                                 [NotNullWhen(false)] out String?  Error,
+                                 out Boolean                       NotSaved)
         {
 
-            Error = null;
+            Error     = null;
+            NotSaved  = false;
 
             lock (updateLock)
             {
@@ -749,7 +809,8 @@ namespace cloud.charging.open.CSMS.OCPP
                 }
                 catch (Exception e)
                 {
-                    Error = $"'{Id}' could not be removed from '{Path}': {e.Message}";
+                    NotSaved  = true;
+                    Error     = $"'{Id}' could not be removed from '{Path}': {e.Message}";
                     return false;
                 }
 

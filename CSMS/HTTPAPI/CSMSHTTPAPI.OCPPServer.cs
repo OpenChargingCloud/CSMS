@@ -199,9 +199,10 @@ namespace cloud.charging.open.CSMS
                      json.Value<String>("algorithm"),
                      out var id,
                      out var csr,
-                     out var error))
+                     out var error,
+                     out var notSaved))
             {
-                return Task.FromResult(ErrorJSON(Request, HTTPStatusCode.BadRequest, error));
+                return Task.FromResult(NotChanged(Request, HTTPStatusCode.BadRequest, error, notSaved));
             }
 
             Log.Notice($"'{user.Id}' had this CSMS generate the key '{id}'.", "ocpp", "tls", "web");
@@ -280,9 +281,10 @@ namespace cloud.charging.open.CSMS
                      CSMS.OCPPServerSettings.ReachableAs ?? [],
                      out var actual,
                      out var warnings,
-                     out var error))
+                     out var error,
+                     out var notSaved))
             {
-                return Task.FromResult(ErrorJSON(Request, HTTPStatusCode.BadRequest, error));
+                return Task.FromResult(NotChanged(Request, HTTPStatusCode.BadRequest, error, notSaved));
             }
 
             if (actual != id)
@@ -321,8 +323,8 @@ namespace cloud.charging.open.CSMS
             if (!TryGetId(Request, out var id, out var badRequest))
                 return Task.FromResult(badRequest);
 
-            if (!CSMS.ServerCertificates.TryRemove(id, out var error))
-                return Task.FromResult(ErrorJSON(Request, HTTPStatusCode.Conflict, error));
+            if (!CSMS.ServerCertificates.TryRemove(id, out var error, out var notSaved))
+                return Task.FromResult(NotChanged(Request, HTTPStatusCode.Conflict, error, notSaved));
 
             Log.Notice($"'{user.Id}' removed the key '{id}'.", "ocpp", "tls", "web");
 
@@ -370,8 +372,8 @@ namespace cloud.charging.open.CSMS
             if (pem.Length == 0)
                 return Task.FromResult(ErrorJSON(Request, HTTPStatusCode.BadRequest, "A 'pem' with the certificate authority in it is required."));
 
-            if (!CSMS.ClientTrust.TryAdd(pem, json.Value<String>("name"), out var id, out var warnings, out var error))
-                return Task.FromResult(ErrorJSON(Request, HTTPStatusCode.BadRequest, error));
+            if (!CSMS.ClientTrust.TryAdd(pem, json.Value<String>("name"), out var id, out var warnings, out var error, out var notSaved))
+                return Task.FromResult(NotChanged(Request, HTTPStatusCode.BadRequest, error, notSaved));
 
             Log.Notice($"'{user.Id}' added the accepted chain '{id}'.", "ocpp", "tls", "trust", "web");
 
@@ -405,12 +407,12 @@ namespace cloud.charging.open.CSMS
                 return Task.FromResult(errorResponse);
 
             if (json.Value<String>("name") is { Length: > 0 } name &&
-                !CSMS.ClientTrust.TryRename(id, name, out var renameError))
-                return Task.FromResult(ErrorJSON(Request, HTTPStatusCode.BadRequest, renameError));
+                !CSMS.ClientTrust.TryRename(id, name, out var renameError, out var renameNotSaved))
+                return Task.FromResult(NotChanged(Request, HTTPStatusCode.BadRequest, renameError, renameNotSaved));
 
             if (json.Value<Boolean?>("enabled") is Boolean enabled &&
-                !CSMS.ClientTrust.TrySetEnabled(id, enabled, out var enableError))
-                return Task.FromResult(ErrorJSON(Request, HTTPStatusCode.BadRequest, enableError));
+                !CSMS.ClientTrust.TrySetEnabled(id, enabled, out var enableError, out var enableNotSaved))
+                return Task.FromResult(NotChanged(Request, HTTPStatusCode.BadRequest, enableError, enableNotSaved));
 
             Log.Info($"'{user.Id}' changed the accepted chain '{id}'.", "ocpp", "tls", "trust", "web");
 
@@ -432,8 +434,8 @@ namespace cloud.charging.open.CSMS
             if (!TryGetId(Request, out var id, out var badRequest))
                 return Task.FromResult(badRequest);
 
-            if (!CSMS.ClientTrust.TryRemove(id, out var error))
-                return Task.FromResult(ErrorJSON(Request, HTTPStatusCode.NotFound, error));
+            if (!CSMS.ClientTrust.TryRemove(id, out var error, out var notSaved))
+                return Task.FromResult(NotChanged(Request, HTTPStatusCode.NotFound, error, notSaved));
 
             Log.Notice($"'{user.Id}' removed the accepted chain '{id}'.", "ocpp", "tls", "trust", "web");
 
@@ -683,10 +685,11 @@ namespace cloud.charging.open.CSMS
                                                   out Boolean                       NotSaved);
 
         /// <summary>
-        /// The answer to a change of the logins that was not made: the status
-        /// of what was wrong with it - or 500, where nothing was, and the file
-        /// could not be written, the change undone. Both came as the status of
-        /// what was wrong, and a full disk was a station "not found".
+        /// The answer to a change of the logins, the keys or the chains that was
+        /// not made: the status of what was wrong with it - or 500, where
+        /// nothing was, and its files could not be written or removed. Both came
+        /// as the status of what was wrong, and a full disk was a station "not
+        /// found".
         /// </summary>
         private static HTTPResponse NotChanged(HTTPRequest     Request,
                                                HTTPStatusCode  WhatWasWrong,

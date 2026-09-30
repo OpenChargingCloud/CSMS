@@ -200,7 +200,7 @@ namespace cloud.charging.open.CSMS.OCPP
 
         #endregion
 
-        #region TryAdd(PEM, Name, out Id, out Warnings, out Error)
+        #region TryAdd(PEM, Name, out Id, out Warnings, out Error [, out NotSaved])
 
         /// <summary>
         /// Accept certificates that lead to the certificate in this file.
@@ -219,11 +219,28 @@ namespace cloud.charging.open.CSMS.OCPP
                               [NotNullWhen(true)]  out String?  Id,
                               out IReadOnlyList<String>         Warnings,
                               [NotNullWhen(false)] out String?  Error)
+
+            => TryAdd(PEM, Name, out Id, out Warnings, out Error, out _);
+
+        /// <summary>
+        /// Accept certificates that lead to the certificate in this file - and
+        /// say whether a refusal was the files' rather than the upload's.
+        /// </summary>
+        /// <param name="PEM">One or more certificates, as PEM.</param>
+        /// <param name="Name">What to call this chain, or null to use the subject of its anchor.</param>
+        /// <param name="NotSaved">True where the chain could not be written, or not read back once it was: see <see cref="TryRemove(String, out String?, out Boolean)"/>.</param>
+        public Boolean TryAdd(String                            PEM,
+                              String?                           Name,
+                              [NotNullWhen(true)]  out String?  Id,
+                              out IReadOnlyList<String>         Warnings,
+                              [NotNullWhen(false)] out String?  Error,
+                              out Boolean                       NotSaved)
         {
 
             Id        = null;
             Warnings  = [];
             Error     = null;
+            NotSaved  = false;
 
             #region What was uploaded
 
@@ -326,7 +343,8 @@ namespace cloud.charging.open.CSMS.OCPP
                 }
                 catch (Exception e)
                 {
-                    Error = $"The chain could not be written to '{Path}': {e.Message}";
+                    NotSaved  = true;
+                    Error     = $"The chain could not be written to '{Path}': {e.Message}";
                     return false;
                 }
 
@@ -334,7 +352,8 @@ namespace cloud.charging.open.CSMS.OCPP
 
                 if (!TryLoadEntry(id, out var entry, out var problem))
                 {
-                    Error = $"The chain was written but cannot be read back: {problem}";
+                    NotSaved  = true;
+                    Error     = $"The chain was written but cannot be read back: {problem}";
                     return false;
                 }
 
@@ -357,7 +376,7 @@ namespace cloud.charging.open.CSMS.OCPP
 
         #endregion
 
-        #region TrySetEnabled(Id, Enabled, out Error) / TryRename(Id, Name, out Error)
+        #region TrySetEnabled(Id, Enabled, out Error [, out NotSaved]) / TryRename(Id, Name, out Error [, out NotSaved])
 
         /// <summary>
         /// Switch a chain on or off without throwing it away.
@@ -365,9 +384,22 @@ namespace cloud.charging.open.CSMS.OCPP
         public Boolean TrySetEnabled(String                            Id,
                                      Boolean                           Enabled,
                                      [NotNullWhen(false)] out String?  Error)
+
+            => TrySetEnabled(Id, Enabled, out Error, out _);
+
+        /// <summary>
+        /// Switch a chain on or off - and say whether a refusal was the files'
+        /// rather than the change's.
+        /// </summary>
+        /// <param name="NotSaved">True where the chain's file could not be written: see <see cref="TryRemove(String, out String?, out Boolean)"/>.</param>
+        public Boolean TrySetEnabled(String                            Id,
+                                     Boolean                           Enabled,
+                                     [NotNullWhen(false)] out String?  Error,
+                                     out Boolean                       NotSaved)
         {
 
-            Error = null;
+            Error     = null;
+            NotSaved  = false;
 
             lock (updateLock)
             {
@@ -385,7 +417,8 @@ namespace cloud.charging.open.CSMS.OCPP
 
                 if (!TrySaveMeta(entry, out Error))
                 {
-                    entry.Enabled = !Enabled;
+                    NotSaved       = true;
+                    entry.Enabled  = !Enabled;
                     return false;
                 }
 
@@ -408,9 +441,22 @@ namespace cloud.charging.open.CSMS.OCPP
         public Boolean TryRename(String                            Id,
                                  String                            Name,
                                  [NotNullWhen(false)] out String?  Error)
+
+            => TryRename(Id, Name, out Error, out _);
+
+        /// <summary>
+        /// Give a chain another name - and say whether a refusal was the files'
+        /// rather than the change's.
+        /// </summary>
+        /// <param name="NotSaved">True where the chain's file could not be written: see <see cref="TryRemove(String, out String?, out Boolean)"/>.</param>
+        public Boolean TryRename(String                            Id,
+                                 String                            Name,
+                                 [NotNullWhen(false)] out String?  Error,
+                                 out Boolean                       NotSaved)
         {
 
-            Error = null;
+            Error     = null;
+            NotSaved  = false;
 
             var name = Name?.Trim() ?? "";
 
@@ -440,7 +486,8 @@ namespace cloud.charging.open.CSMS.OCPP
 
                 if (!TrySaveMeta(entry, out Error))
                 {
-                    entry.Name = previous;
+                    NotSaved    = true;
+                    entry.Name  = previous;
                     return false;
                 }
 
@@ -452,7 +499,7 @@ namespace cloud.charging.open.CSMS.OCPP
 
         #endregion
 
-        #region TryRemove(Id, out Error)
+        #region TryRemove(Id, out Error [, out NotSaved])
 
         /// <summary>
         /// Stop accepting certificates that lead to this anchor, and throw it
@@ -460,9 +507,30 @@ namespace cloud.charging.open.CSMS.OCPP
         /// </summary>
         public Boolean TryRemove(String                            Id,
                                  [NotNullWhen(false)] out String?  Error)
+
+            => TryRemove(Id, out Error, out _);
+
+        /// <summary>
+        /// Stop accepting certificates that lead to this anchor, and throw it
+        /// away - and say whether a refusal was the files' rather than the
+        /// change's.
+        /// </summary>
+        /// <remarks>
+        /// Every change here says so, where it may be refused for two reasons
+        /// that are answered differently: something about it was wrong - no
+        /// such chain, a file that holds none, a name too long - or it was fine,
+        /// and the files could not be written or removed. The web interface
+        /// answered both with the 400 or 404 of the first, as it did for the
+        /// stations file, where a full disk was a station "not found".
+        /// </remarks>
+        /// <param name="NotSaved">True where the files could not be written, read back or removed - nothing was wrong with the change itself.</param>
+        public Boolean TryRemove(String                            Id,
+                                 [NotNullWhen(false)] out String?  Error,
+                                 out Boolean                       NotSaved)
         {
 
-            Error = null;
+            Error     = null;
+            NotSaved  = false;
 
             lock (updateLock)
             {
@@ -484,7 +552,8 @@ namespace cloud.charging.open.CSMS.OCPP
                 }
                 catch (Exception e)
                 {
-                    Error = $"'{Id}' could not be removed from '{Path}': {e.Message}";
+                    NotSaved  = true;
+                    Error     = $"'{Id}' could not be removed from '{Path}': {e.Message}";
                     return false;
                 }
 
