@@ -603,21 +603,33 @@ namespace cloud.charging.open.CSMS
         #region DisposeAsync()
 
         /// <summary>
-        /// Stop listening, let go of the stores of the charging station server,
-        /// and then of what the node below holds.
+        /// Stop listening, write out what the OCPI library still holds for its
+        /// files, let go of the stores of the charging station server, and then
+        /// of what the node below holds.
         /// </summary>
         public override async ValueTask DisposeAsync()
         {
 
             // Stopped first, so that no charging station is still being let in
-            // against a store that has already been let go of. The node below
-            // stops again, which does no harm.
-            await Stop();
+            // against a store that has already been let go of, and no roaming
+            // partner changes anything once the OCPI library's queue is written
+            // out. The node below stops again, which does no harm - and lets go
+            // of what it holds even where this throws.
+            try
+            {
 
-            ServerCertificates?.Dispose();
-            ClientTrust?       .Dispose();
+                await Stop();
 
-            await base.DisposeAsync();
+                await ocpiAPI.DisposeAsync();
+
+                ServerCertificates?.Dispose();
+                ClientTrust?       .Dispose();
+
+            }
+            finally
+            {
+                await base.DisposeAsync();
+            }
 
         }
 
