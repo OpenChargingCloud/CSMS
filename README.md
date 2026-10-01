@@ -142,7 +142,15 @@ OCPI library keeps them, and what they sent, in append-only files of its own
 below an `ocpi/` directory beside the configuration, one set per version, and
 reads them back at every start. A partner is added or removed only once its
 file has it: where that file cannot be written, the Roaming partners page is
-answered 500 with why, and nothing changes.
+answered 500 with why, and nothing changes. So it is with a registration:
+where the file cannot take the token the partner is to call back with, nothing
+is sent. Where the partner accepted and the file refused its answer, the
+registration is in effect all the same - the partner uses the new tokens
+already - and is written down with the next change the file takes, or when the
+CSMS stops; repair the file before then, or the next start will not know it,
+which the log says. Both are answered 500 with why. A partner registering here
+while its file refuses is answered OCPI 3000 with HTTP 500, and the token it
+came with stays valid.
 
 
 ## Certificates, and where they live

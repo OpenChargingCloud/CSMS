@@ -472,9 +472,17 @@ namespace cloud.charging.open.CSMS
         protected override async Task OnStopping()
         {
 
+            WhileStopping?.Invoke();
+
             await StopOCPPServer();
 
         }
+
+        /// <summary>
+        /// A test's hook into stopping, before the charging station server
+        /// stops: what it throws, Stop() throws.
+        /// </summary>
+        internal Action? WhileStopping { get; set; }
 
         #endregion
 
@@ -613,14 +621,21 @@ namespace cloud.charging.open.CSMS
             // Stopped first, so that no charging station is still being let in
             // against a store that has already been let go of, and no roaming
             // partner changes anything once the OCPI library's queue is written
-            // out. The node below stops again, which does no harm - and lets go
-            // of what it holds even where this throws.
+            // out. That is written out even where stopping throws: a
+            // registration a partner accepted may be among it, and nothing else
+            // writes it down. The node below stops again, which does no harm -
+            // and lets go of what it holds even where this throws.
             try
             {
 
-                await Stop();
-
-                await ocpiAPI.DisposeAsync();
+                try
+                {
+                    await Stop();
+                }
+                finally
+                {
+                    await DisposeOCPI();
+                }
 
                 ServerCertificates?.Dispose();
                 ClientTrust?       .Dispose();
@@ -630,6 +645,33 @@ namespace cloud.charging.open.CSMS
             {
                 await base.DisposeAsync();
             }
+
+        }
+
+        #endregion
+
+        #region (private) DisposeOCPI()
+
+        /// <summary>
+        /// Write out what the OCPI library still holds for its files, and say
+        /// what the file of the partners still refused.
+        /// </summary>
+        /// <remarks>
+        /// A registration a partner accepted while that file refused it was
+        /// kept, and the library wrote it down just now where the file took it
+        /// at last. Where it still did not, the next start will not know it.
+        /// </remarks>
+        private async Task DisposeOCPI()
+        {
+
+            await ocpiAPI.DisposeAsync();
+
+            foreach (var version in ocpiVersions)
+                foreach (var remotePartyId in version.UnsavedRemoteParties)
+                    Log.Error(
+                        $"OCPI {version.Label}: what this CSMS holds about the roaming partner '{remotePartyId}' could not be written, and the next start will not know it.",
+                        "ocpi", "files"
+                    );
 
         }
 
