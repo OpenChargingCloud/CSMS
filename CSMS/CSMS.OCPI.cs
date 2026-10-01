@@ -425,6 +425,11 @@ namespace cloud.charging.open.CSMS
         /// partner, so it has to be shown once. The library keeps it readable,
         /// because it has to compare it on every request; the page shows it
         /// only to whoever may manage partners.
+        ///
+        /// Where it was only the file the library keeps the partners of the
+        /// version in that refused, the result says NotSaved, and nothing was
+        /// added: listed and opening this operator until the next start, and
+        /// gone after it, was what it was before WWCP_OCPI bb8c6601.
         /// </remarks>
         public async Task<OCPIOperationResult> AddRemotePartyAsync(JObject JSON)
         {
@@ -530,10 +535,12 @@ namespace cloud.charging.open.CSMS
 
             #endregion
 
-            var error = await version.AddRemoteParty(spec);
+            var result = await version.AddRemoteParty(spec);
 
-            if (error is not null)
-                return OCPIOperationResult.Failed(error);
+            if (!result.Success)
+                return result.NotSaved
+                           ? OCPIOperationResult.Failed($"The roaming partner '{spec.Id}' was not added: {result.Message}", NotSaved: true)
+                           : OCPIOperationResult.Failed(result.Message);
 
             Log.Notice(
                 $"The roaming partner '{spec.Id}' ('{name}') was added on OCPI {version.Label}" +
@@ -597,6 +604,13 @@ namespace cloud.charging.open.CSMS
         /// moment this returns; what it pushed stays, because that is a record
         /// and not a setting.
         /// </summary>
+        /// <remarks>
+        /// Where it was only the file the library keeps the partners of the
+        /// version in that refused, the result says NotSaved, and the partner
+        /// is still there, its token still opening this operator: gone until
+        /// the next start, and back after it, was what it was before WWCP_OCPI
+        /// bb8c6601.
+        /// </remarks>
         public async Task<OCPIOperationResult> RemoveRemotePartyAsync(String? Label, String? Id)
         {
 
@@ -609,8 +623,12 @@ namespace cloud.charging.open.CSMS
             if (version.GetRemoteParty(remotePartyId) is null)
                 return OCPIOperationResult.Failed($"There is no roaming partner '{remotePartyId}' on OCPI {version.Label}.");
 
-            if (!await version.RemoveRemoteParty(remotePartyId))
-                return OCPIOperationResult.Failed($"The roaming partner '{remotePartyId}' could not be removed.");
+            var removed = await version.RemoveRemoteParty(remotePartyId);
+
+            if (!removed.Success)
+                return removed.NotSaved
+                           ? OCPIOperationResult.Failed($"The roaming partner '{remotePartyId}' was not removed, and its token still opens this operator: {removed.Message}", NotSaved: true)
+                           : OCPIOperationResult.Failed($"The roaming partner '{remotePartyId}' could not be removed.");
 
             Log.Notice($"The roaming partner '{remotePartyId}' was removed from OCPI {version.Label}; its token no longer opens this operator.", "ocpi", "partner");
 

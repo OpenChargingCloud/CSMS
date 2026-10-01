@@ -140,7 +140,9 @@ roaming partner wrote into its credentials, and they have nothing to do with the
 OCPP identification above. The partners themselves are *not* in that file: the
 OCPI library keeps them, and what they sent, in append-only files of its own
 below an `ocpi/` directory beside the configuration, one set per version, and
-reads them back at every start.
+reads them back at every start. A partner is added or removed only once its
+file has it: where that file cannot be written, the Roaming partners page is
+answered 500 with why, and nothing changes.
 
 
 ## Certificates, and where they live

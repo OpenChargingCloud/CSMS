@@ -128,7 +128,8 @@ namespace cloud.charging.open.CSMS
         /// this response: somebody hands it to the partner, who registers with
         /// it. With the partner's own token and versions URL as well, this
         /// operator can start the peering itself - see
-        /// <see cref="PostPartnerRegister"/>.
+        /// <see cref="PostPartnerRegister"/>. A partner the file of its
+        /// version cannot take is answered 500 with why, and is not added.
         /// </remarks>
         private async Task<HTTPResponse> PostPartner(HTTPRequest Request)
         {
@@ -142,7 +143,7 @@ namespace cloud.charging.open.CSMS
             var result = await CSMS.AddRemotePartyAsync(json);
 
             if (!result.Success)
-                return ErrorJSON(Request, HTTPStatusCode.BadRequest, result.Message);
+                return NotChanged(Request, HTTPStatusCode.BadRequest, result.Message, result.NotSaved);
 
             Log.Info($"'{user.Id}' added the roaming partner '{result.Data?.Value<String>("id")}'.", "ocpi", "partner", "web");
 
@@ -197,6 +198,10 @@ namespace cloud.charging.open.CSMS
         /// DELETE /api/v1/ocpi/partners/{version}/{id}: forget a roaming
         /// partner.
         /// </summary>
+        /// <remarks>
+        /// A removal the file of its version cannot take is answered 500 with
+        /// why, and the partner stays, its token still opening this operator.
+        /// </remarks>
         private async Task<HTTPResponse> DeletePartner(HTTPRequest Request)
         {
 
@@ -209,7 +214,7 @@ namespace cloud.charging.open.CSMS
             var result = await CSMS.RemoveRemotePartyAsync(version, id);
 
             if (!result.Success)
-                return ErrorJSON(Request, HTTPStatusCode.NotFound, result.Message);
+                return NotChanged(Request, HTTPStatusCode.NotFound, result.Message, result.NotSaved);
 
             Log.Info($"'{user.Id}' removed the roaming partner '{id}' (OCPI {version}).", "ocpi", "partner", "web");
 

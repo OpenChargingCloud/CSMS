@@ -196,7 +196,7 @@ namespace cloud.charging.open.CSMS.OCPI
                                                        ));
 
 
-        public override async Task<String?> AddRemoteParty(RemotePartySpec Spec)
+        public override async Task<OCPIOperationResult> AddRemoteParty(RemotePartySpec Spec)
         {
 
             var businessDetails = new BusinessDetails(Spec.Name, Spec.Website);
@@ -232,14 +232,28 @@ namespace cloud.charging.open.CSMS.OCPI
                                      );
 
             return result.IsSuccess
-                       ? null
-                       : result.ErrorResponse ?? "The library declined to add the roaming partner and did not say why.";
+                       ? OCPIOperationResult.Ok($"The roaming partner '{Spec.Id}' was added on OCPI {Label}.")
+                       : OCPIOperationResult.Failed(
+                             result.ErrorResponse ?? "The library declined to add the roaming partner and did not say why.",
+                             result.NotSaved
+                         );
 
         }
 
 
-        public override Task<Boolean> RemoveRemoteParty(RemoteParty_Id Id)
-            => commonAPI.RemoveRemoteParty(Id);
+        public override async Task<OCPIOperationResult> RemoveRemoteParty(RemoteParty_Id Id)
+        {
+
+            var result = await commonAPI.TryRemoveRemoteParty(Id);
+
+            return result.IsSuccess
+                       ? OCPIOperationResult.Ok($"The roaming partner '{Id}' was removed from OCPI {Label}.")
+                       : OCPIOperationResult.Failed(
+                             result.ErrorResponse ?? "The library declined to remove the roaming partner and did not say why.",
+                             result.NotSaved
+                         );
+
+        }
 
 
         public override async Task<OCPIOperationResult> Register(RemoteParty_Id Id)
