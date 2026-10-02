@@ -281,6 +281,27 @@ namespace cloud.charging.open.CSMS
             ocpiAPI.OnDatabaseLineNotWritten += (timestamp, writer, fileName, line, exception) =>
                 Log.Exception(exception, $"OCPI: a change the next start will not know, because '{fileName}' could not be written", "ocpi", "files");
 
+            // An OCPI request whose handling threw is answered OCPI 3000 with
+            // HTTP 500 and the ids to quote, and nothing else; what was thrown
+            // the library says to nobody but this event. What was asked, by
+            // whom, and the ids, which join the two - not the request's
+            // headers, whose Authorization is a token.
+            ocpiAPI.OnRequestFailed += (timestamp, request, requestId, correlationId, remotePartyId, exception) => {
+
+                Log.Exception(
+                    exception,
+                    $"OCPI: {request.HTTPMethod} {request.Path} from " +
+                    (remotePartyId.HasValue
+                         ? $"the roaming partner '{remotePartyId}'"
+                         : $"somebody at {request.RemoteSocket}") +
+                    $" failed (request id {requestId}, correlation id {correlationId})",
+                    "ocpi", "http"
+                );
+
+                return Task.CompletedTask;
+
+            };
+
             foreach (var version in ocpiSettings.EffectiveVersions)
             {
 

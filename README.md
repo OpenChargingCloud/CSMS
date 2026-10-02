@@ -152,6 +152,14 @@ which the log says. Both are answered 500 with why. A partner registering here
 while its file refuses is answered OCPI 3000 with HTTP 500, and the token it
 came with stays valid.
 
+An OCPI request whose handling fails is answered OCPI 3000 with HTTP 500, a
+message that says nothing of this CSMS, and the request and correlation ids the
+caller came with - or new ones - to quote. What failed is an error in the log,
+tagged `ocpi` and `http`: what was asked, by which partner or from which
+address, the ids, and what was thrown; not the headers, which carry the token.
+A Basic authentication whose password is no TOTP, which is what a scanner
+sends, is turned away as an unknown token, and no error.
+
 
 ## Certificates, and where they live
 
