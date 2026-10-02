@@ -472,15 +472,25 @@ namespace cloud.charging.open.CSMS
         protected override async Task OnStopping()
         {
 
-            WhileStopping?.Invoke();
-
-            await StopOCPPServer();
+            // The charging station server stops even where what comes before
+            // it throws: a stop that failed has stopped all the same, the node
+            // below does not stop a second time, and nothing else would close
+            // the charging station port.
+            try
+            {
+                WhileStopping?.Invoke();
+            }
+            finally
+            {
+                await StopOCPPServer();
+            }
 
         }
 
         /// <summary>
         /// A test's hook into stopping, before the charging station server
-        /// stops: what it throws, Stop() throws.
+        /// stops: what it throws, Stop() throws, once the charging station
+        /// server has stopped all the same.
         /// </summary>
         internal Action? WhileStopping { get; set; }
 
@@ -623,8 +633,9 @@ namespace cloud.charging.open.CSMS
             // partner changes anything once the OCPI library's queue is written
             // out. That is written out even where stopping throws: a
             // registration a partner accepted may be among it, and nothing else
-            // writes it down. The node below stops again, which does no harm -
-            // and lets go of what it holds even where this throws.
+            // writes it down. A stop that threw has stopped all the same, and
+            // the node below does not stop again; it lets go of what it holds
+            // even where this throws.
             try
             {
 

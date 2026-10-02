@@ -571,11 +571,7 @@ namespace cloud.charging.open.CSMS.Tests
 
                 PartnersFiles.Unblock(PartnersFiles.FileOf(csms, "2.2.1"));
 
-                // Once: the node below stops again as it is disposed.
-                csms.WhileStopping = () => {
-                    csms.WhileStopping = null;
-                    throw new InvalidOperationException("Stopping failed, on purpose.");
-                };
+                csms.WhileStopping = () => throw new InvalidOperationException("Stopping failed, on purpose.");
 
                 Assert.ThrowsAsync<InvalidOperationException>(async () => await csms.DisposeAsync());
 
