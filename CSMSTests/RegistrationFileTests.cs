@@ -573,7 +573,7 @@ namespace cloud.charging.open.CSMS.Tests
 
                 csms.WhileStopping = () => throw new InvalidOperationException("Stopping failed, on purpose.");
 
-                Assert.ThrowsAsync<InvalidOperationException>(async () => await csms.DisposeAsync());
+                await Assert.ThrowsAsync<InvalidOperationException>(async () => await csms.DisposeAsync());
 
                 var again = await PartnersFiles.PartnerAfterARestart(directory, "2.2.1", id);
 
