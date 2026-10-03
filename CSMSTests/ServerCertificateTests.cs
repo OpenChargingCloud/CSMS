@@ -583,7 +583,12 @@ namespace cloud.charging.open.CSMS.Tests
 
             Issue(ca, clock.Now.AddYears(-1), clock.Now.AddYears(1));
 
-            Assert.That(store.Select(), Is.SameAs(store.Select()));
+            var first   = store.Select();
+            var second  = store.Select();
+
+            // Not null first: two nulls would be the same answer as well.
+            Assert.That(first,   Is.Not.Null, "There is no chain to answer with.");
+            Assert.That(second,  Is.SameAs(first));
 
         }
 
