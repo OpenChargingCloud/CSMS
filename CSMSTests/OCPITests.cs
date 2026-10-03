@@ -642,6 +642,42 @@ namespace cloud.charging.open.CSMS.Tests
 
         #endregion
 
+        #region TheCredentialsAreNoneOfAStrangersBusiness(Version)
+
+        /// <summary>
+        /// The credentials endpoint answers a partner with what it holds of
+        /// it - and anybody else with nothing: no versions URL, no roles, no
+        /// business details. Neither without a token nor with a made-up one.
+        /// 401 and not merely "no success", so that a path this operator
+        /// does not serve at all cannot pass for a refusal.
+        /// </summary>
+        [TestCase("2.1.1")]
+        [TestCase("2.2.1")]
+        public async Task TheCredentialsAreNoneOfAStrangersBusiness(String Version)
+        {
+
+            using var nobody   = Anonymous();
+            using var stranger = Partner("nobody-gave-me-this");
+
+            foreach (var (who, http) in new[] { ("Somebody without a token", nobody), ("Somebody with a made-up token", stranger) })
+            {
+
+                var response = await http.GetAsync($"/ext/v{Version}/credentials");
+                var text     = await response.Content.ReadAsStringAsync();
+
+                Assert.Multiple(() => {
+                    Assert.That(response.StatusCode,                              Is.EqualTo(HttpStatusCode.Unauthorized), $"{who} was answered {(Int32) response.StatusCode}: {text}");
+                    Assert.That(JObject.Parse(text).Value<Int32>("status_code"),  Is.EqualTo(2000),                        $"{who} was answered: {text}");
+                    Assert.That(text,                                             Does.Not.Contain("GEF"),                 $"{who} was told who this operator is: {text}");
+                    Assert.That(text,                                             Does.Not.Contain("/ext/versions"),       $"{who} was told where its versions are: {text}");
+                });
+
+            }
+
+        }
+
+        #endregion
+
         #region ARemovedPartnerIsShutOut()
 
         [Test]
@@ -912,10 +948,7 @@ namespace cloud.charging.open.CSMS.Tests
             #endregion
 
             // The token the EMSP came in with is spent, and the new one works.
-            // Asked at the versions list, which is the one endpoint that turns
-            // an unknown token away - the credentials endpoint answers anybody
-            // who asks, because a partner has to be able to read what it is
-            // registering against.
+            // Asked at the versions list, where a partner starts.
             using var withTheOldToken = Partner(ourToken);
             using var withTheNewToken = Partner(ours!.Value<String>("token")!);
 
