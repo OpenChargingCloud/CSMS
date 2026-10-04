@@ -1,11 +1,12 @@
 /**
  * The locations drawn, in a document of happy-dom, against a stand-in CSMS:
  * a location half typed in - and its focus - outlives another one withdrawn,
- * the rows keep their elements by their key, and a location published empties
- * the form and says what the CSMS said.
+ * the rows keep their elements by their key, a location published empties
+ * the form and says what the CSMS said, and Reload asks before it throws a
+ * location half typed in away.
  */
 
-import { asked, field, open, refused, said, submit, until, type Asked } from '../../test/csms.ts';
+import { asked, field, open, refused, said, submit, type, until, type Asked } from '../../test/csms.ts';
 
 import { strict as assert }  from 'node:assert';
 import { describe, it }      from 'node:test';
@@ -136,6 +137,32 @@ describe('the locations', () => {
         assert.equal(field(root, '#location-form', 'id').value,    '', 'what was published is still in the form');
         assert.equal(field(root, '#location-form', 'name').value,  '');
         assert.match(root.querySelector('#location-note')!.textContent!, /'L3' is published/);
+
+    });
+
+    // Whether it asks where nothing is typed is not asked here: happy-dom
+    // takes the version's chosen option for one somebody chose, as it keeps
+    // no defaultSelected. In Chrome it asks nothing then.
+    it('ask before Reload throws a location half typed in away, and then ask the CSMS again', async () => {
+
+        const root = await opened();
+
+        type(field(root, '#location-form', 'name'), 'Car park');
+
+        const before = asked.length;
+
+        root.querySelector<HTMLButtonElement>('.page-actions #reload')!.click();
+
+        await until(() => asked.slice(before).some(one => one.method === 'GET' && one.path === '/ocpi/locations'),
+                    'the CSMS was not asked again');
+
+        assert.equal(said.length, 1, `asked ${said.length} times before the location half typed in was thrown away`);
+        assert.match(said[0]!, /not been told about/);
+
+        // Thrown away, as was agreed to: a draw by comparing would have kept it.
+        await until(() => root.querySelector('#location-form') !== null, 'the form was not drawn again');
+
+        assert.equal(field(root, '#location-form', 'name').value, '', 'Reload kept what it was allowed to throw away');
 
     });
 

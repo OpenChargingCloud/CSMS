@@ -1,7 +1,6 @@
 import { api, type RoamingDataKind, type RoamingItem } from '../api/client';
-import { html as stringHTML, must } from '@node/html';
 import type { Page } from '@node/router';
-import { shell } from '@node/shell';
+import { reloadButton, shell } from '@node/shell';
 import { errorMessage, formatTimestamp, formatValue } from '@node/ui';
 import { html, render, repeat, type TemplateResult } from '@node/view';
 
@@ -146,12 +145,11 @@ function page(definition: KindPage): Page {
                 active:    definition.path,
                 title:     definition.title,
                 subtitle:  definition.subtitle,
-                actions:   stringHTML`<button type="button" id="reload" class="btn small">Reload</button>`
+                actions:   reloadButton(() => load())
             });
 
             render(content, html`<div class="loading">Loading ...</div>`);
 
-            must<HTMLButtonElement>(root, '#reload').addEventListener('click', () => void load());
 
             let cancelled = false;
             let items: RoamingItem[] = [];

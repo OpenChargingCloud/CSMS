@@ -6,8 +6,8 @@ import '@fortawesome/fontawesome-free/css/fontawesome.css';
 import '@fortawesome/fontawesome-free/css/solid.css';
 
 import { toURL } from '@node/basePath';
-import { html } from '@node/html';
 import { nodeMenu, startNode } from '@node/start';
+import { html } from '@node/view';
 
 import { configurationPage }      from './pages/configuration';
 import { ocppServerPage }         from './pages/ocppServer';
