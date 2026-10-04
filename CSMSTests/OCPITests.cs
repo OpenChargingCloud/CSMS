@@ -77,6 +77,25 @@ namespace cloud.charging.open.CSMS.Tests
 
         #endregion
 
+        #region (private) Partner211(Token)
+
+        /// <summary>
+        /// An EMSP on OCPI 2.1.1, which sends its token as it is.
+        /// </summary>
+        private HttpClient Partner211(String Token)
+        {
+
+            var http = new HttpClient { BaseAddress = new Uri(BaseURL) };
+
+            http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Token", Token);
+            http.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+
+            return http;
+
+        }
+
+        #endregion
+
         #region (private) AddPartner(HTTP, ...)
 
         /// <summary>
@@ -552,22 +571,14 @@ namespace cloud.charging.open.CSMS.Tests
         /// authorise that card.
         /// </summary>
         /// <remarks>
-        /// Written and then switched off, because the OCPI library cannot do
-        /// it yet and this says exactly what is missing. It files every asset
-        /// - locations, tariffs, tokens - under one of the parties the API was
-        /// built for, and that same list is what the API answers "who are you"
-        /// with: adding the pushing EMSP to it so that its tokens have
-        /// somewhere to go would make this operator advertise itself as an
-        /// EMSP as well, and send EMSP roles in its credentials. Somewhere to
-        /// put a partner's assets that is not a claim about our own identity
-        /// is a change to the library's data model, not to this CSMS - the
-        /// EMSP side has one for the locations a CPO pushes
-        /// (EMSP_HTTPAPI.AddRemoteCPO) and the CPO side has no counterpart.
-        ///
-        /// Until then the tokens page of this operator answers, and is empty.
+        /// Switched off until WWCP_OCPI 5820e08c: the library filed every
+        /// asset under one of the parties the API was built for, so a
+        /// partner's PUT was answered "the party identification ... is
+        /// unknown". It now keeps what a registered partner pushes apart from
+        /// this operator's own parties, without a word about it in the
+        /// credentials.
         /// </remarks>
         [Test]
-        [Ignore("The OCPI library has nowhere to file a token a partner pushed into a CPO; see the remarks.")]
         public async Task APartnerPushesATokenAndItShowsUp()
         {
 
@@ -606,6 +617,213 @@ namespace cloud.charging.open.CSMS.Tests
             Assert.That(CSMS.Log.Recent(500).Any(entry => entry.Message.Contains("0123456789ABCDEF", StringComparison.Ordinal)),
                         Is.True,
                         "A token arrived and the log does not say so.");
+
+        }
+
+        #endregion
+
+        #region APartnerPushesATokenIn211()
+
+        /// <summary>
+        /// The same in OCPI 2.1.1, whose token names its holder by an auth
+        /// id rather than a contract id, and whose partner is known by the
+        /// party in the URL it pushes to.
+        /// </summary>
+        [Test]
+        public async Task APartnerPushesATokenIn211()
+        {
+
+            using var admin = await SignedIn();
+
+            var (_, token, _) = await AddPartner(admin, Version: "2.1.1");
+
+            using var partner = Partner211(token);
+
+            var put = await partner.PutAsync(
+                                "/ext/v2.1.1/cpo/tokens/DE/GDF/0123456789ABCDEF",
+                                new StringContent(new JObject(
+                                    new JProperty("uid",           "0123456789ABCDEF"),
+                                    new JProperty("type",          "RFID"),
+                                    new JProperty("auth_id",       "DE-GDF-C12345678"),
+                                    new JProperty("issuer",        "Test EMSP"),
+                                    new JProperty("valid",         true),
+                                    new JProperty("whitelist",     "ALLOWED"),
+                                    new JProperty("last_updated",  "2026-09-20T10:00:00Z")
+                                ).ToString(), Encoding.UTF8, "application/json")
+                            );
+
+            var putText = await put.Content.ReadAsStringAsync();
+
+            Assert.That(put.IsSuccessStatusCode, Is.True, $"PUT token answered {(Int32) put.StatusCode}: {putText}");
+            Assert.That(JObject.Parse(putText).Value<Int32>("status_code"), Is.EqualTo(1000), putText);
+
+            var tokens = (await GetJSON(admin, "/api/v1/ocpi/tokens"))["items"] as JArray;
+            var pushed = tokens?.FirstOrDefault(item => item.Value<String>("uid") == "0123456789ABCDEF");
+
+            Assert.That(pushed, Is.Not.Null, "The token the partner pushed is not on the Tokens page.");
+            Assert.That(pushed!.Value<String>("version"), Is.EqualTo("2.1.1"));
+            Assert.That(pushed!.Value<String>("auth_id"), Is.EqualTo("DE-GDF-C12345678"));
+
+        }
+
+        #endregion
+
+        #region TwoPartnersMayPushTheSameUid(Version)
+
+        /// <summary>
+        /// A uid is unique to its issuer, not to the world: two partners'
+        /// cards with the same number are two cards, and neither replaces the
+        /// other. In 2.1.1 the token itself does not say whose it is; the
+        /// party in the URL it is pushed to does.
+        /// </summary>
+        [TestCase("2.1.1")]
+        [TestCase("2.2.1")]
+        public async Task TwoPartnersMayPushTheSameUid(String Version)
+        {
+
+            using var admin = await SignedIn();
+
+            foreach (var partyId in new[] { "GDF", "XYZ" })
+            {
+
+                var (_, token, _) = await AddPartner(admin, Version: Version, PartyId: partyId);
+
+                using var partner = Version == "2.1.1" ? Partner211(token) : Partner(token);
+
+                var holder = $"DE-{partyId}-C12345678-X";
+                var json   = Version == "2.1.1"
+                                 ? new JObject(
+                                       new JProperty("uid",           "0123456789ABCDEF"),
+                                       new JProperty("type",          "RFID"),
+                                       new JProperty("auth_id",       holder),
+                                       new JProperty("issuer",        "Test EMSP"),
+                                       new JProperty("valid",         true),
+                                       new JProperty("whitelist",     "ALLOWED"),
+                                       new JProperty("last_updated",  "2026-09-20T10:00:00Z")
+                                   )
+                                 : TokenJSON("0123456789ABCDEF");
+
+                if (Version != "2.1.1")
+                {
+                    json["party_id"]     = partyId;
+                    json["contract_id"]  = holder;
+                }
+
+                var put = await partner.PutAsync(
+                                    $"/ext/v{Version}/cpo/tokens/DE/{partyId}/0123456789ABCDEF",
+                                    new StringContent(json.ToString(), Encoding.UTF8, "application/json")
+                                );
+
+                Assert.That(put.IsSuccessStatusCode, Is.True, $"{partyId}'s PUT token answered {(Int32) put.StatusCode}: {await put.Content.ReadAsStringAsync()}");
+
+            }
+
+            var tokens = ((await GetJSON(admin, "/api/v1/ocpi/tokens"))["items"] as JArray)!.
+                             Where(item => item.Value<String>("uid") == "0123456789ABCDEF").
+                             ToArray();
+
+            Assert.That(tokens.Select(item => item.Value<String>(Version == "2.1.1" ? "auth_id" : "contract_id")),
+                        Is.EquivalentTo(new[] { "DE-GDF-C12345678-X", "DE-XYZ-C12345678-X" }),
+                        "One partner's card replaced the other's.");
+
+        }
+
+        #endregion
+
+        #region APartnerPatchesItsToken()
+
+        /// <summary>
+        /// A card the partner blocks has to stop working here: the PATCH that
+        /// says so is taken in, and the Tokens page says what it says now.
+        /// </summary>
+        [Test]
+        public async Task APartnerPatchesItsToken()
+        {
+
+            using var admin = await SignedIn();
+
+            var (_, token, _) = await AddPartner(admin);
+
+            using var partner = Partner(token);
+
+            var put = await partner.PutAsync(
+                                "/ext/v2.2.1/cpo/tokens/DE/GDF/0123456789ABCDEF",
+                                new StringContent(TokenJSON("0123456789ABCDEF").ToString(), Encoding.UTF8, "application/json")
+                            );
+
+            Assert.That(put.IsSuccessStatusCode, Is.True, $"PUT token answered {(Int32) put.StatusCode}: {await put.Content.ReadAsStringAsync()}");
+
+            var patch = await partner.PatchAsync(
+                                  "/ext/v2.2.1/cpo/tokens/DE/GDF/0123456789ABCDEF",
+                                  new StringContent(new JObject(
+                                      new JProperty("valid",         false),
+                                      new JProperty("last_updated",  "2026-09-21T10:00:00Z")
+                                  ).ToString(), Encoding.UTF8, "application/json")
+                              );
+
+            var patchText = await patch.Content.ReadAsStringAsync();
+
+            Assert.That(patch.IsSuccessStatusCode, Is.True, $"PATCH token answered {(Int32) patch.StatusCode}: {patchText}");
+            Assert.That(JObject.Parse(patchText).Value<Int32>("status_code"), Is.EqualTo(1000), patchText);
+
+            var pushed = ((await GetJSON(admin, "/api/v1/ocpi/tokens"))["items"] as JArray)!.
+                             First(item => item.Value<String>("uid") == "0123456789ABCDEF");
+
+            Assert.That(pushed.Value<Boolean>("valid"), Is.False, "The card the partner blocked is still valid here.");
+
+        }
+
+        #endregion
+
+        #region APushedTokenIsKeptBetweenStarts()
+
+        /// <summary>
+        /// A token a partner pushed is the partner's word that its customer
+        /// may charge here; it has to be there tomorrow, when the card is held
+        /// to a station after a restart.
+        /// </summary>
+        [Test]
+        public async Task APushedTokenIsKeptBetweenStarts()
+        {
+
+            using var admin = await SignedIn();
+
+            var (_, token, _) = await AddPartner(admin);
+
+            using (var partner = Partner(token))
+            {
+
+                var put = await partner.PutAsync(
+                                    "/ext/v2.2.1/cpo/tokens/DE/GDF/0123456789ABCDEF",
+                                    new StringContent(TokenJSON("0123456789ABCDEF").ToString(), Encoding.UTF8, "application/json")
+                                );
+
+                Assert.That(put.IsSuccessStatusCode, Is.True, $"PUT token answered {(Int32) put.StatusCode}: {await put.Content.ReadAsStringAsync()}");
+
+            }
+
+            await CSMS.Stop();
+
+            // Made again, on fresh ports, in the same directory, as the
+            // partners are in ThePartnersAreKeptBetweenStarts.
+            var again = await TestPorts.StartedOnFreshPorts(() => TestCSMSs.New(Directory, Configuration, Clock));
+
+            try
+            {
+
+                var kept = again.OCPIVersions.SelectMany(version => version.Tokens).ToArray();
+
+                Assert.That(kept.Select(item => item.Value<String>("uid")), Does.Contain("0123456789ABCDEF"),
+                            "The token the partner pushed is gone after a restart.");
+
+                Assert.That(kept.First(item => item.Value<String>("uid") == "0123456789ABCDEF").Value<String>("contract_id"),
+                            Is.EqualTo("DE-GDF-C12345678-X"));
+
+            }
+            finally
+            {
+                await again.DisposeAsync();
+            }
 
         }
 

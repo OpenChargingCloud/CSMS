@@ -381,17 +381,14 @@ namespace cloud.charging.open.CSMS.OCPI
         /// up would be a card nobody is billed for.
         /// </para>
         /// <para>
-        /// <b>Empty until the library grows somewhere to put them.</b> The OCPI
-        /// library files every asset - locations, tariffs, tokens - under one of
-        /// the parties its API was built for, and that same list is what the API
-        /// answers "who are you" with. Adding the pushing EMSP to it so that its
-        /// tokens had somewhere to go would make this operator advertise itself
-        /// as an EMSP as well and send EMSP roles in its credentials, so it is
-        /// not done. The EMSP side has a store for a partner's assets that is
-        /// not a claim about its own identity - EMSP_HTTPAPI.AddRemoteCPO - and
-        /// the CPO side has no counterpart yet. A partner's PUT is answered
-        /// "the party identification ... is unknown"; see
-        /// CSMSTests/OCPITests.APartnerPushesATokenAndItShowsUp.
+        /// Kept by the library per partner, apart from this operator's own
+        /// parties (WWCP_OCPI 5820e08c in 2.2.1, 81d160b9 in 2.3.0, b30bc9e7
+        /// in 2.1.1, where the party comes from the URL): only a registered
+        /// partner's push is taken in, nothing about it shows in the
+        /// credentials, two partners' cards with the same uid stay two, and
+        /// it is read back at the start. GetTokenStatus() without a party
+        /// answers every partner's. See CSMSTests/OCPITests: the tokens a
+        /// partner pushes, patches and keeps between starts.
         /// </para>
         /// </remarks>
         public abstract IEnumerable<JObject>  Tokens     { get; }
