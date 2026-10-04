@@ -1,9 +1,10 @@
 import { api, type OCPIConfiguration } from '../api/client';
 import { toURL } from '@node/basePath';
-import { html, must, render } from '@node/html';
+import { html as stringHTML, must } from '@node/html';
 import type { Page } from '@node/router';
 import { shell } from '@node/shell';
 import { errorMessage, formatValue, humanizeKey } from '@node/ui';
+import { html, render } from '@node/view';
 
 /**
  * Who this CSMS is as a charge point operator, where its partners find it, and
@@ -17,6 +18,9 @@ import { errorMessage, formatValue, humanizeKey } from '@node/ui';
  *
  * Nothing here is the OCPP side: the charging stations dial into a server of
  * their own, on a port of its own, and are configured elsewhere.
+ *
+ * Drawn by view.ts, as every page of this CSMS: Reload changes only what
+ * differs.
  */
 export const ocpiPage: Page = {
 
@@ -28,7 +32,7 @@ export const ocpiPage: Page = {
             active:    '/configuration/ocpi',
             title:     'OCPI',
             subtitle:  'Who this operator is to its roaming partners, and where they find it.',
-            actions:   html`<button type="button" id="reload" class="btn small">Reload</button>`
+            actions:   stringHTML`<button type="button" id="reload" class="btn small">Reload</button>`
         });
 
         render(content, html`<div class="loading">Loading ...</div>`);

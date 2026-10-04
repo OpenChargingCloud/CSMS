@@ -1,11 +1,11 @@
 import { api, type Partner, type Partners, type PartnerSpec } from '../api/client';
 import { auth } from '../auth';
-import { keepDrafts } from '@node/drafts';
-import { html, must, render, type HTMLFragment } from '@node/html';
+import { html as stringHTML, must } from '@node/html';
 import type { Page } from '@node/router';
 import { mayButNot, shell } from '@node/shell';
 import { errorMessage, field, formatTimestamp, isChecked } from '@node/ui';
 import { anyFormTypedSinceDrawn, unsaved } from '@node/unsaved';
+import { html, nothing, render, repeat, type TemplateResult } from '@node/view';
 
 /**
  * The roaming partners: the e-mobility service providers whose customers may
@@ -22,6 +22,10 @@ import { anyFormTypedSinceDrawn, unsaved } from '@node/unsaved';
  * The token this operator made up is shown once, when the partner is added, and
  * again in the list to whoever may manage partners: it is what the operator
  * has to hand over, and it opens this operator, so it goes to nobody else.
+ *
+ * Drawn by view.ts: a draw changes only what differs, so that a partner half
+ * typed in outlives the tokens being shown, another partner registered or
+ * removed.
  */
 export const partnersPage: Page = {
 
@@ -33,7 +37,7 @@ export const partnersPage: Page = {
             active:    '/configuration/ocpi/partners',
             title:     'Roaming partners',
             subtitle:  'Who is peered with this operator over OCPI, and who is on the way.',
-            actions:   html`<button type="button" id="reload" class="btn small">Reload</button>`
+            actions:   stringHTML`<button type="button" id="reload" class="btn small">Reload</button>`
         });
 
         render(content, html`<div class="loading">Loading ...</div>`);
@@ -60,6 +64,14 @@ export const partnersPage: Page = {
         /** Whether the tokens in the list are readable or dotted out. */
         let revealTokens = false;
 
+        /** Whether the add form asks for what starting the peering from here takes. */
+        let startHere = false;
+
+        /** The partners being registered right now, by version and id. */
+        const registering = new Set<string>();
+
+        const keyOf = (partner: Partner): string => `${partner.version}/${partner.id}`;
+
 
         function draw(): void {
 
@@ -70,13 +82,13 @@ export const partnersPage: Page = {
 
             render(content, html`
 
-                ${mayManage ? '' : html`
+                ${mayManage ? nothing : html`
                     <div class="notice">
                         ${mayButNot('look at the roaming partners', 'change them')}
                     </div>
                 `}
 
-                ${justAdded === null ? '' : html`
+                ${justAdded === null ? nothing : html`
                     <div class="notice ok">
                         <strong>'${justAdded.id}' was added on OCPI ${justAdded.version}. The token it signs in with is</strong>
                         <code class="password">${justAdded.token}</code><br />
@@ -86,22 +98,20 @@ export const partnersPage: Page = {
                     </div>
                 `}
 
-                ${lastRegistration === null ? '' : html`
+                ${lastRegistration === null ? nothing : html`
                     <div class="notice ${lastRegistration.ok ? 'ok' : 'warn'}">${lastRegistration.message}</div>
                 `}
 
                 <div class="cards">
                     ${listCard(partners)}
-                    ${mayManage ? addCard(partners) : ''}
+                    ${mayManage ? addCard(partners) : nothing}
                 </div>
             `);
-
-            wire();
 
         }
 
 
-        function listCard(partners: Partners): HTMLFragment {
+        function listCard(partners: Partners): TemplateResult {
 
             return html`
                 <section class="card wide">
@@ -109,10 +119,10 @@ export const partnersPage: Page = {
                     <h2>
                         <i class="fa-solid fa-handshake"></i> Partners
                         ${mayManage && partners.partners.some(partner => partner.hasOurToken) ? html`
-                            <button type="button" id="reveal" class="btn small heading-action">
+                            <button type="button" id="reveal" class="btn small heading-action" @click=${reveal}>
                                 ${revealTokens ? 'Hide the tokens' : 'Show the tokens'}
                             </button>
-                        ` : ''}
+                        ` : nothing}
                     </h2>
 
                     <p class="hint">
@@ -138,7 +148,7 @@ export const partnersPage: Page = {
                                           </tr>
                                       </thead>
                                       <tbody>
-                                          ${partners.partners.map(partner => row(partner))}
+                                          ${repeat(partners.partners, keyOf, partner => row(partner))}
                                       </tbody>
                                   </table>
                               </div>
@@ -150,8 +160,9 @@ export const partnersPage: Page = {
         }
 
 
-        function row(partner: Partner): HTMLFragment {
+        function row(partner: Partner): TemplateResult {
 
+            const busy    = registering.has(keyOf(partner));
             const peering = partner.registered
                                 ? html`<span class="badge ok">registered</span>`
                                 : partner.canRegister
@@ -163,12 +174,12 @@ export const partnersPage: Page = {
 
                     <td>
                         <code>${partner.id}</code>
-                        <div class="small muted">${partner.name}${partner.website ? html` &middot; <a href="${partner.website}" target="_blank" rel="noopener">${partner.website}</a>` : ''}</div>
+                        <div class="small muted">${partner.name}${partner.website ? html` &middot; <a href="${partner.website}" target="_blank" rel="noopener">${partner.website}</a>` : nothing}</div>
                     </td>
 
                     <td>${partner.role}</td>
 
-                    <td>${partner.version}${partner.selectedVersion && partner.selectedVersion !== partner.version ? html`<div class="small muted">they chose ${partner.selectedVersion}</div>` : ''}</td>
+                    <td>${partner.version}${partner.selectedVersion && partner.selectedVersion !== partner.version ? html`<div class="small muted">they chose ${partner.selectedVersion}</div>` : nothing}</td>
 
                     <td>
                         ${peering}
@@ -189,12 +200,13 @@ export const partnersPage: Page = {
                     <td class="right">
                         ${mayManage && partner.canRegister ? html`
                             <button type="button" class="btn small partner-register" data-version="${partner.version}" data-id="${partner.id}"
-                                    title="Fetch their versions with the token they handed out, and POST this operator's credentials to them">
-                                ${partner.registered ? 'Register again' : 'Register'}
+                                    title="Fetch their versions with the token they handed out, and POST this operator's credentials to them"
+                                    ?disabled=${busy} @click=${() => void register(partner.version, partner.id)}>
+                                ${busy ? 'Registering ...' : partner.registered ? 'Register again' : 'Register'}
                             </button>
-                        ` : ''}
+                        ` : nothing}
                         <button type="button" class="btn small danger partner-remove" data-version="${partner.version}" data-id="${partner.id}"
-                                ${mayManage ? '' : html`disabled`}>
+                                ?disabled=${!mayManage} @click=${() => void remove(partner.version, partner.id)}>
                             Remove
                         </button>
                     </td>
@@ -206,7 +218,7 @@ export const partnersPage: Page = {
 
 
         /** A token as a cell: dotted out until revealed, "none" when there is none. */
-        function token(value: string | null, present: boolean): HTMLFragment {
+        function token(value: string | null, present: boolean): TemplateResult {
 
             if (!present)
                 return html`<span class="muted">none</span>`;
@@ -221,7 +233,7 @@ export const partnersPage: Page = {
         }
 
 
-        function addCard(partners: Partners): HTMLFragment {
+        function addCard(partners: Partners): TemplateResult {
 
             const newest = partners.versions[partners.versions.length - 1] ?? '';
 
@@ -230,14 +242,14 @@ export const partnersPage: Page = {
 
                     <h2><i class="fa-solid fa-plus"></i> Add a roaming partner</h2>
 
-                    <form id="partner-form" class="form-stack">
+                    <form id="partner-form" class="form-stack" @submit=${add}>
 
                         <div class="form-grid">
 
                             <label>OCPI version
                                 <select name="version">
                                     ${partners.versions.map(version => html`
-                                        <option value="${version}" ${version === newest ? html`selected` : ''}>${version}</option>
+                                        <option value="${version}" ?selected=${version === newest}>${version}</option>
                                     `)}
                                 </select>
                             </label>
@@ -245,7 +257,7 @@ export const partnersPage: Page = {
                             <label>Role
                                 <select name="role">
                                     ${partners.roles.map(role => html`
-                                        <option value="${role}" ${role === 'EMSP' ? html`selected` : ''}>${role}</option>
+                                        <option value="${role}" ?selected=${role === 'EMSP'}>${role}</option>
                                     `)}
                                 </select>
                             </label>
@@ -275,7 +287,7 @@ export const partnersPage: Page = {
                         </div>
 
                         <label class="checkbox">
-                            <input type="checkbox" name="startHere" />
+                            <input type="checkbox" name="startHere" @change=${toggleStartHere} />
                             This operator starts the peering
                             <span class="hint">
                                 Tick this when the partner has already handed out a token and a versions URL. Without
@@ -283,12 +295,12 @@ export const partnersPage: Page = {
                             </span>
                         </label>
 
-                        <div class="form-grid" id="start-here" hidden>
+                        <div class="form-grid" id="start-here" ?hidden=${!startHere}>
                             <label>The token they handed out
-                                <input type="text" name="theirToken" maxlength="255" autocomplete="off" required disabled />
+                                <input type="text" name="theirToken" maxlength="255" autocomplete="off" required ?disabled=${!startHere} />
                             </label>
                             <label>Their versions URL
-                                <input type="url" name="versionsURL" placeholder="https://emsp.example.org/ocpi/versions" maxlength="255" required disabled />
+                                <input type="url" name="versionsURL" placeholder="https://emsp.example.org/ocpi/versions" maxlength="255" required ?disabled=${!startHere} />
                             </label>
                         </div>
 
@@ -305,83 +317,39 @@ export const partnersPage: Page = {
         }
 
 
-        function wire(): void {
-
-            content.querySelector<HTMLButtonElement>('#reveal')?.addEventListener('click', () => {
-                revealTokens = !revealTokens;
-                drawAnew(null);
-            });
-
-            content.querySelectorAll<HTMLButtonElement>('.partner-remove').forEach(button => {
-                button.addEventListener('click', () => void remove(button.dataset.version ?? '', button.dataset.id ?? ''));
-            });
-
-            content.querySelectorAll<HTMLButtonElement>('.partner-register').forEach(button => {
-                button.addEventListener('click', () => void register(button, button.dataset.version ?? '', button.dataset.id ?? ''));
-            });
-
-            const form = content.querySelector<HTMLFormElement>('#partner-form');
-
-            if (!form)
-                return;
-
-            // The fields for starting the peering from here are shown and
-            // hidden where they are, rather than the page drawn again with or
-            // without them: drawn again, the form lost what had been typed
-            // into it above, and nobody was asked. Hidden, they are disabled
-            // too, so that they neither hold up the form nor are sent.
-            form.querySelector<HTMLInputElement>('[name="startHere"]')?.addEventListener('change', event => {
-
-                showStartHere(form);
-
-                if ((event.target as HTMLInputElement).checked)
-                    form.querySelector<HTMLInputElement>('[name="theirToken"]')?.focus();
-
-            });
-
-            form.addEventListener('submit', event => {
-                event.preventDefault();
-                void add(form);
-            });
-
-        }
-
-
-        /** The fields for starting the peering from here, shown and enabled while their box is ticked. */
-        function showStartHere(form: HTMLFormElement): void {
-
-            const startHere  = form.querySelector<HTMLInputElement>('[name="startHere"]')?.checked === true;
-            const fields     = must<HTMLElement>(form, '#start-here');
-
-            fields.hidden = !startHere;
-
-            for (const input of fields.querySelectorAll<HTMLInputElement>('input'))
-                input.disabled = !startHere;
-
+        function reveal(): void {
+            revealTokens = !revealTokens;
+            draw();
         }
 
 
         /**
-         * The page drawn anew, what is typed into the form kept unless it is
-         * the one saved. keepDrafts puts the box for starting the peering from
-         * here back as it was ticked, and the fields below it back as they were
-         * filled in; but the drawing draws those hidden and disabled, as they
-         * are shown where they are, so they are shown again as the box says.
-         * Left hidden beside a ticked box, they would be neither seen nor sent.
+         * The fields for starting the peering from here, shown and enabled
+         * while their box is ticked - drawn so, the rest of the form left as it
+         * is typed into. Hidden, they are disabled too, so that they neither
+         * hold up the form nor are sent.
          */
-        function drawAnew(saved: string | null): void {
+        function toggleStartHere(event: Event): void {
 
-            keepDrafts(content, saved, draw);
+            startHere = (event.target as HTMLInputElement).checked;
+            draw();
 
-            const form = content.querySelector<HTMLFormElement>('#partner-form');
-
-            if (form)
-                showStartHere(form);
+            if (startHere)
+                content.querySelector<HTMLInputElement>('#partner-form [name="theirToken"]')?.focus();
 
         }
 
 
-        async function add(form: HTMLFormElement): Promise<void> {
+        function add(event: SubmitEvent): void {
+
+            event.preventDefault();
+
+            void addPartner(event.currentTarget as HTMLFormElement);
+
+        }
+
+
+        async function addPartner(form: HTMLFormElement): Promise<void> {
 
             const error = must<HTMLElement>(content, '#partner-error');
             error.textContent = '';
@@ -413,7 +381,12 @@ export const partnersPage: Page = {
                 justAdded         = { id: answer.id, token: answer.ourToken, version: answer.version };
                 lastRegistration  = null;
 
-                drawAnew('partner-form');
+                // A draw leaves a form as it is typed into; this one was
+                // taken in, so it is emptied, the box for starting here too.
+                form.reset();
+                startHere = false;
+
+                draw();
 
             }
             catch (problem)
@@ -425,10 +398,12 @@ export const partnersPage: Page = {
         }
 
 
-        async function register(button: HTMLButtonElement, version: string, id: string): Promise<void> {
+        async function register(version: string, id: string): Promise<void> {
 
-            button.disabled     = true;
-            button.textContent  = 'Registering ...';
+            const key = `${version}/${id}`;
+
+            registering.add(key);
+            draw();
 
             try
             {
@@ -438,11 +413,13 @@ export const partnersPage: Page = {
                 if (cancelled)
                     return;
 
+                registering.delete(key);
+
                 store             = answer.partners;
                 lastRegistration  = { ok: answer.ok, message: answer.message };
                 justAdded         = null;
 
-                drawAnew(null);
+                draw();
 
             }
             catch (problem)
@@ -450,6 +427,8 @@ export const partnersPage: Page = {
 
                 if (cancelled)
                     return;
+
+                registering.delete(key);
 
                 // A failed handshake answers 502 with the same shape; anything
                 // else is a fault of this operator.
@@ -459,10 +438,13 @@ export const partnersPage: Page = {
                     if (body.partners)
                         store = body.partners;
                     lastRegistration = { ok: false, message: body.message };
-                    drawAnew(null);
+                    draw();
                 }
                 else
+                {
+                    draw();
                     window.alert(errorMessage(problem));
+                }
 
             }
 
@@ -486,7 +468,7 @@ export const partnersPage: Page = {
                 justAdded         = null;
                 lastRegistration  = null;
 
-                drawAnew(null);
+                draw();
 
             }
             catch (problem)
@@ -494,7 +476,7 @@ export const partnersPage: Page = {
                 if (!cancelled)
                 {
                     window.alert(errorMessage(problem));
-                    void load(true);
+                    void load(false);
                 }
             }
 
@@ -502,11 +484,17 @@ export const partnersPage: Page = {
 
 
         /**
-         * The partners as the CSMS has them now: drawn from nothing - or,
-         * keeping, drawn anew over the page as it is, what is typed on it
-         * kept, after something done on it failed.
+         * The partners as the CSMS has them now, drawn over the page as it is
+         * - what is typed into its form kept, as a draw keeps it - or from
+         * nothing, with Loading first, as Reload and the start have it.
          */
-        async function load(keeping = false): Promise<void> {
+        async function load(showLoading = true): Promise<void> {
+
+            if (showLoading)
+            {
+                render(content, html`<div class="loading">Loading ...</div>`);
+                startHere = false;
+            }
 
             try
             {
@@ -516,11 +504,7 @@ export const partnersPage: Page = {
                     return;
 
                 store = partners;
-
-                if (keeping)
-                    drawAnew(null);
-                else
-                    draw();
+                draw();
             }
             catch (problem)
             {

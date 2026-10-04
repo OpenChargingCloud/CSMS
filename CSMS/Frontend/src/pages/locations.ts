@@ -1,11 +1,11 @@
 import { api, type Location, type Locations, type LocationSpec } from '../api/client';
 import { auth } from '../auth';
-import { keepDrafts } from '@node/drafts';
-import { html, must, render, type HTMLFragment } from '@node/html';
+import { html as stringHTML, must } from '@node/html';
 import type { Page } from '@node/router';
 import { mayButNot, shell } from '@node/shell';
 import { errorMessage, field, formatTimestamp, numberField } from '@node/ui';
 import { anyFormTypedSinceDrawn, unsaved } from '@node/unsaved';
+import { html, nothing, render, repeat, type TemplateResult } from '@node/view';
 
 /**
  * The charging locations this operator publishes: where its stations stand,
@@ -19,6 +19,9 @@ import { anyFormTypedSinceDrawn, unsaved } from '@node/unsaved';
  * What is asked for here is the least OCPI insists on: an address, a place on
  * the map and a time zone. The EVSEs below a location are what the charging
  * stations themselves bring, over OCPP, and are not typed in.
+ *
+ * Drawn by view.ts: a draw changes only what differs, so that a location half
+ * typed in outlives another one withdrawn.
  */
 export const locationsPage: Page = {
 
@@ -30,7 +33,7 @@ export const locationsPage: Page = {
             active:    '/configuration/ocpi/locations',
             title:     'Locations',
             subtitle:  'Where this operator has charging stations, as its partners are shown it.',
-            actions:   html`<button type="button" id="reload" class="btn small">Reload</button>`
+            actions:   stringHTML`<button type="button" id="reload" class="btn small">Reload</button>`
         });
 
         render(content, html`<div class="loading">Loading ...</div>`);
@@ -58,7 +61,7 @@ export const locationsPage: Page = {
 
             render(content, html`
 
-                ${mayManage ? '' : html`
+                ${mayManage ? nothing : html`
                     <div class="notice">
                         ${mayButNot('look at the locations', 'change them')}
                     </div>
@@ -66,16 +69,14 @@ export const locationsPage: Page = {
 
                 <div class="cards">
                     ${listCard(locations)}
-                    ${mayManage ? addCard(locations) : ''}
+                    ${mayManage ? addCard(locations) : nothing}
                 </div>
             `);
-
-            wire();
 
         }
 
 
-        function listCard(locations: Locations): HTMLFragment {
+        function listCard(locations: Locations): TemplateResult {
 
             return html`
                 <section class="card wide">
@@ -106,7 +107,7 @@ export const locationsPage: Page = {
                                           </tr>
                                       </thead>
                                       <tbody>
-                                          ${locations.locations.map(location => row(location))}
+                                          ${repeat(locations.locations, location => `${location.version}/${location.id}`, location => row(location))}
                                       </tbody>
                                   </table>
                               </div>
@@ -118,7 +119,7 @@ export const locationsPage: Page = {
         }
 
 
-        function row(location: Location): HTMLFragment {
+        function row(location: Location): TemplateResult {
 
             const published = location.publish !== false;
 
@@ -138,7 +139,7 @@ export const locationsPage: Page = {
                     <td class="small muted">${formatTimestamp(location.last_updated)}</td>
                     <td class="right">
                         <button type="button" class="btn small danger location-remove" data-version="${location.version}" data-id="${location.id}"
-                                ${mayManage ? '' : html`disabled`}>
+                                ?disabled=${!mayManage} @click=${() => void remove(location.version, location.id)}>
                             Withdraw
                         </button>
                     </td>
@@ -148,7 +149,7 @@ export const locationsPage: Page = {
         }
 
 
-        function addCard(locations: Locations): HTMLFragment {
+        function addCard(locations: Locations): TemplateResult {
 
             const newest = locations.versions[locations.versions.length - 1] ?? '';
 
@@ -157,14 +158,14 @@ export const locationsPage: Page = {
 
                     <h2><i class="fa-solid fa-plus"></i> Publish a location</h2>
 
-                    <form id="location-form" class="form-stack">
+                    <form id="location-form" class="form-stack" @submit=${add}>
 
                         <div class="form-grid">
 
                             <label>OCPI version
                                 <select name="version">
                                     ${locations.versions.map(version => html`
-                                        <option value="${version}" ${version === newest ? html`selected` : ''}>${version}</option>
+                                        <option value="${version}" ?selected=${version === newest}>${version}</option>
                                     `)}
                                 </select>
                             </label>
@@ -227,23 +228,21 @@ export const locationsPage: Page = {
         }
 
 
-        function wire(): void {
+        function add(event: SubmitEvent): void {
 
-            content.querySelectorAll<HTMLButtonElement>('.location-remove').forEach(button => {
-                button.addEventListener('click', () => void remove(button.dataset.version ?? '', button.dataset.id ?? ''));
-            });
+            event.preventDefault();
 
-            content.querySelector<HTMLFormElement>('#location-form')?.addEventListener('submit', event => {
-                event.preventDefault();
-                void add(event.target as HTMLFormElement);
-            });
+            void publish(event.currentTarget as HTMLFormElement);
 
         }
 
 
-        async function add(form: HTMLFormElement): Promise<void> {
+        async function publish(form: HTMLFormElement): Promise<void> {
 
+            const note  = must<HTMLElement>(content, '#location-note');
             const error = must<HTMLElement>(content, '#location-error');
+
+            note.textContent  = '';
             error.textContent = '';
 
             const spec: LocationSpec = {
@@ -272,9 +271,13 @@ export const locationsPage: Page = {
                     return;
 
                 store = answer.locations;
-                keepDrafts(content, 'location-form', draw);
+                draw();
 
-                must<HTMLElement>(content, '#location-note').textContent = answer.message;
+                // A draw leaves a form as it is typed into; this one was
+                // taken in, so it is emptied.
+                form.reset();
+
+                note.textContent = answer.message;
 
             }
             catch (problem)
@@ -299,14 +302,14 @@ export const locationsPage: Page = {
                     return;
 
                 store = answer;
-                keepDrafts(content, null, draw);
+                draw();
             }
             catch (problem)
             {
                 if (!cancelled)
                 {
                     window.alert(errorMessage(problem));
-                    void load(true);
+                    void load(false);
                 }
             }
 
@@ -314,11 +317,14 @@ export const locationsPage: Page = {
 
 
         /**
-         * The locations as the CSMS has them now: drawn from nothing - or,
-         * keeping, drawn anew over the page as it is, what is typed on it
-         * kept, after something done on it failed.
+         * The locations as the CSMS has them now, drawn over the page as it is
+         * - what is typed into its form kept, as a draw keeps it - or from
+         * nothing, with Loading first, as Reload and the start have it.
          */
-        async function load(keeping = false): Promise<void> {
+        async function load(showLoading = true): Promise<void> {
+
+            if (showLoading)
+                render(content, html`<div class="loading">Loading ...</div>`);
 
             try
             {
@@ -328,11 +334,7 @@ export const locationsPage: Page = {
                     return;
 
                 store = locations;
-
-                if (keeping)
-                    keepDrafts(content, null, draw);
-                else
-                    draw();
+                draw();
             }
             catch (problem)
             {

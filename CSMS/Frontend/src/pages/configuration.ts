@@ -1,9 +1,10 @@
 import { api } from '../api/client';
-import { card, librariesCard } from '@node/cards';
-import { html, must, render } from '@node/html';
+import { cardView, librariesCardView } from '@node/cardViews';
+import { html as stringHTML, must } from '@node/html';
 import type { Page } from '@node/router';
 import { shell } from '@node/shell';
 import { errorMessage, formatSince, formatValue } from '@node/ui';
+import { html, render } from '@node/view';
 
 /**
  * What this CSMS is made of - read-only: it answers "what am I
@@ -26,7 +27,7 @@ export const configurationPage: Page = {
             active:    '/configuration',
             title:     'Configuration',
             subtitle:  'What this CSMS is made of.',
-            actions:   html`<button type="button" id="reload" class="btn small">Reload</button>`
+            actions:   stringHTML`<button type="button" id="reload" class="btn small">Reload</button>`
         });
 
         render(content, html`<div class="loading">Loading ...</div>`);
@@ -53,31 +54,31 @@ export const configurationPage: Page = {
 
                     <div class="cards">
 
-                        ${card('CSMS', 'fa-sitemap', configuration.CSMS, html`
+                        ${cardView('CSMS', 'fa-sitemap', configuration.CSMS, html`
                             <div class="kv">
                                 <span class="k">Uptime</span>
                                 <span class="v">${status.uptime} <span class="muted">(started ${formatSince(status.startedAt)})</span></span>
                             </div>
                         `)}
 
-                        ${card('HTTP server',   'fa-server',    configuration.http)}
-                        ${card('Web login',     'fa-user-lock', configuration.web)}
-                        ${card('Event log',     'fa-list-ul',   configuration.log)}
-                        ${card('Time',          'fa-clock',     configuration.time)}
+                        ${cardView('HTTP server',   'fa-server',    configuration.http)}
+                        ${cardView('Web login',     'fa-user-lock', configuration.web)}
+                        ${cardView('Event log',     'fa-list-ul',   configuration.log)}
+                        ${cardView('Time',          'fa-clock',     configuration.time)}
 
-                        ${card(
+                        ${cardView(
                             `OCPP ${formatValue(configuration.ocpp.version)} - ${formatValue(configuration.ocpp.role)}`,
                             'fa-plug',
                             configuration.ocpp
                         )}
 
-                        ${card(
+                        ${cardView(
                             `OCPI - ${formatValue(configuration.ocpi.role)}`,
                             'fa-handshake',
                             configuration.ocpi
                         )}
 
-                        ${librariesCard(configuration.assemblies)}
+                        ${librariesCardView(configuration.assemblies)}
 
                     </div>
 

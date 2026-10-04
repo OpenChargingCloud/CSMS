@@ -1,8 +1,9 @@
 import { api, type RoamingDataKind, type RoamingItem } from '../api/client';
-import { html, must, render, type HTMLFragment } from '@node/html';
+import { html as stringHTML, must } from '@node/html';
 import type { Page } from '@node/router';
 import { shell } from '@node/shell';
 import { errorMessage, formatTimestamp, formatValue } from '@node/ui';
+import { html, render, repeat, type TemplateResult } from '@node/view';
 
 /**
  * What travels between this operator and its roaming partners, other than the
@@ -16,7 +17,8 @@ import { errorMessage, formatTimestamp, formatValue } from '@node/ui';
  * a record changed by hand in a web interface is not a record any more.
  *
  * The columns are the handful of fields worth a glance; the whole object, as
- * OCPI wrote it, is behind every row.
+ * OCPI wrote it, is behind every row. Drawn by view.ts, rows by their key: a
+ * row opened to its JSON stays open when Reload draws the list again.
  */
 
 interface Column {
@@ -29,6 +31,8 @@ interface Column {
 
 interface KindPage {
     kind:       RoamingDataKind;
+    /** What names one of them within its version: a token its uid, the rest their id. */
+    key:        string;
     path:       string;
     title:      string;
     subtitle:   string;
@@ -43,6 +47,7 @@ const string = (item: RoamingItem, key: string): unknown => item[key];
 const kinds: KindPage[] = [
     {
         kind:       'tokens',
+        key:        'uid',
         path:       '/roaming/tokens',
         title:      'Tokens',
         subtitle:   'The cards and app identities the partners let charge here.',
@@ -61,6 +66,7 @@ const kinds: KindPage[] = [
     },
     {
         kind:       'tariffs',
+        key:        'id',
         path:       '/roaming/tariffs',
         title:      'Tariffs',
         subtitle:   'What this operator charges, as its partners are told.',
@@ -77,6 +83,7 @@ const kinds: KindPage[] = [
     },
     {
         kind:       'sessions',
+        key:        'id',
         path:       '/roaming/sessions',
         title:      'Charging sessions',
         subtitle:   'What is charging at this operator\'s stations, as its partners see it.',
@@ -95,6 +102,7 @@ const kinds: KindPage[] = [
     },
     {
         kind:       'cdrs',
+        key:        'id',
         path:       '/roaming/cdrs',
         title:      'Charge detail records',
         subtitle:   'What this operator will invoice its partners for.',
@@ -138,7 +146,7 @@ function page(definition: KindPage): Page {
                 active:    definition.path,
                 title:     definition.title,
                 subtitle:  definition.subtitle,
-                actions:   html`<button type="button" id="reload" class="btn small">Reload</button>`
+                actions:   stringHTML`<button type="button" id="reload" class="btn small">Reload</button>`
             });
 
             render(content, html`<div class="loading">Loading ...</div>`);
@@ -146,8 +154,19 @@ function page(definition: KindPage): Page {
             must<HTMLButtonElement>(root, '#reload').addEventListener('click', () => void load());
 
             let cancelled = false;
+            let items: RoamingItem[] = [];
 
-            function draw(items: RoamingItem[]): void {
+            /** The rows opened to their JSON, by their key. */
+            const opened = new Set<string>();
+
+            /**
+             * What names an object here: its version, its operator and its id -
+             * a partner's token and another partner's may share a uid.
+             */
+            const keyOf = (item: RoamingItem): string =>
+                `${item.version}/${String(item['country_code'] ?? '')}-${String(item['party_id'] ?? '')}/${String(item[definition.key] ?? '')}`;
+
+            function draw(): void {
 
                 render(content, html`
                     <section class="card wide">
@@ -167,7 +186,7 @@ function page(definition: KindPage): Page {
                                               </tr>
                                           </thead>
                                           <tbody>
-                                              ${items.map((item, index) => row(item, index))}
+                                              ${repeat(items, keyOf, item => row(item))}
                                           </tbody>
                                       </table>
                                   </div>
@@ -176,24 +195,22 @@ function page(definition: KindPage): Page {
                     </section>
                 `);
 
-                content.querySelectorAll<HTMLButtonElement>('.show-raw').forEach(button => {
-                    button.addEventListener('click', () => {
+            }
 
-                        const raw = content.querySelector<HTMLElement>(`#raw-${button.dataset.index}`);
+            function toggle(key: string): void {
 
-                        if (raw) {
-                            raw.hidden          = !raw.hidden;
-                            button.textContent  = raw.hidden ? 'JSON' : 'Hide';
-                        }
+                if (!opened.delete(key))
+                    opened.add(key);
 
-                    });
-                });
+                draw();
 
             }
 
-            function row(item: RoamingItem, index: number): HTMLFragment {
+            function row(item: RoamingItem): TemplateResult {
 
                 const { version, ...rest } = item;
+                const key  = keyOf(item);
+                const open = opened.has(key);
 
                 return html`
                     <tr>
@@ -203,10 +220,11 @@ function page(definition: KindPage): Page {
                         })}
                         <td class="small">${version}</td>
                         <td class="right">
-                            <button type="button" class="btn small show-raw" data-index="${index}">JSON</button>
+                            <button type="button" class="btn small show-raw" data-key="${key}"
+                                    @click=${() => toggle(key)}>${open ? 'Hide' : 'JSON'}</button>
                         </td>
                     </tr>
-                    <tr id="raw-${index}" hidden>
+                    <tr class="raw" data-key="${key}" ?hidden=${!open}>
                         <td colspan="${definition.columns.length + 2}">
                             <pre class="pem">${JSON.stringify(rest, null, 2)}</pre>
                         </td>
@@ -221,8 +239,11 @@ function page(definition: KindPage): Page {
                 {
                     const data = await api.ocpi.data(definition.kind);
 
-                    if (!cancelled)
-                        draw(data.items);
+                    if (cancelled)
+                        return;
+
+                    items = data.items;
+                    draw();
                 }
                 catch (problem)
                 {
