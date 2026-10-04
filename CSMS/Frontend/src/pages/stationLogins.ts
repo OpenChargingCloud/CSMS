@@ -198,7 +198,7 @@ export const stationLoginsPage: Page = {
                     ${group !== null ? '' : html`
                         <label>Identification
                             <input type="text" name="id" placeholder="field-test" maxlength="32" required
-                                   pattern="[a-z0-9-]+" />
+                                   pattern="[a-z0-9\\-]+" />
                             <span class="hint">Lower-case letters, digits and hyphens.</span>
                         </label>
                     `}
