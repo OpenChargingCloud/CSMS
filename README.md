@@ -249,6 +249,18 @@ Then open http://127.0.0.1:2351/ and sign in. Signing in happens at Hermod's
 HTTPExt API, mounted under `/ext` - the same door the charging station and the
 local controller use.
 
+Recommended for the first start: bring `root` your own SSH key, for the
+command line over SSH -
+
+```
+dotnet run --project CSMSCLI -- --authorize-ssh-key root=C:\Users\you\.ssh\id_ed25519.pub
+```
+
+Without it, the first start makes up a key pair for `root` and prints its
+private key once, below the password, from `-----BEGIN OPENSSH PRIVATE KEY-----`
+to the END line, to be saved as a file only you can read. See
+[CSMSCLI](https://github.com/OpenChargingCloud/CSMSCLI) for signing in with it.
+
 Port 2351 and not 2348 or 2350: an OpenChargingCloud charging station uses 2348
 and 2349 and a local controller 2350, and all three are routinely tried out on
 the same bench.
