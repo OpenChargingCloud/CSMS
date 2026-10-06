@@ -24,6 +24,7 @@
     <ProjectReference Include="..\..\WWCP_OCPI\WWCP_OCPIv2.1.1\WWCP_OCPIv2.1.1.csproj" />
     <ProjectReference Include="..\..\WWCP_OCPI\WWCP_OCPIv2.2.1\WWCP_OCPIv2.2.1.csproj" />
     <ProjectReference Include="..\..\WWCP_OCPI\WWCP_OCPIv2.3.0\WWCP_OCPIv2.3.0.csproj" />
+    <ProjectReference Include="..\..\WWCP_POI\WWCP_POI\WWCP_POI.csproj" />
   </ItemGroup>
 
   <!-- For the tests: a write of the charging station server's keys and
@@ -127,8 +128,7 @@
 
     <!-- Built, and still not there: npm ran and produced nothing, which is a
          build that failed rather than one without a web interface. -->
-    <Error Condition="'$(FrontendBuildEnabled)' == 'true' And !Exists('$(FrontendDist)index.html')"
-           Text="The frontend build in '$(FrontendDir)' produced no '$(FrontendDist)index.html'. Read what 'npm run build' said above." />
+    <Error Condition="'$(FrontendBuildEnabled)' == 'true' And !Exists('$(FrontendDist)index.html')" Text="The frontend build in '$(FrontendDir)' produced no '$(FrontendDist)index.html'. Read what 'npm run build' said above." />
 
     <!-- Asked to skip the frontend build, and there is nothing from an earlier
          one to reuse. The assembly is then built without a web interface, which
@@ -136,8 +136,7 @@
          exactly that at every start. A warning rather than an error, because
          "no Node on this machine" is a reason to build the backend alone, not
          a reason to be unable to. -->
-    <Warning Condition="'$(FrontendBuildEnabled)' != 'true' And !Exists('$(FrontendDist)index.html')"
-             Text="No web interface: '$(FrontendDist)' holds no index.html and the frontend build was skipped. Run 'npm run build' in '$(FrontendDir)' and build again to get one." />
+    <Warning Condition="'$(FrontendBuildEnabled)' != 'true' And !Exists('$(FrontendDist)index.html')" Text="No web interface: '$(FrontendDist)' holds no index.html and the frontend build was skipped. Run 'npm run build' in '$(FrontendDir)' and build again to get one." />
 
     <ItemGroup Condition="Exists('$(FrontendDist)index.html')">
       <_FrontendFile Include="$(FrontendDist)**\*" />

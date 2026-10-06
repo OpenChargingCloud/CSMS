@@ -17,6 +17,8 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\WWCP_POI\WWCP_POI\WWCP_POI.csproj" />
+    <ProjectReference Include="..\..\WWCP_POI\WWCP_POI_Tests\WWCP_POI_Tests.csproj" />
     <ProjectReference Include="..\CSMS\CSMS.csproj" />
     <ProjectReference Include="..\..\WWCP_Node\WWCP_Node_TestKit\WWCP_Node_TestKit.csproj" />
   </ItemGroup>
