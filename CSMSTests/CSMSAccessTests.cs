@@ -414,6 +414,8 @@ namespace cloud.charging.open.CSMS.Tests
         [TestCase("DELETE",  "api/v1/configuration/ocpp-server/groups/site",              "stations:edit")]
         [TestCase("GET",     "api/v1/configuration/ocpp-server/certificates",             "certificates:read")]
         [TestCase("POST",    "api/v1/configuration/ocpp-server/certificates",             "certificates:edit")]
+        [TestCase("POST",    "api/v1/configuration/ocpp-server/certificates/inspect",     "certificates:edit")]
+        [TestCase("POST",    "api/v1/configuration/ocpp-server/certificates/upload",      "certificates:edit")]
         [TestCase("GET",     "api/v1/configuration/ocpp-server/certificates/k1/csr",      "certificates:read")]
         [TestCase("PUT",     "api/v1/configuration/ocpp-server/certificates/k1",          "certificates:edit")]
         [TestCase("DELETE",  "api/v1/configuration/ocpp-server/certificates/k1",          "certificates:edit")]

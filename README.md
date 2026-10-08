@@ -194,7 +194,13 @@ with a private key, which would be that server's key in the wrong place. The
 page shows these as a third group, what the CSMS *recognises*. `tlsIdentity`
 is kept as well, and nothing in the CSMS uses it yet. An identity is told the
 listeners it is shown on where a kind of node names some; a CSMS names none, so
-the page offers an identity nothing to be told.
+the page offers an identity no uses of its own. Any certificate may be marked
+with a usage made up, for a configuration or code to name later.
+
+One certificate may be kept as several kinds - a TLS root and a kind made up,
+say - and the Certificate store page shows it in three tabs: by usage, every
+certificate once, and the upload, where certificates are pasted or files
+dropped and every one of them is kept as every kind ticked.
 
 A TLS root and a server certificate are told what they are for: the time
 servers (`nts`), the name servers (`dns`), or - with nothing said - every use.
@@ -207,8 +213,16 @@ The store holds private keys **unencrypted** - of these kinds only a
 `tlsIdentity` has one: a PKCS#12 is opened with its password once, at import,
 and written back without one. The file system is what guards them, and the
 CSMS says so at every start and at every import. A file copied into the
-directory by hand is adopted at the next start, or at once with **Reload** on
-the page.
+directory by hand is adopted at the next start, or at once by
+`POST /api/v1/certificates/reload`.
+
+The Server certificates page has three tabs as well: the keys and their signing
+requests, every certificate once by name or by fingerprint with the key it is
+for, and an upload that takes any number of certificates in at once - renewals
+for several keys, say - each under the key it belongs to, which the CSMS reads
+from the certificate itself (`POST …/ocpp-server/certificates/inspect` and
+`…/upload`). A private key that comes along in a file is left out of the box
+and its certificate refused: the key is made here and never arrives.
 
 The charging station server's keys and chains are kept whole. A change their
 files cannot take is answered 500 with why, and what is in effect stays as it

@@ -183,10 +183,9 @@ namespace cloud.charging.open.CSMS.Tests
                 Assert.That(store["kinds"]!["tlsRoot"]!["hasUsages"]!.Value<Boolean>(),         Is.True);
                 Assert.That(store["kinds"]!["tlsRoot"]!["usages"]!.Values<String>(),            Is.EqualTo(new[] { "dns", "nts" }), "what a page may offer a root");
                 Assert.That(store["kinds"]!["tlsServer"]!["usages"]!.Values<String>(),          Is.EqualTo(new[] { "dns", "nts" }));
-                Assert.That(store["kinds"]!["v2gRoot"]!["hasUsages"]!.Value<Boolean>(),         Is.False);
-                Assert.That(store["kinds"]!["tlsIdentity"]!["hasUsages"]!.Value<Boolean>(),     Is.False,
+                Assert.That(store["kinds"]!["v2gRoot"]!["usages"]!.Children().Any(),            Is.False);
+                Assert.That(store["kinds"]!["tlsIdentity"]!["usages"]!.Children().Any(),        Is.False,
                             "a CSMS names no listener an identity could be told of, so a page offers it nothing - not the services a root vouches for");
-                Assert.That(store["kinds"]!["tlsIdentity"]!["usages"]!.Children().Any(),        Is.False);
 
                 Assert.That(Directory.Exists(Path.Combine(directory, "certificates")), Is.True,
                             "the store is beside the configuration file");
