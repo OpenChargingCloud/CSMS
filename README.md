@@ -97,7 +97,8 @@ handed a role rather than a socket.
 | Configuration | nothing - it answers "what am I running" | `configuration:read` |
 | DNS client | the name servers, how they are asked and what each is held to; a test lookup, of all of them or of one | `dns:edit`, `dns:run` |
 | NTS client | the time servers of the group, what it and each of them is held to; a synchronisation, and a test of each server | `nts:edit`, `nts:run` |
-| Certificate store | the roots and the server certificates this CSMS believes, and what each is for | `certificates:edit` |
+| Certificate store | the roots and the server certificates this CSMS believes, and what each is for - certificates alone, no private key | `certificates:edit` |
+| Identities | who this CSMS is as a client, each with its private key: its TLS identities | `certificates:edit` |
 | Charging station server | the port, TLS, the security profiles it accepts | `stations:edit` |
 | Server certificates | the keys and chains this CSMS presents | `certificates:edit` |
 | Client trust | the chains a station's certificate may come from | `certificates:edit` |
@@ -170,7 +171,7 @@ Server certificates and the Accepted chains pages. Everything else it believes
 is in the node's store below - WWCP_Node's `CertificateStore`, a directory of
 files with an `index.json` beside them, in `certificates/` beside the
 configuration file - and is addressed by a short handle rather than by a path.
-The Certificate store page manages it, and so do CSMSCLI's
+The Certificate store and Identities pages manage it, and so do CSMSCLI's
 `--import-certificate` and `--list-certificates`.
 
 A CSMS keeps six of the node's eleven kinds, `CSMS.CertificateKinds`: the
@@ -191,16 +192,22 @@ switched on at once, and all of them are believed.
 A **server certificate** - `tlsServer` - is what a server this CSMS connects to
 shows, kept so that the server can be held to it by its fingerprint, and never
 with a private key, which would be that server's key in the wrong place. The
-page shows these as a third group, what the CSMS *recognises*. `tlsIdentity`
-is kept as well, and nothing in the CSMS uses it yet. An identity is told the
-listeners it is shown on where a kind of node names some; a CSMS names none, so
-the page offers an identity no uses of its own. Any certificate may be marked
-with a usage made up, for a configuration or code to name later.
+page shows these as a third group, what the CSMS *recognises*. A
+`tlsIdentity` - who the CSMS is as a client - is kept as well, and nothing in
+the CSMS uses it yet. A client identity is offered no listener; a CSMS keeps no
+`tlsServerIdentity`, the node's kind for a listener of its own, since what it
+shows the charging stations is its charging station server's. Any certificate
+may be marked with a usage made up, for a configuration or code to name later.
 
 One certificate may be kept as several kinds - a TLS root and a kind made up,
-say - and the Certificate store page shows it in three tabs: by usage, every
-certificate once, and the upload, where certificates are pasted or files
-dropped and every one of them is kept as every kind ticked.
+say. The store is looked after on two pages. **Certificate store** keeps
+certificates alone, with no private key: the roots and the server
+certificates; an upload there leaves a key in the box out, and says where it
+goes.
+**Identities** keeps who the CSMS is as a client, each with its key: the TLS
+identities. Each page has three tabs: by usage, every certificate once, and the
+upload, where certificates are pasted or files dropped and every one of them is
+kept as every kind ticked.
 
 A TLS root and a server certificate are told what they are for: the time
 servers (`nts`), the name servers (`dns`), or - with nothing said - every use.

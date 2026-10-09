@@ -35,6 +35,7 @@ startNode({
             nodeMenu.dns,
             nodeMenu.nts,
             { ...nodeMenu.certificates,                         label: 'Certificate store',   icon: 'fa-vault'                                                  },
+            nodeMenu.identities,
             { path: '/configuration/ocpp-server',               label: 'Charging stations',   icon: 'fa-charging-station',  permission: [ 'stations:read' ]     },
             { path: '/configuration/ocpp-server/logins',        label: 'Logins and groups',   icon: 'fa-users-gear',        permission: [ 'stations:read' ]     },
             { path: '/configuration/ocpp-server/certificates',  label: 'Server certificates', icon: 'fa-certificate',       permission: [ 'certificates:read' ] },
@@ -59,11 +60,12 @@ startNode({
     ],
 
     // "Certificate store", because there is a page called "Server certificates"
-    // as well - the charging station server's, which the words under what
-    // this CSMS presents link to. And what it believes beside the TLS roots
-    // every node keeps: the roots of ISO 15118. Not a client root, which a CSMS
-    // does not keep: the words under what it believes link to the authorities
-    // its charging stations are vouched for by instead.
+    // as well - the charging station server's, which the words under who this
+    // CSMS is as a client, on the Identities page, link to. And what it
+    // believes beside the TLS roots every node keeps: the roots of ISO 15118.
+    // Not a client root, which a CSMS does not keep: the words under what it
+    // believes link to the authorities its charging stations are vouched for
+    // by instead.
     certificates: {
         title:  'Certificate store',
         hints:  {
@@ -76,8 +78,8 @@ startNode({
                 page of their own: <a href="${toURL('/configuration/ocpp-server/trust')}">Accepted chains</a>.
             `,
             presents:  html`
-                What this CSMS shows in TLS, with its private key. Not the key the charging station server
-                shows the stations, which has a page of its own:
+                Who this CSMS is as a client in TLS, with its private key. Not the key the charging station
+                server shows the stations, which has a page of its own:
                 <a href="${toURL('/configuration/ocpp-server/certificates')}">Server certificates</a>.
             `
         }
