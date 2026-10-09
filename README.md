@@ -97,6 +97,7 @@ handed a role rather than a socket.
 | Configuration | nothing - it answers "what am I running" | `configuration:read` |
 | DNS client | the name servers, how they are asked and what each is held to; a test lookup, of all of them or of one | `dns:edit`, `dns:run` |
 | NTS client | the time servers of the group, what it and each of them is held to; a synchronisation, and a test of each server | `nts:edit`, `nts:run` |
+| SSH server | whether the command line is served over SSH, on which port, and whether passwords open it - in effect at once; its host key, who is connected, the keys of the accounts and what it offers | `ssh:edit` |
 | Certificate store | the roots and the server certificates this CSMS believes, and what each is for - certificates alone, no private key | `certificates:edit` |
 | Identities | who this CSMS is as a client, each with its private key: its TLS identities | `certificates:edit` |
 | Charging station server | the port, TLS, the security profiles it accepts | `stations:edit` |
