@@ -549,7 +549,7 @@ namespace cloud.charging.open.CSMS
         /// into the log, where somebody who is allowed to know may read it.
         /// </remarks>
         private Task<HTTPResponse?> ValidateStation(DateTimeOffset             Timestamp,
-                                                    AWebSocketServer           Server,
+                                                    AWebSocketEndpoint         Server,
                                                     WebSocketServerConnection  Connection,
                                                     EventTracking_Id           EventTrackingId,
                                                     CancellationToken          CancellationToken)
