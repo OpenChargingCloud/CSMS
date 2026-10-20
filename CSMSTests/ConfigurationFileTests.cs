@@ -82,7 +82,7 @@ namespace cloud.charging.open.CSMS.Tests
 
             var written = new WWCPConfiguration(
                               DNS:   new DNSConfiguration(Enabled: false),
-                              NTS:   new NTSConfiguration(Enabled: true)
+                              NTS:   new NTSSection([ new ("legal", new NTSConfiguration(Enabled: true)) ])
                           ).ToJSON();
 
             written.Merge(new CSMSConfiguration(
@@ -97,7 +97,7 @@ namespace cloud.charging.open.CSMS.Tests
 
             Assert.Multiple(() => {
                 Assert.That(read!.DNS?.Enabled,        Is.False);
-                Assert.That(read.NTS?.Enabled,         Is.True);
+                Assert.That(read.NTS?["legal"]?.Enabled, Is.True);
                 Assert.That(read.IsEmpty,              Is.False);
                 Assert.That(csms!.OCPP?.NodeId,        Is.EqualTo("lc042"));
                 Assert.That(csms.OCPP?.VendorName,     Is.EqualTo("ACME"));

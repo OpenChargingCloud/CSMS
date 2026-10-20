@@ -96,7 +96,7 @@ namespace cloud.charging.open.CSMS.Tests
         {
 
             var configuration = new JObject(
-                                    new JProperty("nts",  new JObject(new JProperty("enabled", false))),
+                                    new JProperty("nts",  new JObject(new JProperty("groups", new JObject(new JProperty("legal", new JObject(new JProperty("enabled", false))))))),
                                     new JProperty("ocpp", new JObject(
                                         new JProperty("nodeId",      "lc-in-the-file"),
                                         new JProperty("vendorName",  "Somebody Else")

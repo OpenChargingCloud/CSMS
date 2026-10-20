@@ -394,15 +394,16 @@ own clock exactly where it was. Everything connected to this CSMS is stamped
 against this clock, so a jump backwards would put two meter readings out of order
 in a record written somewhere else entirely, with nothing in it to say why.
 
-**It asks a group, not a server.** `nts.servers` is a list, and by default it is
-the PTB's four, of which `nts.minServers` - two - have to answer before the group
-has a time at all. One host being rebooted no longer leaves this CSMS without a
+**It asks a group, not a server.** The `nts` section names its groups of time
+servers under `groups`, and the one it checks its clock against is the legal
+one, `nts.groups.legal`. Its `servers` are a list, by default the PTB's four, of
+which `minServers` - two - have to answer before the group has a time at all. One host being rebooted no longer leaves this CSMS without a
 check, and two servers that agree catch what one server cannot: one that is
 wrong rather than absent. What the check reports is what the servers that
 answered and authenticated agree on, with a line for each of them, so a failure
 says which of the four failed and how.
 
-Every key of the `nts` section, and what it is when absent:
+Every key of a group, and what it is when absent:
 
 | Key | Default | |
 |---|---|---|
@@ -414,6 +415,8 @@ Every key of the `nts` section, and what it is when absent:
 | `ntsKEPort`, `ntpPort` | `4460`, `123` | for that one server |
 | `timeoutSeconds` | `10` | per request |
 | `checkEverySeconds` | `900` | how often the clock is checked |
+| `errorLogging` | `5` | failed checks in a row before that is written down |
+| `maxErrors` | `10`, `50` for "local" | failed checks in a row before what rests on the group is limited |
 | `legalTimeAuthority` | - | who the operator says stands behind it |
 | `legalTimeToleranceSeconds` | `1` | how far off the clock may be |
 | `legalTimeMaxAgeSeconds` | `3600` | how old the last check may be |
@@ -424,17 +427,15 @@ peers - putting them in separate bands would say something about them that is no
 true. An entry may be a bare host name or an object saying more:
 `{ "hostname": "time.local", "priority": 0, "ntsKEPort": 4460, "enabled": true }`.
 
-Servers that disagree by more than `nts.maxDeviationSeconds` are written down
+Servers that disagree by more than `maxDeviationSeconds` are written down
 rather than acted on. The disagreement belongs in the log, and the time is still a
 time.
 
-A section naming a single `hostname` and no list becomes a group of one, which is
-what every file written before there were groups says, and it keeps working. A
-group of one is held to a quorum of one, and a section asking two of it is
-refused. A list without `minServers` is held to two, as the default four are, or
+A group naming a single `hostname` and no list is a group of one server, held
+to a quorum of one, and one asking two of it is refused. A list without `minServers` is held to two, as the default four are, or
 to all of its servers when it has fewer switched on.
 
-A section mentioning neither leaves the servers alone rather than quietly reducing
+A group mentioning neither leaves the servers alone rather than quietly reducing
 four to one - the switch on the NTS page sends nothing but `enabled` - and one
 mentioning nothing but `minServers` or `maxDeviationSeconds` holds the servers the
 CSMS already has to it. A quorum those servers could never reach is refused: at
@@ -445,6 +446,14 @@ at once.
 A host name written back into the file carries the root label -
 `ptbtime1.ptb.de.` - because that is the absolute form it was parsed into, and not
 a stray character. What the CSMS prints for somebody to read drops it again.
+
+A section with keys outside of `groups` - the flat `nts` section of the files
+from before there were groups, `"nts": { "enabled": false }` say - is refused at
+the start, with where they belong: `"nts": { "groups": { "legal": { "enabled":
+false } } }`. A save never moves it into a group either; the file is left as it
+was. No `nts` section at all, and `"nts": { }`, is the legal group of the PTB's
+four. More groups - "local", say - are WWCP_Node's to describe, as is what
+rests on each of them.
 
 An entry of `dns.servers` is an address or a host name, as a string or as the
 object the DNS page writes the list back in:
@@ -459,7 +468,7 @@ refused at the start, and the page refuses it the same way, with the entry named
 
 `GET /api/v1/clock` is that measurement, and the one word it never
 guesses is "legal": that needs a claim the operator wrote into
-`nts.legalTimeAuthority`, a check against that very server, a recent one, and a
+`nts.groups.legal.legalTimeAuthority`, a check against that very server, a recent one, and a
 small difference. Any of those missing and the answer says `unverified` and names
 which one in `why`.
 

@@ -100,9 +100,9 @@ namespace cloud.charging.open.CSMS.Tests
         public static JObject Offline
 
             => new (
-                   new JProperty("nts", new JObject(
+                   new JProperty("nts", new JObject(new JProperty("groups", new JObject(new JProperty("legal", new JObject(
                        new JProperty("enabled", false)
-                   ))
+                   ))))))
                );
 
         #endregion

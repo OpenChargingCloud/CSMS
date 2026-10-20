@@ -61,9 +61,9 @@ namespace cloud.charging.open.CSMS.Tests
         protected override JObject Configuration
 
             => new (
-                   new JProperty("nts",   new JObject(
+                   new JProperty("nts",   new JObject(new JProperty("groups", new JObject(new JProperty("legal", new JObject(
                        new JProperty("enabled",  false)
-                   )),
+                   )))))),
                    new JProperty("ocpi",  new JObject(
                        new JProperty("versions",  new JArray("2.1.1", "2.2.1", "2.3.0"))
                    ))
