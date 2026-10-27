@@ -265,6 +265,7 @@ namespace cloud.charging.open.CSMS
         /// <param name="BridgeDebugLog">Whether what the libraries below write with DebugX ends up in the log.</param>
         /// <param name="TimeProvider">Where this CSMS reads the time; the system clock by default.</param>
         /// <param name="SSH">What the program says about serving the command line over SSH; nothing by default - see SSHSettings.</param>
+        /// <param name="Web">What the program says about HTTPS of its own and the reverse proxies in front, over the "web" section of the configuration file; nothing by default, and then only the file says it - see WebConfiguration.</param>
         public CSMS(DNSClient?             DNSClient          = null,
                     NTSClient?             NTSClient          = null,
                     HTTPServer?            HTTPServer         = null,
@@ -285,7 +286,8 @@ namespace cloud.charging.open.CSMS
                     String?                LogPath            = null,
                     Boolean                BridgeDebugLog     = true,
                     TimeProvider?          TimeProvider       = null,
-                    SSHSettings?           SSH                = null)
+                    SSHSettings?           SSH                = null,
+                    WebConfiguration?      Web                = null)
 
             : base(Kind:              CSMSKind,
                    Version:           typeof(CSMS).Assembly.GetName().Version?.ToString(3) ?? "0.0.0",
@@ -313,7 +315,8 @@ namespace cloud.charging.open.CSMS
                    BridgeDebugLog:    BridgeDebugLog,
                    TraceTags:         TraceTags,
                    TimeProvider:      TimeProvider,
-                   SSH:               SSH)
+                   SSH:               SSH,
+                   Web:               Web)
 
         {
 
