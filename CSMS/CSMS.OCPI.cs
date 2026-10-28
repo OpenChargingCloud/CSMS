@@ -27,6 +27,7 @@ using org.GraphDefined.Vanaheimr.Aegir;
 using org.GraphDefined.Vanaheimr.Hermod.HTTP;
 
 using cloud.charging.open.protocols.OCPI;
+using cloud.charging.open.protocols.WWCP.Node;
 using cloud.charging.open.protocols.WWCP.Node.Logging;
 
 using cloud.charging.open.CSMS.Configuration;
@@ -233,6 +234,12 @@ namespace cloud.charging.open.CSMS
             #region Where the library writes
 
             OCPIDirectory    = Path.Combine(Path.GetDirectoryName(ConfigFile.Path) ?? ".", OCPIDirectoryName);
+
+            // The partners and their tokens are in there, each token the whole
+            // of a partner's access to this CSMS or of this CSMS's to the
+            // partner: for the account this CSMS runs under alone, and what an
+            // earlier version left open is closed at the next start.
+            OwnerOnly.Directory(OCPIDirectory, problem => Log.Warning(problem, "ocpi", "security"));
 
             #endregion
 

@@ -224,6 +224,17 @@ CSMS says so at every start and at every import. A file copied into the
 directory by hand is adopted at the next start, or at once by
 `POST /api/v1/certificates/reload`.
 
+What holds a secret is for the account the CSMS runs under alone:
+`ocpp-server-keys/`, `ocpp-stations.json` with the stations' passwords and
+`ocpi/` with the partners' tokens, beside the node's own `accounts/`, `logs/`,
+`certificates/` and `ssh/`. On Unix that is 0700 for a directory and 0600 for a
+file; on Windows an access control list of its own, nothing inherited from the
+folder above, that grants this account, SYSTEM and the administrators - what a
+folder at the root of a drive would otherwise grant every authenticated user.
+What an earlier version left open is closed at the next start. A file system
+that can do neither, a mounted share say, is a warning in the log, and the CSMS
+runs all the same.
+
 The Server certificates page has three tabs as well: the keys and their signing
 requests, every certificate once by name or by fingerprint with the key it is
 for, and an upload that takes any number of certificates in at once - renewals

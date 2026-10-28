@@ -41,6 +41,7 @@ using BCx509 = Org.BouncyCastle.X509;
 using org.GraphDefined.Vanaheimr.Hermod;
 using org.GraphDefined.Vanaheimr.Hermod.PKI;
 
+using cloud.charging.open.protocols.WWCP.Node;
 using cloud.charging.open.protocols.WWCP.Node.Logging;
 using cloud.charging.open.CSMS.Web;
 
@@ -119,6 +120,11 @@ namespace cloud.charging.open.CSMS.OCPP
         /// is matched against to find out whose it is.
         /// </summary>
         private readonly Dictionary<String, Byte[]>               publicKeys  = [];
+
+        /// <summary>
+        /// Whether the directory was made readable by its owner alone yet.
+        /// </summary>
+        private Boolean                                           restricted;
 
         /// <summary>
         /// The chain that is being presented, and the entry it came from.
@@ -276,6 +282,10 @@ namespace cloud.charging.open.CSMS.OCPP
 
                 if (!Directory.Exists(Path))
                     return;
+
+                // What an earlier version left readable by others is closed
+                // at the next start.
+                CreateDirectory();
 
                 foreach (var keyFile in Directory.GetFiles(Path, "*.key.pem").OrderBy(file => file))
                 {
@@ -1545,24 +1555,31 @@ namespace cloud.charging.open.CSMS.OCPP
         }
 
         /// <summary>
-        /// The directory, readable by its owner alone where that can be said.
+        /// The directory, made where it is not there yet and readable by its
+        /// owner alone (see <see cref="OwnerOnly"/>) - once per store, and
+        /// again where it was taken away meanwhile. What is written into it
+        /// later inherits that on Windows; on Unix nobody else gets in.
         /// </summary>
         private void CreateDirectory()
         {
 
-            if (Directory.Exists(Path))
+            if (restricted && Directory.Exists(Path))
                 return;
 
-            if (OperatingSystem.IsWindows())
-                Directory.CreateDirectory(Path);
+            OwnerOnly.Directory(Path, Complain);
 
-            else
-                Directory.CreateDirectory(
-                    Path,
-                    UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute
-                );
+            restricted = true;
 
         }
+
+        /// <summary>
+        /// What could not be restricted, for the log: the keys are then as
+        /// open as the file system leaves them, and whoever runs this CSMS
+        /// should know.
+        /// </summary>
+        private void Complain(String Problem)
+
+            => OnNotice?.Invoke(LogLevel.Warning, Problem);
 
         /// <summary>
         /// One file of this store written, readable by its owner alone where
@@ -1576,7 +1593,7 @@ namespace cloud.charging.open.CSMS.OCPP
             BeforeWriting?.Invoke(Target);
 
             if (OwnerOnly)
-                OwnerOnlyFile.Write(Target, Content);
+                OwnerOnlyFile.Write(Target, Content, Complain);
 
             else
                 File.WriteAllText(Target, Content);

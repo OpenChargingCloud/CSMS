@@ -26,6 +26,7 @@ using Newtonsoft.Json.Linq;
 using org.GraphDefined.Vanaheimr.Hermod;
 using org.GraphDefined.Vanaheimr.Hermod.HTTP;
 
+using cloud.charging.open.protocols.WWCP.Node;
 using cloud.charging.open.protocols.WWCP.Node.Logging;
 using cloud.charging.open.CSMS.Web;
 
@@ -245,6 +246,10 @@ namespace cloud.charging.open.CSMS.OCPP
 
                 if (!File.Exists(Path))
                     return true;
+
+                // Passwords: what an earlier version wrote readable by others
+                // is closed at the next start.
+                OwnerOnly.File(Path, problem => OnNotice?.Invoke(LogLevel.Warning, problem));
 
                 JObject document;
 
@@ -1334,9 +1339,13 @@ namespace cloud.charging.open.CSMS.OCPP
                                           Select (login => login.ToJSON(WithSecrets: true))
                         ))
 
-                    ).ToString(Formatting.Indented) + Environment.NewLine
+                    ).ToString(Formatting.Indented) + Environment.NewLine,
+
+                    problem => OnNotice?.Invoke(LogLevel.Warning, problem)
+
                 );
 
+                // The file moved keeps what was set on it.
                 File.Move(temporary, Path, overwrite: true);
 
                 return true;
