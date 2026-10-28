@@ -162,6 +162,22 @@ address, the ids, and what was thrown; not the headers, which carry the token.
 A Basic authentication whose password is no TOTP, which is what a scanner
 sends, is turned away as an unknown token, and no error.
 
+A partner is called where it says it is - the versions URL it hands in with its
+credentials, and every endpoint its versions name - with its token in the
+header, and so on the public internet alone: this machine, the networks beside
+it and a cloud's metadata service are refused, whatever a name resolves to.
+A partner on the same site, or a bench with both ends on one machine, is
+allowed by `remoteNetworks` in the `ocpi` section, rules read in their order
+before the rest are refused:
+
+```json
+"ocpi": { "remoteNetworks": [ "192.168.0.0/16 => ALLOW", "127.0.0.0/8 => ALLOW", "::1 => ALLOW" ] }
+```
+
+A rule may refuse as well (`"203.0.113.7 => DENY"`), and `"0.0.0.0/0 => ALLOW"`
+with `"::/0 => ALLOW"` switches it off. A rule that is none stops the start
+with why. The log says at every start which rules there are.
+
 
 ## Certificates, and where they live
 

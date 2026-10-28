@@ -53,6 +53,17 @@ namespace cloud.charging.open.CSMS.Tests
     public class OCPITests : ACSMSTests
     {
 
+        #region Configuration
+
+        /// <summary>
+        /// The stub EMSP runs on this machine, which a CSMS calls only where a
+        /// rule allows it.
+        /// </summary>
+        protected override JObject Configuration
+            => TestCSMSs.LoopbackPartners(TestCSMSs.Offline);
+
+        #endregion
+
         #region (private) Partner(Token)
 
         /// <summary>
@@ -1040,6 +1051,59 @@ namespace cloud.charging.open.CSMS.Tests
                 Assert.That(emsp.TokensSeen, Does.Contain(StubEMSP.TokenA));
 
             });
+
+        }
+
+        #endregion
+
+        #region APartnerOnANetworkNotAllowedIsNotCalled()
+
+        /// <summary>
+        /// Without a rule allowing it, a partner whose versions URL points at
+        /// this machine - or at any network but the public internet - is not
+        /// called: not with this operator's credentials, and not with the token
+        /// it handed out either.
+        /// </summary>
+        /// <remarks>
+        /// The rules are taken by each OCPI client as it is made, so the CSMS
+        /// of this fixture, which allows this machine, is given the rules of a
+        /// CSMS that says nothing before the registration makes its client.
+        /// </remarks>
+        [Test]
+        public async Task APartnerOnANetworkNotAllowedIsNotCalled()
+        {
+
+            using var admin = await SignedIn();
+
+            await using var emsp = await StubEMSP.Start();
+
+            var (id, _, _) = await AddPartner(
+                                 admin,
+                                 TheirToken:   StubEMSP.TokenA,
+                                 VersionsURL:  emsp.VersionsURL
+                             );
+
+            var allowed = CSMS.OCPIAPI.RemoteNetworkAcl;
+
+            try
+            {
+
+                CSMS.OCPIAPI.RemoteNetworkAcl = new OCPIConfiguration().RemoteNetworkAcl();
+
+                var register = await admin.PostAsync($"/api/v1/ocpi/partners/2.2.1/{id}/register", JSONBody());
+                var text     = await register.Content.ReadAsStringAsync();
+
+                Assert.Multiple(() => {
+                    Assert.That(JObject.Parse(text).Value<Boolean>("ok"), Is.False,    $"A partner on this machine was registered with: {text}");
+                    Assert.That(emsp.ReceivedCredentials,                 Is.Null,     "The partner on this machine received this operator's credentials.");
+                    Assert.That(emsp.TokensSeen,                          Is.Empty,    "The partner on this machine was called.");
+                });
+
+            }
+            finally
+            {
+                CSMS.OCPIAPI.RemoteNetworkAcl = allowed;
+            }
 
         }
 

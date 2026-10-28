@@ -21,6 +21,8 @@ using System.Diagnostics.CodeAnalysis;
 
 using Newtonsoft.Json.Linq;
 
+using org.GraphDefined.Vanaheimr.Hermod.SSH;
+
 using cloud.charging.open.protocols.WWCP.Node.Configuration;
 
 #endregion
@@ -63,6 +65,7 @@ namespace cloud.charging.open.CSMS.Configuration
     /// <param name="TariffsAsOpenData">Whether anybody may read this operator's tariffs without a token.</param>
     /// <param name="AllowDowngrades">Whether a partner may overwrite an object with an older one.</param>
     /// <param name="Logging">What of the OCPI traffic ends up in the event log.</param>
+    /// <param name="RemoteNetworks">Rules for where this CSMS may connect to on behalf of a roaming partner, before the non-public networks are refused - "192.168.0.0/16 => ALLOW", say; see <see cref="RemoteNetworkAcl"/>.</param>
     public sealed record OCPIConfiguration(String?                 CountryCode           = null,
                                            String?                 PartyId               = null,
                                            String?                 Name                  = null,
@@ -72,7 +75,8 @@ namespace cloud.charging.open.CSMS.Configuration
                                            Boolean?                LocationsAsOpenData   = null,
                                            Boolean?                TariffsAsOpenData     = null,
                                            Boolean?                AllowDowngrades       = null,
-                                           OCPILogging?            Logging               = null)
+                                           OCPILogging?            Logging               = null,
+                                           IReadOnlyList<String>?  RemoteNetworks        = null)
     {
 
         #region Data
@@ -129,6 +133,16 @@ namespace cloud.charging.open.CSMS.Configuration
         /// </summary>
         public const Int32   MaxExternalURLLength        = 255;
 
+        /// <summary>
+        /// The most rules for the remote networks.
+        /// </summary>
+        public const Int32   MaxRemoteNetworks           = 64;
+
+        /// <summary>
+        /// The longest a rule for the remote networks may be written.
+        /// </summary>
+        public const Int32   MaxRemoteNetworkLength      = 64;
+
         #endregion
 
         #region Properties
@@ -141,6 +155,39 @@ namespace cloud.charging.open.CSMS.Configuration
             => Versions is { Count: > 0 }
                    ? Versions
                    : DefaultVersions;
+
+        #endregion
+
+        #region RemoteNetworkAcl()
+
+        /// <summary>
+        /// Where the OCPI clients of this CSMS may connect to: the rules the
+        /// file says, in its order, then no network but the public internet.
+        /// </summary>
+        /// <remarks>
+        /// A partner hands in the URL of its versions with its credentials, and
+        /// its versions name the URLs of its endpoints. Each of them is called
+        /// with the partner's token in the header, so a partner allowed
+        /// anywhere has this CSMS call whatever its network reaches: this host,
+        /// the machines beside it, a cloud's metadata service. So the
+        /// non-public networks are refused unless a rule here allows them -
+        /// a partner on the same site, or a bench with both ends on one machine
+        /// ("127.0.0.0/8 => ALLOW", "::1 => ALLOW"). The first rule that
+        /// matches decides, and every address a name resolves to must be
+        /// allowed. "0.0.0.0/0 => ALLOW" and "::/0 => ALLOW" switch it off.
+        /// </remarks>
+        public NetworkAcl RemoteNetworkAcl()
+        {
+
+            var acl = NetworkAcl.AllowByDefault();
+
+            foreach (var rule in RemoteNetworks ?? [])
+                if (!acl.TryAdd(rule, out var error))
+                    throw new ArgumentException($"'{SectionName}.remoteNetworks': {error}");
+
+            return acl.DenyNonPublicNetworks();
+
+        }
 
         #endregion
 
@@ -166,7 +213,8 @@ namespace cloud.charging.open.CSMS.Configuration
                 !ConfigurationReader.TryReadString (JSON, "externalURL",          SectionName,   MaxExternalURLLength, out var externalURL,   out Error) ||
                 !ConfigurationReader.TryReadBoolean(JSON, "locationsAsOpenData",  SectionName,                         out var locationsOpen, out Error) ||
                 !ConfigurationReader.TryReadBoolean(JSON, "tariffsAsOpenData",    SectionName,                         out var tariffsOpen,   out Error) ||
-                !ConfigurationReader.TryReadBoolean(JSON, "allowDowngrades",      SectionName,                         out var downgrades,    out Error))
+                !ConfigurationReader.TryReadBoolean(JSON, "allowDowngrades",      SectionName,                         out var downgrades,    out Error) ||
+                !ConfigurationReader.TryReadStrings(JSON, "remoteNetworks",       SectionName,   MaxRemoteNetworks, MaxRemoteNetworkLength, out var remoteNetworks, out Error))
             {
                 return false;
             }
@@ -232,6 +280,19 @@ namespace cloud.charging.open.CSMS.Configuration
 
             #endregion
 
+            #region The remote networks
+
+            foreach (var rule in remoteNetworks ?? [])
+            {
+                if (!NetworkAcl.DenyByDefault().TryAdd(rule, out var ruleError))
+                {
+                    Error = $"'{SectionName}.remoteNetworks': \"{rule}\" is no rule like \"192.168.0.0/16 => ALLOW\": {ruleError}";
+                    return false;
+                }
+            }
+
+            #endregion
+
             #region Logging
 
             OCPILogging? logging = null;
@@ -262,7 +323,8 @@ namespace cloud.charging.open.CSMS.Configuration
                                 locationsOpen,
                                 tariffsOpen,
                                 downgrades,
-                                logging
+                                logging,
+                                remoteNetworks
                             );
 
             return true;
@@ -293,6 +355,7 @@ namespace cloud.charging.open.CSMS.Configuration
             if (TariffsAsOpenData.  HasValue)     json.Add("tariffsAsOpenData",    TariffsAsOpenData.  Value);
             if (AllowDowngrades.    HasValue)     json.Add("allowDowngrades",      AllowDowngrades.    Value);
             if (Logging             is not null)  json.Add("logging",              Logging.ToJSON());
+            if (RemoteNetworks      is not null)  json.Add("remoteNetworks",       new JArray(RemoteNetworks));
 
             return json;
 

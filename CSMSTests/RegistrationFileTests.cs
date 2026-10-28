@@ -659,18 +659,19 @@ namespace cloud.charging.open.CSMS.Tests
     {
 
         /// <summary>
-        /// A configuration offering every OCPI version, the time client off.
+        /// A configuration offering every OCPI version, the time client off,
+        /// and the partners of the tests on this machine allowed.
         /// </summary>
         public static JObject EveryVersion
 
-            => new (
+            => TestCSMSs.LoopbackPartners(new (
                    new JProperty("nts",   new JObject(new JProperty("groups", new JObject(new JProperty("legal", new JObject(
                        new JProperty("enabled",  false)
                    )))))),
                    new JProperty("ocpi",  new JObject(
                        new JProperty("versions",  new JArray("2.1.1", "2.2.1", "2.3.0"))
                    ))
-               );
+               ));
 
         /// <summary>
         /// The file the library keeps the partners of a version in.

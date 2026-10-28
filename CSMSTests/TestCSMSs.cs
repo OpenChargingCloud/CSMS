@@ -107,6 +107,29 @@ namespace cloud.charging.open.CSMS.Tests
 
         #endregion
 
+        #region LoopbackPartners(Configuration)
+
+        /// <summary>
+        /// The configuration with the roaming partners of a test allowed where
+        /// they are: on this machine, which a CSMS otherwise does not call -
+        /// see OCPIConfiguration.RemoteNetworkAcl().
+        /// </summary>
+        public static JObject LoopbackPartners(JObject Configuration)
+        {
+
+            var configuration = (JObject) Configuration.DeepClone();
+
+            if (configuration["ocpi"] is not JObject ocpi)
+                configuration["ocpi"] = ocpi = new JObject();
+
+            ocpi["remoteNetworks"] = new JArray("127.0.0.0/8 => ALLOW", "::1 => ALLOW");
+
+            return configuration;
+
+        }
+
+        #endregion
+
         #region TemporaryDirectory(Purpose)
 
         /// <summary>

@@ -279,7 +279,13 @@ namespace cloud.charging.open.CSMS
                           DisableLogging:            true,
                           LoggingPath:               OCPIDirectory
 
-                      );
+                      ) {
+
+                          // Before any client is made: each takes it as it is
+                          // made. See OCPIConfiguration.RemoteNetworkAcl().
+                          RemoteNetworkAcl           = ocpiSettings.RemoteNetworkAcl()
+
+                      };
 
             // A line the OCPI library could not write into its files is a
             // change the next start will not know, and the library says so to
@@ -346,7 +352,10 @@ namespace cloud.charging.open.CSMS
 
             Log.Info(
                 $"OCPI: this CSMS is the operator {PartyIdText} '{BusinessDetails.Name}', speaking {String.Join(", ", ocpiVersions.Select(version => version.Label))}; " +
-                $"its partners find it at {OCPIVersionsURL} and its files are below '{OCPIDirectory}'.",
+                $"its partners find it at {OCPIVersionsURL} and its files are below '{OCPIDirectory}'. " +
+                (ocpiSettings.RemoteNetworks is { Count: > 0 } rules
+                     ? $"It calls its partners where these rules allow, then on the public internet alone: {String.Join(", ", rules)}."
+                     : "It calls its partners on the public internet alone."),
                 "ocpi"
             );
 
@@ -388,7 +397,8 @@ namespace cloud.charging.open.CSMS
                        new JProperty("tariffsAsOpenData",    ocpiAPI.TariffsAsOpenData),
                        new JProperty("allowDowngrades",      ocpiAPI.AllowDowngrades ?? false),
                        new JProperty("logRequests",          ocpiSettings.Logging?.Requests != false),
-                       new JProperty("logPayloads",          ocpiSettings.Logging?.Payloads == true)
+                       new JProperty("logPayloads",          ocpiSettings.Logging?.Payloads == true),
+                       new JProperty("remoteNetworks",       new JArray(ocpiSettings.RemoteNetworks ?? []))
                    )),
 
                    new JProperty("counts",       new JObject(
