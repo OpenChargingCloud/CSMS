@@ -269,7 +269,7 @@ namespace cloud.charging.open.CSMS.Tests
         /// <summary>
         /// A Basic authentication whose password is no TOTP - "y" in <c>curl -u
         /// x:y</c>, or none at all - is no failure: the caller is turned away as
-        /// an unknown token, and the log has no error to say about it.
+        /// an unknown token, 401, and the log has no error to say about it.
         /// </summary>
         [TestCase("y")]
         [TestCase("")]
@@ -279,8 +279,9 @@ namespace cloud.charging.open.CSMS.Tests
             var (response, text) = await Send(CSMS.OCPIVersionsURL.ToString(), Basic("x", Password));
 
             Assert.Multiple(() => {
-                Assert.That((Int32) response.StatusCode,  Is.LessThan(500),               $"A scanner was answered {(Int32) response.StatusCode}: {text}");
-                Assert.That(response.IsSuccessStatusCode,  Is.False,                      "A made-up token was let in.");
+                Assert.That(response.StatusCode,           Is.EqualTo(HttpStatusCode.Unauthorized),  $"A scanner was answered {(Int32) response.StatusCode}: {text}");
+                Assert.That(JObject.Parse(text).Value<String>("status_message"),
+                                                           Is.EqualTo("Unknown access token!"),      text);
                 Assert.That(text,                          Does.Not.Contain(".cs:line"),  "The caller is told where this CSMS was built.");
                 Assert.That(Failures(),                    Is.Empty,                      "A scanner is an error in the log.");
             });

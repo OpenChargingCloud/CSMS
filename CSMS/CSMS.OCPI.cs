@@ -333,6 +333,9 @@ namespace cloud.charging.open.CSMS
 
             #region Somebody discovering this operator
 
+            // A token of nobody here never gets this far: the OCPI library
+            // answers it 401 "Unknown access token!" before the route, at this
+            // path as at every other but the open data's.
             ocpiAPI.OnGetVersionsResponse += (timestamp, api, request, response, cancellationToken) => {
 
                 if (ocpiSettings.Logging?.Requests != false)
@@ -340,7 +343,7 @@ namespace cloud.charging.open.CSMS
                         request.RemoteParty is not null
                             ? $"The roaming partner '{request.RemoteParty.Id}' asked for the OCPI versions."
                             : $"Somebody at {request.HTTPRequest.RemoteSocket} asked for the OCPI versions" +
-                              (request.AccessToken.HasValue ? " with a token this operator does not know." : " without a token."),
+                              (request.AccessToken.HasValue ? " with a token of no roaming partner." : " without a token."),
                         "ocpi", "versions"
                     );
 

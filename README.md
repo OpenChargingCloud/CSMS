@@ -162,6 +162,15 @@ address, the ids, and what was thrown; not the headers, which carry the token.
 A Basic authentication whose password is no TOTP, which is what a scanner
 sends, is turned away as an unknown token, and no error.
 
+A token no partner was given is answered 401, OCPI 2000 "Unknown access
+token!", at every path of every version, before the path is asked - the
+versions, the version details, the credentials and every module alike. No
+token at all is not that: the versions and the version details stay open, so
+that a partner finds the credentials endpoint before it registers there with
+the token it was given. With `locationsAsOpenData` or `tariffsAsOpenData` in
+the `ocpi` section the locations or tariffs are anybody's, and a made-up token
+reads them as no token does; everything else still refuses it.
+
 A partner is called where it says it is - the versions URL it hands in with its
 credentials, and every endpoint its versions name - with its token in the
 header, and so on the public internet alone: this machine, the networks beside

@@ -851,15 +851,15 @@ namespace cloud.charging.open.CSMS.Tests
 
             using var stranger = Partner("nobody-gave-me-this");
 
-            Assert.That((await stranger.GetAsync("/ext/versions")).IsSuccessStatusCode,
-                        Is.False, "Somebody with a made-up token was let into this operator.");
+            Assert.That((await stranger.GetAsync("/ext/versions")).StatusCode,
+                        Is.EqualTo(HttpStatusCode.Unauthorized), "Somebody with a made-up token was let into this operator.");
 
             var put = await stranger.PutAsync(
                                 "/ext/v2.2.1/cpo/tokens/DE/GDF/0123456789ABCDEF",
                                 new StringContent(TokenJSON("0123456789ABCDEF").ToString(), Encoding.UTF8, "application/json")
                             );
 
-            Assert.That(put.IsSuccessStatusCode, Is.False, "Somebody with a made-up token pushed a token into this operator.");
+            Assert.That(put.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized), "Somebody with a made-up token pushed a token into this operator.");
 
             using var admin = await SignedIn();
 
