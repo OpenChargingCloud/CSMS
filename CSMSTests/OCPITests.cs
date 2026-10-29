@@ -1246,6 +1246,139 @@ namespace cloud.charging.open.CSMS.Tests
 
         #endregion
 
+        #region (private) Caller(Version, Token)
+
+        /// <summary>
+        /// An EMSP calling with a token as its version sends it: as it is in
+        /// 2.1.1, base64 encoded from 2.2 on.
+        /// </summary>
+        private HttpClient Caller(String Version, String Token)
+
+            => Version == "2.1.1"
+                   ? Partner211(Token)
+                   : Partner(Token);
+
+        #endregion
+
+        #region (private) AssertTheNewTokenOpensThisOperator(Version, Token)
+
+        /// <summary>
+        /// The token of a registered partner, sent as its version sends it,
+        /// opens the version details - and they list a module a partner is
+        /// shown once it has registered.
+        /// </summary>
+        private async Task AssertTheNewTokenOpensThisOperator(String Version, String Token)
+        {
+
+            using var partner  = Caller(Version, Token);
+
+            var response       = await partner.GetAsync($"/ext/versions/{Version}");
+            var text           = await response.Content.ReadAsStringAsync();
+
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK),
+                        $"The registered partner's new token, sent as OCPI {Version} sends it, was answered {(Int32) response.StatusCode}: {text}");
+
+            var identifiers    = (JObject.Parse(text)["data"]?["endpoints"] as JArray)?.Select(endpoint => endpoint.Value<String>("identifier")).ToArray();
+
+            Assert.That(identifiers, Does.Contain("sessions"), $"The new token is not taken as the registered partner's: {text}");
+
+        }
+
+        #endregion
+
+        #region AnEMSPsNewTokenWorksAsItsVersionSendsIt(Version)
+
+        /// <summary>
+        /// An EMSP registers here of its own accord, and calls on with the token
+        /// it was answered with, sent as its version sends tokens: as it is in
+        /// OCPI 2.1.1.
+        /// </summary>
+        /// <remarks>
+        /// This operator keeps its token for a 2.1.1 partner unencoded, and
+        /// since WWCP_OCPI 7d901fc9 (O6) the token that replaces it at the
+        /// registration keeps that. Before, it was given the defaults; with the
+        /// settings this operator makes that changed nothing on the wire - the
+        /// test passes against the commit before as well - so this is the
+        /// 2.1.1 handshake covered, not O6 proved.
+        /// </remarks>
+        [TestCase("2.1.1")]
+        [TestCase("2.2.1")]
+        public async Task AnEMSPsNewTokenWorksAsItsVersionSendsIt(String Version)
+        {
+
+            using var admin = await SignedIn();
+
+            await using var emsp = await StubEMSP.Start(Version);
+
+            var (_, ourToken, _) = await AddPartner(admin, Version);
+
+            using var partner = Caller(Version, ourToken);
+
+            var posted     = await partner.PostAsync(
+                                       $"/ext/v{Version}/credentials",
+                                       new StringContent(
+                                           StubEMSP.Credentials(Version, StubEMSP.TokenC, emsp.VersionsURL, "Test EMSP").ToString(),
+                                           Encoding.UTF8,
+                                           "application/json"
+                                       )
+                                   );
+
+            var postedText = await posted.Content.ReadAsStringAsync();
+
+            Assert.That(posted.IsSuccessStatusCode, Is.True, $"POST credentials answered {(Int32) posted.StatusCode}: {postedText}");
+
+            var newToken   = JObject.Parse(postedText)["data"]?.Value<String>("token");
+
+            Assert.That(newToken, Is.Not.Null.And.Not.EqualTo(ourToken), postedText);
+
+            await AssertTheNewTokenOpensThisOperator(Version, newToken!);
+
+        }
+
+        #endregion
+
+        #region TheTokenThisOperatorSendsWorksAsTheVersionSendsIt(Version)
+
+        /// <summary>
+        /// This operator registers with an EMSP, and the EMSP calls with the
+        /// token it was sent, as its version sends tokens.
+        /// </summary>
+        /// <remarks>
+        /// The other direction of AnEMSPsNewTokenWorksAsItsVersionSendsIt: here
+        /// it is the token this operator stores before sending it that takes
+        /// the settings of the one it replaces.
+        /// </remarks>
+        [TestCase("2.1.1")]
+        [TestCase("2.2.1")]
+        public async Task TheTokenThisOperatorSendsWorksAsTheVersionSendsIt(String Version)
+        {
+
+            using var admin = await SignedIn();
+
+            await using var emsp = await StubEMSP.Start(Version);
+
+            var (id, _, _) = await AddPartner(
+                                 admin,
+                                 Version,
+                                 TheirToken:   StubEMSP.TokenA,
+                                 VersionsURL:  emsp.VersionsURL
+                             );
+
+            var register = await admin.PostAsync($"/api/v1/ocpi/partners/{Version}/{id}/register", JSONBody());
+            var text     = await register.Content.ReadAsStringAsync();
+
+            Assert.That(JObject.Parse(text).Value<Boolean>("ok"), Is.True, text);
+
+            var sent     = emsp.ReceivedCredentials?.Value<String>("token");
+
+            Assert.That(sent, Is.Not.Null, "The EMSP never received this operator's credentials.");
+
+            await AssertTheNewTokenOpensThisOperator(Version, sent!);
+
+        }
+
+        #endregion
+
         #region (private) StubEMSP
 
         /// <summary>
@@ -1291,7 +1424,12 @@ namespace cloud.charging.open.CSMS.Tests
             }
 
 
-            public static async Task<StubEMSP> Start()
+            /// <summary>
+            /// The stub, speaking one OCPI version: 2.2.1 unless said
+            /// otherwise, or 2.1.1, whose endpoints have no role and whose
+            /// credentials no roles.
+            /// </summary>
+            public static async Task<StubEMSP> Start(String Version = "2.2.1")
             {
 
                 var port    = new ClosedPort();
@@ -1302,6 +1440,7 @@ namespace cloud.charging.open.CSMS.Tests
                 var origin  = $"http://127.0.0.1:{port}";
                 var stub    = new StubEMSP(server, port, $"{origin}/versions");
                 var api     = server.AddHTTPAPI(HTTPPath.Root);
+                var is211   = Version == "2.1.1";
 
                 api.AddHandler(
                     HTTPPath.Parse("/versions"),
@@ -1309,51 +1448,40 @@ namespace cloud.charging.open.CSMS.Tests
                         stub.Remember(request);
                         return Task.FromResult(JSON(request, new JArray(
                             new JObject(
-                                new JProperty("version",  "2.2.1"),
-                                new JProperty("url",      $"{origin}/versions/2.2.1")
+                                new JProperty("version",  Version),
+                                new JProperty("url",      $"{origin}/versions/{Version}")
                             )
                         )));
                     },
                     HTTPMethod.GET
                 );
 
+                var credentialsEndpoint = new JObject(
+                                              new JProperty("identifier",  "credentials"),
+                                              new JProperty("url",         $"{origin}/{Version}/credentials")
+                                          );
+
+                if (!is211)
+                    credentialsEndpoint.Add("role", "RECEIVER");
+
                 api.AddHandler(
-                    HTTPPath.Parse("/versions/2.2.1"),
+                    HTTPPath.Parse($"/versions/{Version}"),
                     request => {
                         stub.Remember(request);
                         return Task.FromResult(JSON(request, new JObject(
-                            new JProperty("version",    "2.2.1"),
-                            new JProperty("endpoints",  new JArray(
-                                new JObject(
-                                    new JProperty("identifier",  "credentials"),
-                                    new JProperty("role",        "RECEIVER"),
-                                    new JProperty("url",         $"{origin}/2.2.1/credentials")
-                                )
-                            ))
+                            new JProperty("version",    Version),
+                            new JProperty("endpoints",  new JArray(credentialsEndpoint))
                         )));
                     },
                     HTTPMethod.GET
                 );
 
                 api.AddHandler(
-                    HTTPPath.Parse("/2.2.1/credentials"),
+                    HTTPPath.Parse($"/{Version}/credentials"),
                     request => {
                         stub.Remember(request);
                         stub.ReceivedCredentials = JObject.Parse(request.HTTPBodyAsUTF8String ?? "{}");
-                        return Task.FromResult(JSON(request, new JObject(
-                            new JProperty("token",  TokenC),
-                            new JProperty("url",    stub.VersionsURL),
-                            new JProperty("roles",  new JArray(
-                                new JObject(
-                                    new JProperty("role",              "EMSP"),
-                                    new JProperty("party_id",          "GDF"),
-                                    new JProperty("country_code",      "DE"),
-                                    new JProperty("business_details",  new JObject(
-                                        new JProperty("name",  "Stub EMSP")
-                                    ))
-                                )
-                            ))
-                        )));
+                        return Task.FromResult(JSON(request, Credentials(Version, TokenC, stub.VersionsURL, "Stub EMSP")));
                     },
                     HTTPMethod.POST
                 );
@@ -1383,6 +1511,36 @@ namespace cloud.charging.open.CSMS.Tests
                 }
 
             }
+
+
+            /// <summary>
+            /// The credentials of an EMSP DE*GDF: with its roles from 2.2 on,
+            /// and in 2.1.1 with its party and business details at the top.
+            /// </summary>
+            public static JObject Credentials(String Version, String Token, String VersionsURL, String Name)
+
+                => Version == "2.1.1"
+
+                       ? new (
+                             new JProperty("token",             Token),
+                             new JProperty("url",               VersionsURL),
+                             new JProperty("business_details",  new JObject(new JProperty("name", Name))),
+                             new JProperty("party_id",          "GDF"),
+                             new JProperty("country_code",      "DE")
+                         )
+
+                       : new (
+                             new JProperty("token",  Token),
+                             new JProperty("url",    VersionsURL),
+                             new JProperty("roles",  new JArray(
+                                 new JObject(
+                                     new JProperty("role",              "EMSP"),
+                                     new JProperty("party_id",          "GDF"),
+                                     new JProperty("country_code",      "DE"),
+                                     new JProperty("business_details",  new JObject(new JProperty("name", Name)))
+                                 )
+                             ))
+                         );
 
 
             private static HTTPResponse JSON(HTTPRequest Request, JToken Data)
