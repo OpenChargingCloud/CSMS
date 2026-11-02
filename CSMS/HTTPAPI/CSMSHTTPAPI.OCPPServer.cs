@@ -247,7 +247,7 @@ namespace cloud.charging.open.CSMS
                            ContentType     = HTTPContentType.Text.PLAIN,
                            Content         = Encoding.UTF8.GetBytes(csr),
                            CacheControl    = "no-store",
-                           ContentDisposition = $"attachment; filename=\"{id}.csr.pem\""
+                           ContentDisposition = HTTPContentDisposition.Attachment($"{id}.csr.pem")
                        }.WithCommonSecurityHeaders().AsImmutable
                    );
 
