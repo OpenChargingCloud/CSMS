@@ -548,6 +548,7 @@ namespace cloud.charging.open.CSMS
                          new JProperty("running",          ocppServerStarted),
                          new JProperty("tls",              ocppServerTLS),
                          new JProperty("url",              OCPPServerURL),
+                         new JProperty("sshUrl",           OCPPOverSSHServed ? OCPPServerSSHURL : null),
                          new JProperty("securityProfiles", new JArray((ocppServerSettings.SecurityProfiles ?? []).Select(profile => (Int32) profile))),
                          new JProperty("stationLogins",    StationLogins.EnabledCount),
                          new JProperty("trustedChains",    ClientTrust.EnabledCount),

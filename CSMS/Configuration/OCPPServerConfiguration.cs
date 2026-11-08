@@ -65,6 +65,7 @@ namespace cloud.charging.open.CSMS.Configuration
     /// <param name="MaxConnections">How many charging stations may be connected at once.</param>
     /// <param name="PingEvery">How often a silent connection is pinged, which is how a station that went away is noticed.</param>
     /// <param name="Logging">What of this server ends up in the event log.</param>
+    /// <param name="SSH">Whether, and how, the charging stations may connect over SSH as well.</param>
     public sealed record OCPPServerConfiguration(Boolean?                 Enabled                      = null,
                                                  IIPAddress?              Address                      = null,
                                                  IPPort?                  TCPPort                      = null,
@@ -75,7 +76,8 @@ namespace cloud.charging.open.CSMS.Configuration
                                                  Boolean?                 CheckCertificateRevocation   = null,
                                                  UInt32?                  MaxConnections               = null,
                                                  TimeSpan?                PingEvery                    = null,
-                                                 OCPPServerLogging?       Logging                      = null)
+                                                 OCPPServerLogging?       Logging                      = null,
+                                                 OCPPServerSSH?           SSH                          = null)
     {
 
         #region Data
@@ -197,7 +199,8 @@ namespace cloud.charging.open.CSMS.Configuration
                !CheckCertificateRevocation.HasValue  &&
                !MaxConnections.HasValue              &&
                !PingEvery.HasValue                   &&
-               (Logging is null || Logging.IsEmpty);
+               (Logging is null || Logging.IsEmpty)  &&
+               (SSH     is null || SSH.    IsEmpty);
 
         #endregion
 
@@ -377,6 +380,26 @@ namespace cloud.charging.open.CSMS.Configuration
 
             #endregion
 
+            #region OCPP over SSH
+
+            OCPPServerSSH? ssh = null;
+
+            if (JSON[OCPPServerSSH.FieldName] is JToken sshToken && sshToken.Type != JTokenType.Null)
+            {
+
+                if (sshToken is not JObject sshJSON)
+                {
+                    Error = $"'{OCPPServerSSH.Path}' must be a JSON object.";
+                    return false;
+                }
+
+                if (!OCPPServerSSH.TryParse(sshJSON, out ssh, out Error))
+                    return false;
+
+            }
+
+            #endregion
+
             Configuration = new OCPPServerConfiguration(
                                 enabled,
                                 address,
@@ -388,7 +411,8 @@ namespace cloud.charging.open.CSMS.Configuration
                                 checkCRL,
                                 maxConnections,
                                 pingEvery,
-                                logging
+                                logging,
+                                ssh
                             );
 
             return true;
@@ -423,7 +447,8 @@ namespace cloud.charging.open.CSMS.Configuration
                          Update.CheckCertificateRevocation ?? CheckCertificateRevocation,
                          Update.MaxConnections             ?? MaxConnections,
                          Update.PingEvery                  ?? PingEvery,
-                         (Logging ?? new OCPPServerLogging()).Merge(Update.Logging)
+                         (Logging ?? new OCPPServerLogging()).Merge(Update.Logging),
+                         (SSH     ?? new OCPPServerSSH())    .Merge(Update.SSH)
                      );
 
         /// <summary>
@@ -446,7 +471,8 @@ namespace cloud.charging.open.CSMS.Configuration
                    CheckCertificateRevocation ?? false,
                    MaxConnections             ?? DefaultMaxConnections,
                    PingEvery                  ?? DefaultPingEvery,
-                   (Logging ?? new OCPPServerLogging()).Effective()
+                   (Logging ?? new OCPPServerLogging()).Effective(),
+                   (SSH     ?? new OCPPServerSSH())    .Effective()
                );
 
         #endregion
@@ -502,6 +528,10 @@ namespace cloud.charging.open.CSMS.Configuration
             // whether or not profile 3 is allowed, and what is done with the
             // one it sends - or does not send - is decided per connection. So
             // narrowing or widening them is in effect as soon as it is saved.
+
+            if (Update.SSH is not null)
+                fields.AddRange((SSH ?? new OCPPServerSSH()).NeedsARestartFor(Update.SSH));
+
             return fields;
 
         }
@@ -532,6 +562,9 @@ namespace cloud.charging.open.CSMS.Configuration
 
             if (Logging is not null && !Logging.IsEmpty)
                 json.Add(OCPPServerLogging.FieldName, Logging.ToJSON());
+
+            if (SSH is not null && !SSH.IsEmpty)
+                json.Add(OCPPServerSSH.FieldName, SSH.ToJSON());
 
             return json;
 
