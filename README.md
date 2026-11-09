@@ -104,7 +104,7 @@ handed a role rather than a socket.
 | Server certificates | the keys and chains this CSMS presents | `certificates:edit` |
 | Client trust | the chains a station's certificate may come from | `certificates:edit` |
 | Station logins | who may sign in, and with what | `stations:edit` |
-| Certificate signing | where the CSRs of the charging stations go - the EST server of a PKI - the certificates the stations have, and what became of the latest; a station asked for a new certificate by hand | `certificates:edit` |
+| Certificate signing | where the CSRs of the charging stations go - the EST server of a PKI - the certificates the stations have, and what became of the latest; a station asked for a new certificate by hand; what the stations asked of the OCSP responder | `certificates:edit` |
 | OCPI | nothing - who this operator is and where its partners find it | `roaming:read` |
 | Roaming partners | the EMSPs it is peered with, and the peering itself | `roaming:edit` |
 | Locations | the charging locations it publishes | `locations:edit` |
@@ -299,7 +299,8 @@ to the station with `CertificateSigned`, with the CAs above it but the root:
   "chargingStationCertificate": "https://pki.example.org/.well-known/est/stations",
   "v2gCertificate":             "https://pki.example.org/.well-known/est/secc",
   "apiKey":                     "<an API key of the PKI>",
-  "renewDaysBefore":            30
+  "renewDaysBefore":            30,
+  "ocspResponders":             [ "http://ocsp.example.com/" ]
 }
 ```
 
@@ -341,12 +342,46 @@ the same certificate, so that one that says no, or never sends its CSR, is
 asked again the next day rather than at every reconnection; a kind of
 certificate the CSMS sends to no PKI is not asked for at all. `0` is never.
 
-The page shows the certificates, until when they hold, which are due, which
-stations are connected, and what each said when it was last asked; **Renew
-now**, or `POST /api/v1/configuration/certificate-signing/renew` with
+A certificate is never renewed before half of its life is over: one that holds
+for less than twice `renewDaysBefore` - ten days from a PKI, with the thirty of
+the default - is renewed halfway, or every new certificate would be due the day
+it was signed and the station asked for another every day. The page marks such
+a certificate *halfway*. Of a certificate noted before its first day was kept,
+only `renewDaysBefore` counts, until the station signs in with it again.
+
+The page shows the certificates, until when they hold, from when they are
+renewed, which are due, which stations are connected, and what each said when
+it was last asked; **Renew now**, or
+`POST /api/v1/configuration/certificate-signing/renew` with
 `{ "station", "certificateType" }`, asks a connected station at once, whatever is
 due - its first certificate, for a station that signs in with a password. It
 answers what the station said, `409` where the station is not connected.
+**Forget**, or
+`DELETE /api/v1/configuration/certificate-signing/certificates/{station}/{certificateType}`,
+has the CSMS forget a certificate, which is not renewed any more until the
+station signs in with it again or is signed a new one; a station removed takes
+its certificates with it.
+
+### Whether a certificate is revoked
+
+A station asks whether a certificate is revoked with `GetCertificateStatus`,
+OCPP 2.0.1 and 2.1, M06 - above all the CAs of its SECC certificate, whose OCSP
+answers it hands to the EV in ISO 15118-2, and which has no way to the OCSP
+responder of the PKI but through the CSMS. The CSMS makes an OCSP request of
+RFC 6960 of what the station names - the hashes of the issuer and the serial
+number - sends it to the responder the station names, and hands the answer
+back as it came, DER in Base64, for the station and the EV to judge by its
+signature; one longer than the 18000 characters every station takes is not.
+
+The responder is the station's word, and the CSMS asks it from inside its
+network, so it asks only one on the host of an EST server above - at that
+server's port, or at 80 or 443, as the OCSP responder of the PKI of
+OpenChargingCloud is at `<its public address>/api/v1/pki/ocsp` - or one that
+begins with an address of `ocspResponders`. Any other request, and one that is
+no OCSP request, is answered `Failed`, as is one the responder does not answer
+successfully. The **Certificate signing** page shows the latest hundred: the
+station, the serial number, the responder, and what it said - good, revoked or
+unknown - and until when.
 
 
 ## Running it

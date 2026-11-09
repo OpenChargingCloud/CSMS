@@ -41,6 +41,7 @@ namespace cloud.charging.open.CSMS.OCPP
     /// <param name="Noted">When this CSMS first knew of it.</param>
     /// <param name="RenewalAsked">When the station was last asked for a new one, for this certificate.</param>
     /// <param name="RenewalAnswer">What the station answered: "Accepted", "Rejected", "NotImplemented" - or why it could not be asked.</param>
+    /// <param name="NotBefore">From when it holds; not known of the certificates noted before it was kept.</param>
     public sealed record StationCertificate(String           Station,
                                             String           CertificateType,
                                             String           Fingerprint,
@@ -48,7 +49,8 @@ namespace cloud.charging.open.CSMS.OCPP
                                             String           Source,
                                             DateTimeOffset   Noted,
                                             DateTimeOffset?  RenewalAsked    = null,
-                                            String?          RenewalAnswer   = null)
+                                            String?          RenewalAnswer   = null,
+                                            DateTimeOffset?  NotBefore       = null)
     {
 
         public JObject ToJSON()
@@ -57,6 +59,7 @@ namespace cloud.charging.open.CSMS.OCPP
                    new JProperty("station",          Station),
                    new JProperty("certificateType",  CertificateType),
                    new JProperty("fingerprint",      Fingerprint),
+                   new JProperty("notBefore",        NotBefore?.ToUniversalTime().ToString("o")),
                    new JProperty("notAfter",         NotAfter.ToUniversalTime().ToString("o")),
                    new JProperty("source",           Source),
                    new JProperty("noted",            Noted.ToUniversalTime().ToString("o")),
@@ -89,7 +92,10 @@ namespace cloud.charging.open.CSMS.OCPP
                                               JSON["renewalAsked"] is JToken asked && asked.Type != JTokenType.Null
                                                   ? DateTimeOffset.Parse(asked.Value<String>()!, null, System.Globalization.DateTimeStyles.RoundtripKind)
                                                   : null,
-                                              JSON["renewalAnswer"]?.Type == JTokenType.String ? JSON["renewalAnswer"]!.Value<String>() : null);
+                                              JSON["renewalAnswer"]?.Type == JTokenType.String ? JSON["renewalAnswer"]!.Value<String>() : null,
+                                              JSON["notBefore"] is JToken notBefore && notBefore.Type != JTokenType.Null
+                                                  ? DateTimeOffset.Parse(notBefore.Value<String>()!, null, System.Globalization.DateTimeStyles.RoundtripKind)
+                                                  : null);
 
             }
             catch (Exception e) when (e is FormatException or InvalidCastException or ArgumentException)
@@ -260,19 +266,20 @@ namespace cloud.charging.open.CSMS.OCPP
 
         #endregion
 
-        #region Note(Station, CertificateType, Fingerprint, NotAfter, Source, At)
+        #region Note(Station, CertificateType, Fingerprint, NotAfter, Source, At, NotBefore = null)
 
         /// <summary>
         /// A certificate of a station: kept where it is the first of its kind,
         /// or holds longer than the one known.
         /// </summary>
         /// <returns>Whether it is the one kept now.</returns>
-        public Boolean Note(String          Station,
-                            String          CertificateType,
-                            String          Fingerprint,
-                            DateTimeOffset  NotAfter,
-                            String          Source,
-                            DateTimeOffset  At)
+        public Boolean Note(String           Station,
+                            String           CertificateType,
+                            String           Fingerprint,
+                            DateTimeOffset   NotAfter,
+                            String           Source,
+                            DateTimeOffset   At,
+                            DateTimeOffset?  NotBefore   = null)
         {
 
             lock (updateLock)
@@ -281,13 +288,55 @@ namespace cloud.charging.open.CSMS.OCPP
                 if (certificates.TryGetValue((Station, CertificateType), out var known) &&
                     (known.Fingerprint == Fingerprint || known.NotAfter > NotAfter))
                 {
+
+                    // Known from before its first day was kept: learned now.
+                    if (known.Fingerprint == Fingerprint && known.NotBefore is null && NotBefore is not null)
+                    {
+                        certificates[(Station, CertificateType)] = known with { NotBefore = NotBefore };
+                        Save();
+                    }
+
                     return known.Fingerprint == Fingerprint;
+
                 }
 
-                certificates[(Station, CertificateType)] = new StationCertificate(Station, CertificateType, Fingerprint, NotAfter, Source, At);
+                certificates[(Station, CertificateType)] = new StationCertificate(Station, CertificateType, Fingerprint, NotAfter, Source, At, NotBefore: NotBefore);
 
                 Save();
                 return true;
+
+            }
+
+        }
+
+        #endregion
+
+        #region Forget(Station, CertificateType = null)
+
+        /// <summary>
+        /// Forget the certificate of the given kind of a station - or all of
+        /// its certificates: the station is gone, or the certificate is not the
+        /// station's to be renewed any more.
+        /// </summary>
+        /// <returns>How many were forgotten.</returns>
+        public Int32 Forget(String   Station,
+                            String?  CertificateType   = null)
+        {
+
+            lock (updateLock)
+            {
+
+                var gone = certificates.Keys.Where(key => key.Station == Station &&
+                                                          (CertificateType is null || key.Type == CertificateType)).
+                                             ToList();
+
+                foreach (var key in gone)
+                    certificates.Remove(key);
+
+                if (gone.Count > 0)
+                    Save();
+
+                return gone.Count;
 
             }
 

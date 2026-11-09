@@ -278,7 +278,7 @@ namespace cloud.charging.open.CSMS.Tests
             // certificate.
             using var key         = System.Security.Cryptography.ECDsa.Create(System.Security.Cryptography.ECCurve.NamedCurves.nistP256);
             var csr               = new CertificateRequest("CN=cs003", key, System.Security.Cryptography.HashAlgorithmName.SHA256).CreateSigningRequestPem();
-            using var signed      = ca.Sign(csr, DateTimeOffset.UtcNow.AddDays(-1), DateTimeOffset.UtcNow.AddDays(20), ClientAuthentication: true);
+            using var signed      = ca.Sign(csr, DateTimeOffset.UtcNow.AddDays(-345), DateTimeOffset.UtcNow.AddDays(20), ClientAuthentication: true);
             using var withKey     = signed.CopyWithPrivateKey(key);
             using var certificate = X509CertificateLoader.LoadPkcs12(withKey.Export(X509ContentType.Pkcs12, "station"), "station", X509KeyStorageFlags.Exportable);
 

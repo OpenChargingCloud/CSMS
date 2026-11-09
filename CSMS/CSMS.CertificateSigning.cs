@@ -178,6 +178,7 @@ namespace cloud.charging.open.CSMS
             csms01.SignCertificateProcessor = SignCertificate;
 
             BuildCertificateRenewal();
+            BuildCertificateStatus();
 
             Log.Info($"Certificate signing: {certificateSigning}.", "ocpp", "certificate");
 
@@ -251,12 +252,17 @@ namespace cloud.charging.open.CSMS
 
             json.Add("certificates", new JArray(StationCertificates.All.Select(certificate => {
                                                     var one = certificate.ToJSON();
+                                                    one.Add("renewsFrom", RenewsFrom(certificate)?.ToUniversalTime().ToString("o"));
+                                                    one.Add("halfway",    IsHalfway(certificate));
                                                     one.Add("due",        IsDue(certificate));
                                                     one.Add("connected",  IsConnected(certificate.Station));
                                                     return one;
                                                 })));
 
+            json["ocspResponders"]             ??= new JArray();
+
             json.Add("requests", new JArray(CertificateSignings.Select(entry => entry.ToJSON())));
+            json.Add("statusRequests", new JArray(CertificateStatuses.Select(entry => entry.ToJSON())));
 
             return json;
 
@@ -399,7 +405,7 @@ namespace cloud.charging.open.CSMS
             try
             {
 
-                using var http   = ESTClient(EST);
+                using var http   = PKIClient(EST);
 
                 using var post   = new HttpRequestMessage(HttpMethod.Post, $"{EST}/simpleenroll") {
                                        Content = new StringContent(Convert.ToBase64String(CSR), Encoding.ASCII)
@@ -465,7 +471,8 @@ namespace cloud.charging.open.CSMS
 
                 Remember(new CertificateSigningEntry(At, station, Type.ToString(), "signed", null, fingerprint, certificate.NotAfter));
 
-                StationCertificates.Note(station, Type.ToString(), fingerprint, certificate.NotAfter.ToUniversalTime(), "signed", TimeProvider.GetUtcNow());
+                StationCertificates.Note(station, Type.ToString(), fingerprint, certificate.NotAfter.ToUniversalTime(), "signed", TimeProvider.GetUtcNow(),
+                                         certificate.NotBefore.ToUniversalTime());
 
                 Log.Notice($"'{station}' took the {Type} {fingerprint}, signed by '{certificate.Issuer}' and valid until {certificate.NotAfter.ToUniversalTime():u}.",
                            "ocpp", "certificate", "station", "security");
@@ -488,15 +495,15 @@ namespace cloud.charging.open.CSMS
 
         #endregion
 
-        #region (private) ESTClient(EST)
+        #region (private) PKIClient(Address, Timeout = null)
 
         /// <summary>
-        /// An HTTP client for the EST server of the PKI: its name looked up by
-        /// the DNS client of this node, and its certificate judged by this node
-        /// - the machine's roots and the TLS roots of this node's own store for
-        /// "pki" - as the name and the time servers are.
+        /// An HTTP client for the PKI - its EST server, its OCSP responder: its
+        /// name looked up by the DNS client of this node, and its certificate
+        /// judged by this node - the machine's roots and the TLS roots of this
+        /// node's own store for "pki" - as the name and the time servers are.
         /// </summary>
-        private HttpClient ESTClient(Uri EST)
+        private HttpClient PKIClient(Uri Address, TimeSpan? Timeout = null)
         {
 
             var handler = NameResolution.HTTPHandler(DNSClient);
@@ -506,7 +513,7 @@ namespace cloud.charging.open.CSMS
                 using var shown = certificate is null ? null : X509CertificateLoader.LoadCertificate(certificate.GetRawCertData());
 
                 return JudgeServer(PKIService,
-                                   EST.Host,
+                                   Address.Host,
                                    null,
                                    shown,
                                    chain,
@@ -515,7 +522,7 @@ namespace cloud.charging.open.CSMS
 
             };
 
-            return new HttpClient(handler, disposeHandler: true) { Timeout = ESTTimeout };
+            return new HttpClient(handler, disposeHandler: true) { Timeout = Timeout ?? ESTTimeout };
 
         }
 

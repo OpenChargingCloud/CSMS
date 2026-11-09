@@ -361,7 +361,9 @@ namespace cloud.charging.open.CSMS.Tests
         public async Task AStationWhoseCertificateRunsOutIsAskedForANewOneAfterItsBootNotification()
         {
 
+            // A certificate of a year, ten days of which are left.
             est!.ValidFor     = TimeSpan.FromDays(10);
+            est.IssuedAgo     = TimeSpan.FromDays(355);
 
             using var station = await Connect("cs001");
 
@@ -393,7 +395,8 @@ namespace cloud.charging.open.CSMS.Tests
 
             // And the CSR it sends goes the way every other does: the new
             // certificate is the one known now, and not due.
-            est.ValidFor = TimeSpan.FromDays(365);
+            est.ValidFor  = TimeSpan.FromDays(365);
+            est.IssuedAgo = TimeSpan.FromMinutes(5);
 
             await SignedACertificate(station, "cs001", "m2");
 
@@ -423,6 +426,102 @@ namespace cloud.charging.open.CSMS.Tests
                         "asked for a certificate that holds for a year");
 
             Assert.That(await CSMS.RenewDueCertificates(), Is.EqualTo(0));
+
+        }
+
+        #endregion
+
+        #region ACertificateThatHoldsLessThanTheDaysConfiguredIsRenewedHalfway()
+
+        /// <summary>
+        /// A PKI that signs for ten days, with the thirty days before of the
+        /// default: the new certificate would be due the day it was signed, and
+        /// the station asked every day. It is renewed halfway instead.
+        /// </summary>
+        [Test]
+        public async Task ACertificateThatHoldsLessThanTheDaysConfiguredIsRenewedHalfway()
+        {
+
+            est!.ValidFor     = TimeSpan.FromDays(10);
+
+            using var station = await Connect("cs001");
+            using var browser = await SignedIn();
+
+            await SignedACertificate(station, "cs001");
+            await Booted(station, "b1");
+
+            Assert.That(async () => await Receive(station, TimeSpan.FromSeconds(2)), Throws.InstanceOf<OperationCanceledException>(),
+                        "asked for the certificate it was just signed");
+
+            var known       = CSMS.StationCertificates.Get("cs001", "ChargingStationCertificate")!;
+            var shown       = JObject.Parse(await browser.GetStringAsync("api/v1/configuration/certificate-signing"));
+            var certificate = shown["certificates"]!.Single(one => one["station"]!.Value<String>() == "cs001");
+
+            Assert.Multiple(() => {
+                Assert.That(known.NotBefore,                            Is.Not.Null, "its first day is kept");
+                Assert.That(CSMS.IsHalfway(known),                      Is.True);
+                Assert.That(CSMS.IsDue(known),                          Is.False);
+                Assert.That(CSMS.RenewsFrom(known),                     Is.EqualTo(known.NotAfter - (known.NotAfter - known.NotBefore!.Value) / 2));
+                Assert.That(certificate["halfway"]!.Value<Boolean>(),   Is.True);
+                Assert.That(certificate["renewsFrom"]!.Type,            Is.Not.EqualTo(JTokenType.Null));
+            });
+
+            // Halfway through, it is.
+            var later = known with { NotBefore = known.NotBefore!.Value.AddDays(-6), NotAfter = known.NotAfter.AddDays(-6) };
+
+            Assert.That(CSMS.IsDue(later), Is.True, "past half of its life");
+
+            // Of a certificate whose first day is not known, as of one noted
+            // before it was kept, only the days configured count.
+            Assert.That(CSMS.IsDue(known with { NotBefore = null }), Is.True);
+
+        }
+
+        #endregion
+
+        #region ACertificateIsForgotten()
+
+        /// <summary>
+        /// Forgotten by hand, and with its station: not renewed any more.
+        /// </summary>
+        [Test]
+        public async Task ACertificateIsForgotten()
+        {
+
+            using var station = await Connect("cs001");
+            using var browser = await SignedIn();
+
+            await SignedACertificate(station, "cs001");
+
+            CSMS.StationCertificates.Note("cs001", "V2GCertificate",             "ee", DateTimeOffset.UtcNow.AddDays(100), "signed", DateTimeOffset.UtcNow);
+            CSMS.StationCertificates.Note("cs002", "ChargingStationCertificate", "ff", DateTimeOffset.UtcNow.AddDays(100), "signed", DateTimeOffset.UtcNow);
+
+            using var forgotten = await browser.DeleteAsync("api/v1/configuration/certificate-signing/certificates/cs001/V2GCertificate");
+            using var unknown   = await browser.DeleteAsync("api/v1/configuration/certificate-signing/certificates/cs001/V2GCertificate");
+            var shown           = JObject.Parse(await forgotten.Content.ReadAsStringAsync());
+
+            Assert.Multiple(() => {
+                Assert.That(forgotten.StatusCode,                                                   Is.EqualTo(HttpStatusCode.OK), shown.ToString());
+                Assert.That(unknown.StatusCode,                                                     Is.EqualTo(HttpStatusCode.NotFound));
+                Assert.That(shown["certificates"]!.Count(),                                         Is.EqualTo(2));
+                Assert.That(CSMS.StationCertificates.Get("cs001", "V2GCertificate"),                Is.Null);
+                Assert.That(CSMS.StationCertificates.Get("cs001", "ChargingStationCertificate"),    Is.Not.Null, "only the one named");
+            });
+
+            // The file says so too: a restart does not bring it back.
+            var again = new StationCertificates(CSMS.StationCertificates.Path);
+            again.Load();
+
+            Assert.That(again.Get("cs001", "V2GCertificate"), Is.Null);
+
+            // The station removed: its certificates with it, and no other's.
+            using var removed = await browser.DeleteAsync("api/v1/configuration/ocpp-server/stations/cs001");
+
+            Assert.Multiple(() => {
+                Assert.That(removed.StatusCode,                                                     Is.EqualTo(HttpStatusCode.OK));
+                Assert.That(CSMS.StationCertificates.Get("cs001", "ChargingStationCertificate"),    Is.Null);
+                Assert.That(CSMS.StationCertificates.Get("cs002", "ChargingStationCertificate"),    Is.Not.Null);
+            });
 
         }
 
@@ -552,6 +651,173 @@ namespace cloud.charging.open.CSMS.Tests
         #endregion
 
 
+        #region AStationAsksWhetherACertificateIsRevoked()
+
+        /// <summary>
+        /// A station's GetCertificateStatus, sent on to the OCSP responder of
+        /// the PKI - on the host of its EST server - and its answer handed
+        /// back as it came: of a certificate revoked, and of one that is not.
+        /// </summary>
+        [Test]
+        public async Task AStationAsksWhetherACertificateIsRevoked()
+        {
+
+            using var station = await Connect("cs001");
+            using var browser = await SignedIn();
+
+            est!.Revoked.TryAdd("1a2b3c", 0);
+
+            var responder = $"http://127.0.0.1:{estPort}/api/v1/pki/ocsp";
+
+            await Send(station, GetCertificateStatus("s1", "1A2B3C", responder));
+            var revoked = await Receive(station);
+
+            await Send(station, GetCertificateStatus("s2", "0FF", responder));
+            var good    = await Receive(station);
+
+            var der     = Convert.FromBase64String(revoked[2]!["ocspResult"]!.Value<String>()!);
+            var shown   = JObject.Parse(await browser.GetStringAsync("api/v1/configuration/certificate-signing"));
+
+            Assert.Multiple(() => {
+
+                Assert.That(revoked[0]!.Value<Int32>(),                     Is.EqualTo(3), revoked.ToString());
+                Assert.That(revoked[2]!["status"]!.Value<String>(),         Is.EqualTo("Accepted"));
+                Assert.That(OCSPMessages.TryRead(der, "1a2b3c", out var read), Is.True, "what the station is handed is the OCSP response");
+                Assert.That(read!.CertificateStatus,                        Is.EqualTo("revoked"));
+                Assert.That(good[2]!["status"]!.Value<String>(),            Is.EqualTo("Accepted"));
+
+                Assert.That(est.OCSPRequests.Count,                         Is.EqualTo(2), "asked of the responder");
+
+                Assert.That(CSMS.CertificateStatuses.Select(entry => entry.Outcome),      Is.EqualTo(new[] { "good", "revoked" }), "the newest first");
+                Assert.That(CSMS.CertificateStatuses[1].NextUpdate,                       Is.Not.Null);
+                Assert.That(shown["statusRequests"]!.Count(),                             Is.EqualTo(2));
+                Assert.That(shown["statusRequests"]![1]!["serialNumber"]!.Value<String>(), Is.EqualTo("1A2B3C"));
+
+            });
+
+        }
+
+        #endregion
+
+        #region AResponderNoneToldOfIsNotAsked()
+
+        /// <summary>
+        /// The responder is a station's word: one on another host than the
+        /// EST server, and none named, is not asked - nor a request that is no
+        /// OCSP request - and the station is told Failed.
+        /// </summary>
+        [Test]
+        public async Task AResponderNoneToldOfIsNotAsked()
+        {
+
+            using var station = await Connect("cs001");
+
+            await Send(station, GetCertificateStatus("s1", "1A2B3C", $"http://127.0.0.2:{estPort}/api/v1/pki/ocsp"));
+            var elsewhere = await Receive(station);
+
+            await Send(station, GetCertificateStatus("s2", "1A2B3C", $"http://127.0.0.1:{estPort}/api/v1/pki/ocsp", NameHash: "abcd"));
+            var shortHash = await Receive(station);
+
+            est!.OCSPStatus = (Int32) FakeEST.OCSPResponseStatus.TryLater;
+
+            await Send(station, GetCertificateStatus("s3", "1A2B3C", $"http://127.0.0.1:{estPort}/api/v1/pki/ocsp"));
+            var later     = await Receive(station);
+
+            Assert.Multiple(() => {
+                Assert.That(elsewhere[2]!["status"]!.Value<String>(),                  Is.EqualTo("Failed"), elsewhere.ToString());
+                Assert.That(elsewhere[2]!["statusInfo"]!["reasonCode"]!.Value<String>(), Is.EqualTo("UnknownResponder"));
+                Assert.That(shortHash[2]!["status"]!.Value<String>(),                  Is.EqualTo("Failed"));
+                Assert.That(later[2]!["status"]!.Value<String>(),                      Is.EqualTo("Failed"));
+                Assert.That(est.OCSPRequests.Count,                                    Is.EqualTo(1), "only the request that could be sent was sent");
+                Assert.That(CSMS.CertificateStatuses.Select(entry => entry.Outcome),   Is.EqualTo(new[] { "failed", "refused", "refused" }));
+                Assert.That(CSMS.CertificateStatuses[0].Detail,                        Does.Contain("tryLater"));
+            });
+
+        }
+
+        #endregion
+
+        #region TheOCSPRespondersAreNamed()
+
+        /// <summary>
+        /// The responders beside the EST host, as the API takes them - and
+        /// which are asked: one named, below its path; one on the host of an
+        /// EST server, at its port and those of HTTP and HTTPS.
+        /// </summary>
+        [Test]
+        public async Task TheOCSPRespondersAreNamed()
+        {
+
+            using var browser = await SignedIn();
+
+            using var notAList = await browser.PutAsync("api/v1/configuration/certificate-signing",
+                                                        new StringContent("""{ "ocspResponders": "http://ocsp.example.com/" }""", Encoding.UTF8, "application/json"));
+
+            using var notAURL  = await browser.PutAsync("api/v1/configuration/certificate-signing",
+                                                        new StringContent("""{ "ocspResponders": [ "ftp://ocsp.example.com/" ] }""", Encoding.UTF8, "application/json"));
+
+            using var named    = await browser.PutAsync("api/v1/configuration/certificate-signing",
+                                                        new StringContent("""{ "ocspResponders": [ "http://ocsp.example.com/a" ] }""", Encoding.UTF8, "application/json"));
+
+            var shown          = JObject.Parse(await named.Content.ReadAsStringAsync());
+            var file           = JObject.Parse(File.ReadAllText(Path.Combine(Directory, WWCPConfigFile.DefaultFileName)))[CertificateSigningConfiguration.SectionName]!;
+            var signing        = CSMS.CertificateSigning;
+
+            Assert.Multiple(() => {
+
+                Assert.That(notAList.StatusCode,                              Is.EqualTo(HttpStatusCode.BadRequest));
+                Assert.That(notAURL.StatusCode,                               Is.EqualTo(HttpStatusCode.BadRequest));
+                Assert.That(named.StatusCode,                                 Is.EqualTo(HttpStatusCode.OK), shown.ToString());
+                Assert.That(shown["ocspResponders"]![0]!.Value<String>(),     Is.EqualTo("http://ocsp.example.com/a"));
+                Assert.That(file["ocspResponders"]![0]!.Value<String>(),      Is.EqualTo("http://ocsp.example.com/a"));
+                Assert.That(file["apiKey"]!.Value<String>(),                  Is.EqualTo(TheAPIKey), "what was not named stays");
+
+                Assert.That(signing.MayAsk(new Uri("http://ocsp.example.com/a")),                  Is.True);
+                Assert.That(signing.MayAsk(new Uri("http://ocsp.example.com/a/b")),                Is.True);
+                Assert.That(signing.MayAsk(new Uri("http://ocsp.example.com/ab")),                 Is.False, "not below its path");
+                Assert.That(signing.MayAsk(new Uri("https://ocsp.example.com/a")),                 Is.False, "not at another scheme");
+                Assert.That(signing.MayAsk(new Uri("http://user@ocsp.example.com/a")),             Is.False);
+                Assert.That(signing.MayAsk(new Uri($"http://127.0.0.1:{estPort}/anything")),       Is.True,  "on the host of the EST server");
+                Assert.That(signing.MayAsk(new Uri("http://127.0.0.1/ocsp")),                      Is.True,  "at the port of HTTP");
+                Assert.That(signing.MayAsk(new Uri("http://127.0.0.1:6379/")),                     Is.False, "at any other port");
+                Assert.That(signing.MayAsk(new Uri("http://127.0.0.2/ocsp")),                      Is.False);
+
+            });
+
+            using var none = await browser.PutAsync("api/v1/configuration/certificate-signing",
+                                                    new StringContent("""{ "ocspResponders": null }""", Encoding.UTF8, "application/json"));
+
+            Assert.That(CSMS.CertificateSigning.MayAsk(new Uri("http://ocsp.example.com/a")), Is.False, "taken away");
+
+        }
+
+        #endregion
+
+
+        #region (private) GetCertificateStatus(MessageId, SerialNumber, Responder, NameHash = null)
+
+        /// <summary>
+        /// A station asking whether a certificate below the intermediate of the
+        /// PKI is revoked.
+        /// </summary>
+        private JArray GetCertificateStatus(String   MessageId,
+                                            String   SerialNumber,
+                                            String   Responder,
+                                            String?  NameHash   = null)
+
+            => new (2, MessageId, "GetCertificateStatus",
+                    new JObject(
+                        new JProperty("ocspRequestData", new JObject(
+                            new JProperty("hashAlgorithm",   "SHA256"),
+                            new JProperty("issuerNameHash",  NameHash ?? Convert.ToHexString(SHA256.HashData(est!.CA.Intermediate!.SubjectName.RawData)).ToLowerInvariant()),
+                            new JProperty("issuerKeyHash",   Convert.ToHexString(SHA256.HashData(est!.CA.Intermediate!.PublicKey.EncodedKeyValue.RawData)).ToLowerInvariant()),
+                            new JProperty("serialNumber",    SerialNumber),
+                            new JProperty("responderURL",    Responder)
+                        ))
+                    ));
+
+        #endregion
+
         #region (private) SignedACertificate(Station, Id, MessageId = "m1") / Booted(Station, MessageId)
 
         /// <summary>
@@ -651,6 +917,16 @@ namespace cloud.charging.open.CSMS.Tests
             public ConcurrentQueue<String>            APIKeys   { get; } = new ();
             public String?                            Refuse    { get; set; }
             public TimeSpan                           ValidFor  { get; set; } = TimeSpan.FromDays(365);
+            public TimeSpan                           IssuedAgo { get; set; } = TimeSpan.FromMinutes(5);
+
+            /// <summary>
+            /// The OCSP requests it was sent, as DER; the serial numbers it says
+            /// are revoked, in lower case hexadecimal; and the responseStatus it
+            /// answers with, where it is not successful.
+            /// </summary>
+            public ConcurrentQueue<Byte[]>            OCSPRequests   { get; } = new ();
+            public ConcurrentDictionary<String, Byte> Revoked        { get; } = new ();
+            public Int32?                             OCSPStatus     { get; set; }
 
             public FakeEST()
             {
@@ -698,11 +974,19 @@ namespace cloud.charging.open.CSMS.Tests
                 if (headers.TryGetValue("api-key", out var apiKey))
                     APIKeys.Enqueue(apiKey);
 
-                String  status;
-                String  contentType = "application/pkcs7-mime; smime-type=certs-only";
-                String  answer;
+                String   status;
+                String   contentType = "application/pkcs7-mime; smime-type=certs-only";
+                String   answer      = "";
+                Byte[]?  binary      = null;
 
-                if (request[0] == "POST" && request[1].EndsWith("/simpleenroll"))
+                if (request[0] == "POST" && request[1].EndsWith("/ocsp"))
+                {
+                    OCSPRequests.Enqueue(body);
+                    status      = "200 OK";
+                    contentType = "application/ocsp-response";
+                    binary      = OCSPResponse(body);
+                }
+                else if (request[0] == "POST" && request[1].EndsWith("/simpleenroll"))
                 {
                     if (Refuse is not null)
                     {
@@ -713,7 +997,7 @@ namespace cloud.charging.open.CSMS.Tests
                     else
                     {
                         var csr     = PemEncoding.WriteString("CERTIFICATE REQUEST", Convert.FromBase64String(Encoding.ASCII.GetString(body)));
-                        using var certificate = CA.Sign(csr, DateTimeOffset.UtcNow.AddMinutes(-5), DateTimeOffset.UtcNow.Add(ValidFor), ClientAuthentication: true);
+                        using var certificate = CA.Sign(csr, DateTimeOffset.UtcNow - IssuedAgo, DateTimeOffset.UtcNow.Add(ValidFor), ClientAuthentication: true);
                         status      = "200 OK";
                         answer      = Convert.ToBase64String(CertsOnly(certificate));
                     }
@@ -730,12 +1014,104 @@ namespace cloud.charging.open.CSMS.Tests
                     answer      = "no such thing";
                 }
 
-                var bytes = Encoding.ASCII.GetBytes(answer);
+                var bytes = binary ?? Encoding.ASCII.GetBytes(answer);
                 var reply = Encoding.ASCII.GetBytes($"HTTP/1.1 {status}\r\nContent-Type: {contentType}\r\nContent-Length: {bytes.Length}\r\nConnection: close\r\n\r\n");
 
                 await stream.WriteAsync(reply);
                 await stream.WriteAsync(bytes);
 
+            }
+
+            /// <summary>
+            /// The answer to an OCSP request of one certificate, RFC 6960: good,
+            /// or revoked where its serial number is in Revoked - signed with
+            /// nothing anybody could check, which is not what is tested.
+            /// </summary>
+            private Byte[] OCSPResponse(Byte[] Request)
+            {
+
+                var writer = new AsnWriter(AsnEncodingRules.DER);
+
+                if (OCSPStatus is Int32 failed)
+                {
+                    using (writer.PushSequence())
+                        writer.WriteEnumeratedValue((OCSPResponseStatus) failed);
+                    return writer.Encode();
+                }
+
+                var certID = new AsnReader(Request, AsnEncodingRules.DER).ReadSequence().  // OCSPRequest
+                                                                         ReadSequence().  //   TBSRequest
+                                                                         ReadSequence().  //     requestList
+                                                                         ReadSequence().  //       Request
+                                                                         ReadEncodedValue();
+
+                var serialReader = new AsnReader(certID, AsnEncodingRules.DER).ReadSequence();
+                serialReader.ReadSequence();
+                serialReader.ReadOctetString();
+                serialReader.ReadOctetString();
+                var serial       = Convert.ToHexString(serialReader.ReadIntegerBytes().Span).TrimStart('0').ToLowerInvariant();
+
+                var now          = DateTimeOffset.UtcNow;
+                var basic        = new AsnWriter(AsnEncodingRules.DER);
+
+                using (basic.PushSequence())                                            // BasicOCSPResponse
+                {
+
+                    using (basic.PushSequence())                                        //   ResponseData
+                    {
+
+                        using (basic.PushSequence(new Asn1Tag(TagClass.ContextSpecific, 2, true)))
+                            basic.WriteOctetString(new Byte[20]);                       //     responderID byKey
+
+                        basic.WriteGeneralizedTime(now);                                //     producedAt
+
+                        using (basic.PushSequence())                                    //     responses
+                        using (basic.PushSequence())                                    //       SingleResponse
+                        {
+
+                            basic.WriteEncodedValue(certID.Span);
+
+                            if (Revoked.ContainsKey(serial))
+                                using (basic.PushSequence(new Asn1Tag(TagClass.ContextSpecific, 1, true)))
+                                    basic.WriteGeneralizedTime(now.AddDays(-2));
+                            else
+                                basic.WriteNull(new Asn1Tag(TagClass.ContextSpecific, 0));
+
+                            basic.WriteGeneralizedTime(now);                            //         thisUpdate
+
+                            using (basic.PushSequence(new Asn1Tag(TagClass.ContextSpecific, 0, true)))
+                                basic.WriteGeneralizedTime(now.AddHours(1));            //         nextUpdate
+
+                        }
+
+                    }
+
+                    using (basic.PushSequence())
+                        basic.WriteObjectIdentifier("1.2.840.10045.4.3.2");
+
+                    basic.WriteBitString(new Byte[64]);
+
+                }
+
+                using (writer.PushSequence())                                           // OCSPResponse
+                {
+                    writer.WriteEnumeratedValue(OCSPResponseStatus.Successful);
+                    using (writer.PushSequence(new Asn1Tag(TagClass.ContextSpecific, 0, true)))
+                    using (writer.PushSequence())
+                    {
+                        writer.WriteObjectIdentifier(OCSPMessages.BasicResponseOID);
+                        writer.WriteOctetString(basic.Encode());
+                    }
+                }
+
+                return writer.Encode();
+
+            }
+
+            public enum OCSPResponseStatus
+            {
+                Successful  = 0,
+                TryLater    = 3
             }
 
             /// <summary>

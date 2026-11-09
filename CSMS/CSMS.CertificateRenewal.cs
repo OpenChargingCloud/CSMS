@@ -152,7 +152,8 @@ namespace cloud.charging.open.CSMS
                                          Certificate.GetCertHashString(HashAlgorithmName.SHA256).ToLowerInvariant(),
                                          Certificate.NotAfter.ToUniversalTime(),
                                          "presented",
-                                         TimeProvider.GetUtcNow());
+                                         TimeProvider.GetUtcNow(),
+                                         Certificate.NotBefore.ToUniversalTime());
 
             }
             catch (Exception e)
@@ -184,15 +185,52 @@ namespace cloud.charging.open.CSMS
 
         #endregion
 
-        #region IsDue(Certificate)
+        #region RenewsFrom(Certificate) / IsHalfway(Certificate) / IsDue(Certificate)
 
         /// <summary>
-        /// Whether a certificate runs out within the days it is renewed before.
+        /// From when a certificate is renewed: the days configured before it
+        /// runs out - but not before half of its life is over. Null where this
+        /// CSMS renews none.
+        /// </summary>
+        /// <remarks>
+        /// A PKI that signs for less long than the days configured would have
+        /// every new certificate due on the day it was signed, and the station
+        /// asked for another every day: such a certificate is renewed halfway
+        /// instead. Of a certificate whose first day is not known, as of those
+        /// noted before it was kept, only the days configured count.
+        /// </remarks>
+        public DateTimeOffset? RenewsFrom(StationCertificate Certificate)
+        {
+
+            var before = certificateSigning.RenewBefore;
+
+            if (before <= TimeSpan.Zero)
+                return null;
+
+            if (IsHalfway(Certificate))
+                before = (Certificate.NotAfter - Certificate.NotBefore!.Value) / 2;
+
+            return Certificate.NotAfter - before;
+
+        }
+
+        /// <summary>
+        /// Whether a certificate holds for so short a time that it is renewed
+        /// halfway, and not the days configured before it runs out.
+        /// </summary>
+        public Boolean IsHalfway(StationCertificate Certificate)
+
+            => certificateSigning.RenewBefore > TimeSpan.Zero &&
+               Certificate.NotBefore is DateTimeOffset notBefore &&
+               (Certificate.NotAfter - notBefore) / 2 < certificateSigning.RenewBefore;
+
+        /// <summary>
+        /// Whether a certificate is to be renewed now.
         /// </summary>
         public Boolean IsDue(StationCertificate Certificate)
 
-            => certificateSigning.RenewBefore > TimeSpan.Zero &&
-               Certificate.NotAfter - TimeProvider.GetUtcNow() <= certificateSigning.RenewBefore;
+            => RenewsFrom(Certificate) is DateTimeOffset from &&
+               TimeProvider.GetUtcNow() >= from;
 
         #endregion
 

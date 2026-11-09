@@ -591,7 +591,11 @@ export const api = {
         save:  (update: CertificateSigningUpdate)  => request<CertificateSigning>('PUT', '/configuration/certificate-signing', update),
         /** Ask a connected station with TriggerMessage for a new certificate of that kind, now. */
         renew: (station: string, certificateType: string) =>
-                   request<CertificateRenewal>('POST', '/configuration/certificate-signing/renew', { station, certificateType })
+                   request<CertificateRenewal>('POST', '/configuration/certificate-signing/renew', { station, certificateType }),
+        /** Forget a station's certificate: it is not renewed any more, until the station signs in with it or is signed a new one. */
+        forget: (station: string, certificateType: string) =>
+                   request<CertificateSigning>('DELETE',
+                       `/configuration/certificate-signing/certificates/${encodeURIComponent(station)}/${encodeURIComponent(certificateType)}`)
 
     },
 
@@ -741,12 +745,29 @@ export interface CertificateSigningEntry {
     notAfter:         string | null;
 }
 
+/** What became of one GetCertificateStatus request of a charging station. */
+export interface CertificateStatusEntry {
+    at:            string;
+    station:       string;
+    /** Of the certificate asked about, in hexadecimal. */
+    serialNumber:  string;
+    /** The OCSP responder the station named. */
+    responder:     string;
+    /** As the responder said; or answered of another certificate; not sent on; not answered. */
+    outcome:       'good' | 'revoked' | 'unknown' | 'answered' | 'refused' | 'failed';
+    detail:        string | null;
+    /** Until when the answer holds, where the responder says so. */
+    nextUpdate:    string | null;
+}
+
 /** A certificate a charging station has, as the CSMS knows of it, and what came of asking it to renew. */
 export interface StationCertificate {
     station:          string;
     certificateType:  string;
     /** The SHA-256 fingerprint. */
     fingerprint:      string;
+    /** Not known of the certificates noted before it was kept. */
+    notBefore:        string | null;
     notAfter:         string;
     /** Signed here and taken by the station; or what the station signed in with. */
     source:           'signed' | 'presented';
@@ -754,7 +775,11 @@ export interface StationCertificate {
     renewalAsked:     string | null;
     /** "Accepted", "Rejected", "NotImplemented" - or "failed". */
     renewalAnswer:    string | null;
-    /** Whether it runs out within the days it is renewed before. */
+    /** From when it is renewed; null where none is. */
+    renewsFrom:       string | null;
+    /** It holds for less than twice the days it is renewed before, and is renewed halfway instead. */
+    halfway:          boolean;
+    /** Whether it is to be renewed now. */
     due:              boolean;
     connected:        boolean;
 }
@@ -773,8 +798,12 @@ export interface CertificateSigning {
     apiKey:                      boolean;
     /** How many days before a certificate runs out the station is asked for a new one; 0 for never. */
     renewDaysBefore:             number;
+    /** The OCSP responders a station may have asked, beside those on the host of an EST server. */
+    ocspResponders:              string[];
     certificates:                StationCertificate[];
     requests:                    CertificateSigningEntry[];
+    /** The latest GetCertificateStatus requests, the newest first. */
+    statusRequests:              CertificateStatusEntry[];
 }
 
 /** A change of it: what is named is changed, null removes it. */
@@ -783,4 +812,5 @@ export interface CertificateSigningUpdate {
     v2gCertificate?:              string | null;
     apiKey?:                      string | null;
     renewDaysBefore?:             number | null;
+    ocspResponders?:              string[] | null;
 }

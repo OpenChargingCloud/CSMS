@@ -38,6 +38,7 @@ namespace cloud.charging.open.CSMS
     /// | <c>GET v1/configuration/certificate-signing</c> | where each kind of certificate is signed, whether there is an API key, and the latest requests |
     /// | <c>PUT v1/configuration/certificate-signing</c> | <c>{ chargingStationCertificate, v2gCertificate, apiKey, renewDaysBefore }</c>: what is named is changed, null removes it, and what is not named stays |
     /// | <c>POST v1/configuration/certificate-signing/renew</c> | <c>{ station, certificateType }</c>: the station is asked for a new certificate of that kind now, and what it answered is said |
+    /// | <c>DELETE v1/configuration/certificate-signing/certificates/{station}/{certificateType}</c> | the certificate is forgotten, and not renewed any more - until the station signs in with it, or is signed a new one |
     /// <para>
     /// Reading at the stations' permission; changing at the certificates',
     /// which only the administrators have: where the CSRs go is who signs the
@@ -59,6 +60,8 @@ namespace cloud.charging.open.CSMS
             AddHandler(root, PutCertificateSigning, HTTPMethod.PUT);
 
             AddHandler(root + "/renew", PostCertificateRenewal, HTTPMethod.POST);
+
+            AddHandler(root + "/certificates/{station}/{certificateType}", DeleteStationCertificate, HTTPMethod.DELETE);
 
         }
 
@@ -140,6 +143,35 @@ namespace cloud.charging.open.CSMS
                                     new JProperty("answer",  renewal.Answer),
                                     new JProperty("detail",  renewal.Detail)
                                 ));
+
+        }
+
+        #endregion
+
+        #region (private) DeleteStationCertificate(Request)
+
+        /// <summary>
+        /// DELETE /api/v1/configuration/certificate-signing/certificates/{station}/{certificateType}:
+        /// answered as GET is; 404 where no such certificate is known.
+        /// </summary>
+        private Task<HTTPResponse> DeleteStationCertificate(HTTPRequest Request)
+        {
+
+            if (!TryAuthorize(Request, Permission.Edit(NodeResources.Certificates), true, out var user, out var refused))
+                return Task.FromResult(refused);
+
+            var station = Request.ParsedURLParameters.ElementAtOrDefault(0)?.Trim() ?? "";
+            var type    = Request.ParsedURLParameters.ElementAtOrDefault(1)?.Trim() ?? "";
+
+            if (station.Length == 0 || type.Length == 0)
+                return Task.FromResult(ErrorJSON(Request, HTTPStatusCode.BadRequest, "Say which station, and which certificate."));
+
+            if (CSMS.StationCertificates.Forget(station, type) == 0)
+                return Task.FromResult(ErrorJSON(Request, HTTPStatusCode.NotFound, $"No {type} of '{station}' is known."));
+
+            Log.Info($"'{user.Id}' had the {type} of '{station}' forgotten: it is not renewed any more.", "ocpp", "certificate", "web");
+
+            return Task.FromResult(JSONResponse(Request, HTTPStatusCode.OK, CSMS.CertificateSigningJSON()));
 
         }
 

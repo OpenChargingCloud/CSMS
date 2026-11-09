@@ -39,7 +39,8 @@ namespace cloud.charging.open.CSMS.Configuration
     ///   "chargingStationCertificate": "https://pki.example.org/.well-known/est/stations",
     ///   "v2gCertificate":             "https://pki.example.org/.well-known/est/secc",
     ///   "apiKey":                     "...",
-    ///   "renewDaysBefore":            30
+    ///   "renewDaysBefore":            30,
+    ///   "ocspResponders":             [ "http://ocsp.example.com/" ]
     /// }
     /// </code>
     /// <para>
@@ -57,6 +58,12 @@ namespace cloud.charging.open.CSMS.Configuration
     /// SignCertificate of that kind. 0 for never; 30 where nothing is said.
     /// </para>
     /// <para>
+    /// A station's GetCertificateStatus is sent on to the OCSP responder it
+    /// names where that is on the host of one of the EST servers - at its port,
+    /// or at 80 or 443 - or begins with one of "ocspResponders": this CSMS asks
+    /// nowhere else on a station's word.
+    /// </para>
+    /// <para>
     /// Null is "the file does not say", as in every section: what is missing
     /// keeps whatever this CSMS had.
     /// </para>
@@ -65,10 +72,12 @@ namespace cloud.charging.open.CSMS.Configuration
     /// <param name="V2GCertificate">The EST server a charging station's SECC certificate of ISO 15118-2 is signed at; null for none.</param>
     /// <param name="APIKey">The API key this CSMS signs in to the PKI with; null for none.</param>
     /// <param name="RenewDaysBefore">How many days before a station's certificate runs out the station is asked for a new one; 0 for never, null for the default.</param>
-    public sealed record CertificateSigningConfiguration(Uri?     ChargingStationCertificate   = null,
-                                                         Uri?     V2GCertificate               = null,
-                                                         String?  APIKey                       = null,
-                                                         Int32?   RenewDaysBefore              = null)
+    /// <param name="OCSPResponders">The OCSP responders a station may have asked through this CSMS, beside those on the host of an EST server; null for none.</param>
+    public sealed record CertificateSigningConfiguration(Uri?                  ChargingStationCertificate   = null,
+                                                         Uri?                  V2GCertificate               = null,
+                                                         String?               APIKey                       = null,
+                                                         Int32?                RenewDaysBefore              = null,
+                                                         IReadOnlyList<Uri>?   OCSPResponders               = null)
     {
 
         #region Data
@@ -94,6 +103,11 @@ namespace cloud.charging.open.CSMS.Configuration
         /// year, beyond which every certificate would be renewed every day.
         /// </summary>
         public const Int32   MaxRenewDaysBefore     = 365;
+
+        /// <summary>
+        /// The most OCSP responders that may be named.
+        /// </summary>
+        public const Int32   MaxOCSPResponders      = 16;
 
         #endregion
 
@@ -122,6 +136,38 @@ namespace cloud.charging.open.CSMS.Configuration
                    "V2GCertificate"              => V2GCertificate,
                    _                             => null
                };
+
+        /// <summary>
+        /// Whether a station may have the OCSP responder at the given address
+        /// asked through this CSMS: one on the host of an EST server - at its
+        /// port, or at the ports of HTTP and HTTPS - or one of those named.
+        /// </summary>
+        public Boolean MayAsk(Uri Responder)
+        {
+
+            if (!Responder.IsAbsoluteUri ||
+                Responder.Scheme is not ("http" or "https") ||
+                !String.IsNullOrEmpty(Responder.UserInfo))
+            {
+                return false;
+            }
+
+            foreach (var est in new[] { ChargingStationCertificate, V2GCertificate }.OfType<Uri>())
+                if (String.Equals(est.Host, Responder.Host, StringComparison.OrdinalIgnoreCase) &&
+                    (Responder.Port == est.Port || Responder.Port is 80 or 443))
+                {
+                    return true;
+                }
+
+            var asked = Responder.GetLeftPart(UriPartial.Path);
+
+            return (OCSPResponders ?? []).Any(named => {
+                       var prefix = named.GetLeftPart(UriPartial.Path);
+                       return String.Equals(named.GetLeftPart(UriPartial.Authority), Responder.GetLeftPart(UriPartial.Authority), StringComparison.OrdinalIgnoreCase) &&
+                              (asked == prefix || asked.StartsWith(prefix.EndsWith('/') ? prefix : prefix + "/", StringComparison.Ordinal));
+                   });
+
+        }
 
         #endregion
 
@@ -177,7 +223,45 @@ namespace cloud.charging.open.CSMS.Configuration
 
             }
 
-            Configuration = new CertificateSigningConfiguration(chargingStation, v2g, apiKey, renewDaysBefore);
+            List<Uri>? ocspResponders = null;
+
+            if (JSON["ocspResponders"] is JToken respondersToken && respondersToken.Type != JTokenType.Null)
+            {
+
+                var wrong = $"'{SectionName}.ocspResponders' is a list of up to {MaxOCSPResponders} addresses of OCSP responders, as http://ocsp.example.com/.";
+
+                if (respondersToken is not JArray responders || responders.Count > MaxOCSPResponders)
+                {
+                    Error = wrong;
+                    return false;
+                }
+
+                ocspResponders = [];
+
+                foreach (var responder in responders)
+                {
+
+                    var text = responder.Type == JTokenType.String ? responder.Value<String>()?.Trim() : null;
+
+                    if (String.IsNullOrEmpty(text) ||
+                        !Uri.TryCreate(text, UriKind.Absolute, out var address) ||
+                        address.Scheme is not ("https" or "http") ||
+                        !String.IsNullOrEmpty(address.UserInfo) ||
+                        !String.IsNullOrEmpty(address.Query) ||
+                        !String.IsNullOrEmpty(address.Fragment))
+                    {
+                        Error = wrong;
+                        return false;
+                    }
+
+                    if (!ocspResponders.Contains(address))
+                        ocspResponders.Add(address);
+
+                }
+
+            }
+
+            Configuration = new CertificateSigningConfiguration(chargingStation, v2g, apiKey, renewDaysBefore, ocspResponders);
             return true;
 
         }
@@ -250,7 +334,8 @@ namespace cloud.charging.open.CSMS.Configuration
             => new (Update.ChargingStationCertificate ?? ChargingStationCertificate,
                     Update.V2GCertificate             ?? V2GCertificate,
                     Update.APIKey                     ?? APIKey,
-                    Update.RenewDaysBefore            ?? RenewDaysBefore);
+                    Update.RenewDaysBefore            ?? RenewDaysBefore,
+                    Update.OCSPResponders             ?? OCSPResponders);
 
         /// <summary>
         /// This section without what the given names of it say: what a JSON
@@ -264,7 +349,8 @@ namespace cloud.charging.open.CSMS.Configuration
             return new (names.Contains("chargingStationCertificate") ? null : ChargingStationCertificate,
                         names.Contains("v2gCertificate")             ? null : V2GCertificate,
                         names.Contains("apiKey")                     ? null : APIKey,
-                        names.Contains("renewDaysBefore")            ? null : RenewDaysBefore);
+                        names.Contains("renewDaysBefore")            ? null : RenewDaysBefore,
+                        names.Contains("ocspResponders")             ? null : OCSPResponders);
 
         }
 
@@ -286,6 +372,7 @@ namespace cloud.charging.open.CSMS.Configuration
             if (V2GCertificate             is not null)  json.Add("v2gCertificate",             V2GCertificate.ToString());
 
             if (RenewDaysBefore            is not null)  json.Add("renewDaysBefore",            RenewDaysBefore.Value);
+            if (OCSPResponders             is not null)  json.Add("ocspResponders",             new JArray(OCSPResponders.Select(responder => responder.ToString())));
 
             if (WithAPIKey)
             {

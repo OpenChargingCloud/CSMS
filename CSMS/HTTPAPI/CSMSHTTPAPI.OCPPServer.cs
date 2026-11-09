@@ -978,7 +978,11 @@ namespace cloud.charging.open.CSMS
             if (!CSMS.StationLogins.TryRemove(id, out var error, out var notSaved))
                 return Task.FromResult(NotChanged(Request, HTTPStatusCode.NotFound, error, notSaved));
 
-            Log.Notice($"'{user.Id}' removed the charging station '{id}'.", "ocpp", "station", "auth", "web");
+            // Its certificates with it: a station that is gone is not to be
+            // asked for new ones.
+            var forgotten = CSMS.StationCertificates.Forget(id);
+
+            Log.Notice($"'{user.Id}' removed the charging station '{id}'{(forgotten > 0 ? $", and the {forgotten} certificate(s) known of it" : "")}.", "ocpp", "station", "auth", "web");
 
             return Task.FromResult(
                        JSONResponse(Request, HTTPStatusCode.OK, CSMS.StationLogins.ToJSON())

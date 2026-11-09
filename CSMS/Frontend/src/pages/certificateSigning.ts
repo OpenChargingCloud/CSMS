@@ -1,4 +1,4 @@
-import { api, type CertificateSigning, type CertificateSigningUpdate, type StationCertificate } from '../api/client';
+import { api, type CertificateSigning, type CertificateSigningUpdate, type CertificateStatusEntry, type StationCertificate } from '../api/client';
 import { auth } from '../auth';
 import type { Page } from '@node/router';
 import { mayButNot, reloadButton, shell } from '@node/shell';
@@ -15,6 +15,10 @@ import { html, nothing, render, type TemplateResult } from '@node/view';
  * And the certificates the stations have, as the CSMS knows of them: each is
  * renewed the days configured before it runs out - the station asked with
  * TriggerMessage for a new one - or by hand, at once.
+ *
+ * And whether a certificate is revoked, as a station asks with
+ * GetCertificateStatus: asked on of the OCSP responder of the PKI, and of no
+ * other but those named here.
  *
  * Read at the stations' permission, changed at the certificates': where the
  * CSRs go is who signs the certificates the stations sign in with. The API
@@ -49,6 +53,17 @@ export const certificateSigningPage: Page = {
             }
         }
 
+        function statusChip(entry: CertificateStatusEntry): TemplateResult {
+            switch (entry.outcome) {
+                case 'good':      return html`<span class="chip ok">good</span>`;
+                case 'revoked':   return html`<span class="chip warn">revoked</span>`;
+                case 'unknown':   return html`<span class="chip warn">unknown</span>`;
+                case 'answered':  return html`<span class="chip">answered</span>`;
+                case 'refused':   return html`<span class="chip warn">not sent on</span>`;
+                default:          return html`<span class="chip warn">not answered</span>`;
+            }
+        }
+
         function renewalCell(certificate: StationCertificate): TemplateResult | string {
             if (!certificate.renewalAsked)
                 return '';
@@ -60,12 +75,20 @@ export const certificateSigningPage: Page = {
             return html`
                 <tr data-station="${certificate.station}" data-type="${certificate.certificateType}">
                     ${mayChange ? html`
-                        <td><button type="button" class="btn small certificate-renew" ?disabled=${!certificate.connected}
+                        <td>
+                            <button type="button" class="btn small certificate-renew" ?disabled=${!certificate.connected}
                                     title=${certificate.connected ? nothing : 'The station is not connected'}
-                                    @click=${() => void renew(certificate.station, certificate.certificateType)}>Renew now</button></td>` : nothing}
+                                    @click=${() => void renew(certificate.station, certificate.certificateType)}>Renew now</button>
+                            <button type="button" class="btn small danger certificate-forget"
+                                    title="Not renewed any more - until the station signs in with it, or is signed a new one"
+                                    @click=${() => void forget(certificate.station, certificate.certificateType)}>Forget</button>
+                        </td>` : nothing}
                     <td>${certificate.station}${certificate.connected ? html` <span class="chip ok">connected</span>` : nothing}</td>
                     <td>${certificate.certificateType}</td>
-                    <td>${formatTimestamp(certificate.notAfter)}${certificate.due ? html` <span class="chip warn">due</span>` : nothing}</td>
+                    <td>${formatTimestamp(certificate.notAfter)}${certificate.due ? html` <span class="chip warn">due</span>` : nothing}
+                        ${certificate.renewsFrom ? html`<br /><span class="hint renews-from">renewed from ${formatTimestamp(certificate.renewsFrom)}${certificate.halfway
+                            ? html` <span class="chip" title="It holds for less than twice the days it is renewed before: it is renewed halfway, not every day.">halfway</span>`
+                            : nothing}</span>` : nothing}</td>
                     <td>${certificate.source === 'signed' ? 'signed here' : 'signed in with'}
                         <code title=${certificate.fingerprint}>${certificate.fingerprint.slice(0, 16)}...</code></td>
                     <td>${renewalCell(certificate)}</td>
@@ -125,7 +148,18 @@ export const certificateSigningPage: Page = {
                             </label>
                             <span class="hint">
                                 A station whose certificate runs out within these days is asked for a new one - after it
-                                starts, and once a day while it stays connected. 0 for never.
+                                starts, and once a day while it stays connected. 0 for never. A certificate that holds for less
+                                than twice as long is renewed halfway instead, so that a new one is not due the day it is signed.
+                            </span>
+
+                            <label>Further OCSP responders
+                                <textarea name="ocspResponders" rows="2" placeholder="http://ocsp.example.com/"
+                                          .defaultValue=${signing.ocspResponders.join('\n')} ?disabled=${!mayChange}></textarea>
+                            </label>
+                            <span class="hint">
+                                One address per line. A station's GetCertificateStatus is sent on to the OCSP responder it
+                                names where that is on the host of an EST server above - or begins with one of these. No other
+                                is asked on a station's word.
                             </span>
 
                             ${mayChange ? html`
@@ -177,6 +211,32 @@ export const certificateSigningPage: Page = {
 
                     </section>
 
+                    <section class="card wide" id="status-requests">
+
+                        <h2><i class="fa-solid fa-shield-halved"></i> The latest certificate status requests</h2>
+
+                        ${signing.statusRequests.length === 0 ? html`<p class="hint">No charging station has asked whether a certificate is revoked since the start.</p>` : html`
+                            <div class="table-scroll">
+                                <table class="records">
+                                    <thead><tr><th>When</th><th>Station</th><th>Status</th><th>Until</th><th>Serial number</th><th>Responder</th><th></th></tr></thead>
+                                    <tbody>
+                                        ${signing.statusRequests.map(entry => html`
+                                            <tr data-station="${entry.station}" data-serial="${entry.serialNumber}">
+                                                <td>${formatTimestamp(entry.at)}</td>
+                                                <td>${entry.station}</td>
+                                                <td>${statusChip(entry)}</td>
+                                                <td>${entry.nextUpdate ? formatTimestamp(entry.nextUpdate) : ''}</td>
+                                                <td><code>${entry.serialNumber}</code></td>
+                                                <td>${entry.responder}</td>
+                                                <td>${entry.detail ?? ''}</td>
+                                            </tr>
+                                        `)}
+                                    </tbody>
+                                </table>
+                            </div>`}
+
+                    </section>
+
                     <section class="card wide" id="signing-requests">
 
                         <h2><i class="fa-solid fa-list-check"></i> The latest requests</h2>
@@ -221,12 +281,17 @@ export const certificateSigningPage: Page = {
             const apiKey  = field(form, 'apiKey', false).trim();
             const remove  = form.querySelector('[name="removeAPIKey"]') !== null && isChecked(form, 'removeAPIKey');
             const days    = numberField(form, 'renewDaysBefore');
+            const ocsp    = field(form, 'ocspResponders', false).
+                                split('\n').
+                                map(line => line.trim()).
+                                filter(line => line.length > 0);
 
             const update: CertificateSigningUpdate = {
                 chargingStationCertificate:  station.length > 0 ? station : null,
                 v2gCertificate:              v2g.length     > 0 ? v2g     : null,
                 // Emptied: the default, as null says.
                 renewDaysBefore:             Number.isNaN(days) ? null : days,
+                ocspResponders:              ocsp,
                 ...(apiKey.length > 0 ? { apiKey } : remove ? { apiKey: null } : {})
             };
 
@@ -306,6 +371,45 @@ export const certificateSigningPage: Page = {
                 if (cancelled)
                     return;
                 if (note)   note.textContent  = '';
+                if (error)  error.textContent = errorMessage(problem);
+            }
+
+        }
+
+        /**
+         * Forget a station's certificate: it is not renewed any more, until
+         * the station signs in with it or is signed a new one.
+         */
+        async function forget(station: string, certificateType: string): Promise<void> {
+
+            if (!window.confirm(`Forget the ${certificateType} of '${station}'?\n\nIt is not renewed any more - until the station signs in with it again, or is signed a new one.`))
+                return;
+
+            const note  = content.querySelector<HTMLElement>('#renew-note');
+            const error = content.querySelector<HTMLElement>('#renew-error');
+
+            if (note)   note.textContent  = '';
+            if (error)  error.textContent = '';
+
+            try
+            {
+
+                const loaded = await api.certificateSigning.forget(station, certificateType);
+                if (cancelled)
+                    return;
+
+                held = loaded;
+                draw();
+
+                const done = content.querySelector<HTMLElement>('#renew-note');
+                if (done)
+                    done.textContent = `The ${certificateType} of '${station}' is forgotten.`;
+
+            }
+            catch (problem)
+            {
+                if (cancelled)
+                    return;
                 if (error)  error.textContent = errorMessage(problem);
             }
 
