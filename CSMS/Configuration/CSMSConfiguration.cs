@@ -51,9 +51,11 @@ namespace cloud.charging.open.CSMS.Configuration
     /// <param name="OCPP">Who this CSMS says it is when it speaks OCPP.</param>
     /// <param name="OCPPServer">The server the charging stations below it connect to.</param>
     /// <param name="OCPI">Who this CSMS is when it speaks OCPI to its roaming partners.</param>
-    public sealed record CSMSConfiguration(OCPPConfiguration?        OCPP         = null,
-                                           OCPPServerConfiguration?  OCPPServer   = null,
-                                           OCPIConfiguration?        OCPI         = null)
+    /// <param name="CertificateSigning">Where the CSR of a charging station's SignCertificate request goes.</param>
+    public sealed record CSMSConfiguration(OCPPConfiguration?                OCPP                 = null,
+                                           OCPPServerConfiguration?          OCPPServer           = null,
+                                           OCPIConfiguration?                OCPI                 = null,
+                                           CertificateSigningConfiguration?  CertificateSigning   = null)
     {
 
         #region Properties
@@ -62,7 +64,7 @@ namespace cloud.charging.open.CSMS.Configuration
         /// Whether this document says anything at all.
         /// </summary>
         public Boolean IsEmpty
-            => OCPP is null && OCPPServer is null && OCPI is null;
+            => OCPP is null && OCPPServer is null && OCPI is null && CertificateSigning is null;
 
         #endregion
 
@@ -151,7 +153,27 @@ namespace cloud.charging.open.CSMS.Configuration
 
             #endregion
 
-            Configuration = new CSMSConfiguration(ocpp, ocppServer, ocpi);
+            #region Certificate signing
+
+            CertificateSigningConfiguration? certificateSigning = null;
+
+            if (JSON[CertificateSigningConfiguration.SectionName] is JToken signingToken && signingToken.Type != JTokenType.Null)
+            {
+
+                if (signingToken is not JObject signingJSON)
+                {
+                    Error = $"'{CertificateSigningConfiguration.SectionName}' must be a JSON object.";
+                    return false;
+                }
+
+                if (!CertificateSigningConfiguration.TryParse(signingJSON, out certificateSigning, out Error))
+                    return false;
+
+            }
+
+            #endregion
+
+            Configuration = new CSMSConfiguration(ocpp, ocppServer, ocpi, certificateSigning);
             return true;
 
         }
@@ -177,6 +199,9 @@ namespace cloud.charging.open.CSMS.Configuration
             if (OCPI is not null)
                 json.Add(OCPIConfiguration.SectionName,  OCPI.ToJSON());
 
+            if (CertificateSigning is not null)
+                json.Add(CertificateSigningConfiguration.SectionName, CertificateSigning.ToJSON());
+
             return json;
 
         }
@@ -193,7 +218,8 @@ namespace cloud.charging.open.CSMS.Configuration
                          new[] {
                              OCPP       is not null ? OCPP.ToString()        : null,
                              OCPPServer is not null ? OCPPServer.ToString()  : null,
-                             OCPI       is not null ? OCPI.ToString()        : null
+                             OCPI       is not null ? OCPI.ToString()        : null,
+                             CertificateSigning is not null ? CertificateSigning.ToString() : null
                          }.Where(section => section is not null));
 
         #endregion

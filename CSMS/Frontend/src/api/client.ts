@@ -580,6 +580,18 @@ export const api = {
      * The charging station server: its socket, the certificates it presents,
      * the chains it accepts and the stations that may sign in.
      */
+    /**
+     * Where the CSRs of the charging stations' SignCertificate requests go -
+     * the EST server of a PKI - and what became of the latest.
+     */
+    certificateSigning: {
+
+        get:   ()                                  => request<CertificateSigning>('GET', '/configuration/certificate-signing'),
+        /** What is named is changed, null removes it, what is not named stays: the API key above all. */
+        save:  (update: CertificateSigningUpdate)  => request<CertificateSigning>('PUT', '/configuration/certificate-signing', update)
+
+    },
+
     ocppServer: {
 
         get:   ()                          => request<OCPPServerConfiguration>('GET', '/configuration/ocpp-server'),
@@ -711,3 +723,33 @@ export const api = {
     }
 
 };
+
+
+/** What became of one SignCertificate request of a charging station. */
+export interface CertificateSigningEntry {
+    at:               string;
+    station:          string;
+    certificateType:  string;
+    /** At the PKI; taken by the station; refused here; not signed by the PKI; not taken by the station. */
+    outcome:          'signing' | 'signed' | 'rejected' | 'failed' | 'notTaken';
+    detail:           string | null;
+    /** The SHA-256 fingerprint of the certificate signed. */
+    certificate:      string | null;
+    notAfter:         string | null;
+}
+
+/** Where the CSRs of the charging stations go: the EST server of a PKI for each kind of certificate. */
+export interface CertificateSigning {
+    chargingStationCertificate:  string | null;
+    v2gCertificate:              string | null;
+    /** Whether there is an API key; the key itself is never read back. */
+    apiKey:                      boolean;
+    requests:                    CertificateSigningEntry[];
+}
+
+/** A change of it: what is named is changed, null removes it. */
+export interface CertificateSigningUpdate {
+    chargingStationCertificate?:  string | null;
+    v2gCertificate?:              string | null;
+    apiKey?:                      string | null;
+}

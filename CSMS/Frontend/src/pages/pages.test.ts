@@ -11,6 +11,7 @@ import { everyPageIn } from '@node/../test/pages.ts';
 everyPageIn(new URL('./', import.meta.url), {
 
     withForms: [
+        'certificateSigning.ts',
         'clientTrust.ts',
         'locations.ts',
         'ocppServer.ts',

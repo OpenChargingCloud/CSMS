@@ -104,6 +104,7 @@ handed a role rather than a socket.
 | Server certificates | the keys and chains this CSMS presents | `certificates:edit` |
 | Client trust | the chains a station's certificate may come from | `certificates:edit` |
 | Station logins | who may sign in, and with what | `stations:edit` |
+| Certificate signing | where the CSRs of the charging stations go - the EST server of a PKI - and what became of the latest | `certificates:edit` |
 | OCPI | nothing - who this operator is and where its partners find it | `roaming:read` |
 | Roaming partners | the EMSPs it is peered with, and the peering itself | `roaming:edit` |
 | Locations | the charging locations it publishes | `locations:edit` |
@@ -122,8 +123,9 @@ that was applied but not written down disappears at the next start without
 anybody noticing.
 
 The node below reads the sections every one of these programs has - `dns`,
-`nts` and `certificates` - and the CSMS reads its own - `ocpp`, `ocppServer`
-and `ocpi` - from the same document; each passes over what is the other's.
+`nts` and `certificates` - and the CSMS reads its own - `ocpp`, `ocppServer`,
+`ocpi` and `certificateSigning` - from the same document; each passes over
+what is the other's.
 Beside the file the node keeps its certificate store, in `certificates/`, and
 what it believed each server with, in `known-servers.json`. What the CSMS
 presents to the charging stations and believes of them is its charging station
@@ -281,6 +283,47 @@ deleted, and put back where one of them cannot be - held open by somebody, as
 Windows keeps a file then. A file that cannot be put back, or deleted once all
 are aside, is left over under its `*.removed` name, which the next start does
 not read, and said in the log.
+
+
+## The stations' certificates, signed by a PKI
+
+A charging station asks for a certificate with `SignCertificate`, OCPP 2.0.1
+and 2.1, A02 and A03 - its own, which it signs in with at security profile 3,
+or the SECC certificate of ISO 15118-2. The CSMS sends the CSR on to the EST
+server of a PKI, RFC 7030 - the [PKI](https://github.com/OpenChargingCloud/PKI)
+of OpenChargingCloud, or any other - and hands the certificate that comes back
+to the station with `CertificateSigned`, with the CAs above it but the root:
+
+```json
+"certificateSigning": {
+  "chargingStationCertificate": "https://pki.example.org/.well-known/est/stations",
+  "v2gCertificate":             "https://pki.example.org/.well-known/est/secc",
+  "apiKey":                     "<an API key of the PKI>"
+}
+```
+
+An address is where EST is, with its label: the CSR goes to its
+`simpleenroll`, and the CAs come from its `cacerts`. A kind of certificate
+without one is not signed, and the station is told so. The API key is that of
+an account of the PKI that may sign certificates of servers and clients - the
+`registrar` role of the PKI of OpenChargingCloud - and goes over HTTPS only, or
+to the loopback address; plain HTTP to anywhere else is refused, since the key
+and the certificates would travel in the clear. The PKI's TLS certificate is
+judged as the name and the time servers' are: by the machine's roots and the
+TLS roots of the certificate store for `pki`.
+
+The station is answered at once - `Accepted`, or `Rejected` with why - and the
+certificate follows once the PKI has signed it. A CSR whose signature does not
+hold is rejected, and so is a station's own certificate for any common name but
+the station's identity: a station would otherwise be signed a certificate to
+sign in as another. A SECC certificate names the SECC, which the CSMS does not
+know, and what it may be is the PKI's to say. One request of each kind for each
+station at a time. The **Certificate signing** page, and `GET` and `PUT`
+`/api/v1/configuration/certificate-signing`, say where the CSRs go and what
+became of the latest hundred: signed, rejected, not signed by the PKI, or not
+taken by the station. The API key is never shown again, only whether there is
+one; `PUT` changes what it names, removes what it sets to `null`, and keeps the
+rest.
 
 
 ## Running it

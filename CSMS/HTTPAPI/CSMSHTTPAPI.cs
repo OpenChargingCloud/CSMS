@@ -90,6 +90,7 @@ namespace cloud.charging.open.CSMS
             // between them; see CSMSHTTPAPI.OCPI.cs.
             RegisterOCPPServerRoutes();
             RegisterOCPIRoutes();
+            RegisterCertificateSigningRoutes();
 
         }
 

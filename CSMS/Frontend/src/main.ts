@@ -14,6 +14,7 @@ import { ocppServerPage }         from './pages/ocppServer';
 import { stationLoginsPage }      from './pages/stationLogins';
 import { serverCertificatesPage } from './pages/serverCertificates';
 import { clientTrustPage }        from './pages/clientTrust';
+import { certificateSigningPage } from './pages/certificateSigning';
 import { ocpiPage }               from './pages/ocpi';
 import { partnersPage }           from './pages/partners';
 import { locationsPage }          from './pages/locations';
@@ -41,6 +42,7 @@ startNode({
             { path: '/configuration/ocpp-server/logins',        label: 'Logins and groups',   icon: 'fa-users-gear',        permission: [ 'stations:read' ]     },
             { path: '/configuration/ocpp-server/certificates',  label: 'Server certificates', icon: 'fa-certificate',       permission: [ 'certificates:read' ] },
             { path: '/configuration/ocpp-server/trust',         label: 'Accepted chains',     icon: 'fa-user-shield',       permission: [ 'certificates:read' ] },
+            { path: '/configuration/ocpp-server/signing',       label: 'Certificate signing', icon: 'fa-file-signature',    permission: [ 'stations:read' ]     },
             { path: '/configuration/ocpi',                      label: 'OCPI',                icon: 'fa-plug',              permission: [ 'roaming:read' ]      },
             { path: '/configuration/ocpi/partners',             label: 'Roaming partners',    icon: 'fa-handshake',         permission: [ 'roaming:read' ]      },
             { path: '/configuration/ocpi/locations',            label: 'Locations',           icon: 'fa-map-location-dot',  permission: [ 'locations:read' ]    }
@@ -99,6 +101,7 @@ startNode({
         '/configuration/ocpp-server/logins':        stationLoginsPage,
         '/configuration/ocpp-server/certificates':  serverCertificatesPage,
         '/configuration/ocpp-server/trust':         clientTrustPage,
+        '/configuration/ocpp-server/signing':       certificateSigningPage,
 
         '/configuration/ocpi':                      ocpiPage,
         '/configuration/ocpi/partners':             partnersPage,

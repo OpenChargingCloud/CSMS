@@ -380,6 +380,10 @@ namespace cloud.charging.open.CSMS
 
             this.Log.Info($"OCPP 2.1 CSMS '{csms01.Id}' is set up as {csms01.VendorName} {csms01.Model}.", "ocpp");
 
+            // The CSRs of the charging stations, to the PKI the file names -
+            // and not to the test CA of the node.
+            BuildCertificateSigning(configuration.CertificateSigning);
+
             #endregion
 
             #region The server the charging stations connect to
