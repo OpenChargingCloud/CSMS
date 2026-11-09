@@ -34,6 +34,7 @@ using cloud.charging.open.protocols.WWCP.Node.Configuration;
 using cloud.charging.open.protocols.WWCP.Node.TestKit;
 
 using cloud.charging.open.CSMS.Configuration;
+using cloud.charging.open.CSMS.OCPP;
 
 #endregion
 
@@ -354,6 +355,264 @@ namespace cloud.charging.open.CSMS.Tests
         #endregion
 
 
+        #region AStationWhoseCertificateRunsOutIsAskedForANewOneAfterItsBootNotification()
+
+        [Test]
+        public async Task AStationWhoseCertificateRunsOutIsAskedForANewOneAfterItsBootNotification()
+        {
+
+            est!.ValidFor     = TimeSpan.FromDays(10);
+
+            using var station = await Connect("cs001");
+
+            await SignedACertificate(station, "cs001");
+
+            var known = CSMS.StationCertificates.Get("cs001", "ChargingStationCertificate");
+
+            Assert.That(known,         Is.Not.Null, "the certificate the station took is known");
+            Assert.That(known!.Source, Is.EqualTo("signed"));
+
+            await Booted(station, "b1");
+
+            var trigger = await Receive(station);
+
+            Assert.Multiple(() => {
+                Assert.That(trigger[0]!.Value<Int32>(),                         Is.EqualTo(2), trigger.ToString());
+                Assert.That(trigger[2]!.Value<String>(),                        Is.EqualTo("TriggerMessage"));
+                Assert.That(trigger[3]!["requestedMessage"]!.Value<String>(),   Is.EqualTo("SignChargingStationCertificate"));
+            });
+
+            await Send(station, new JArray(3, trigger[1]!.Value<String>()!, new JObject(new JProperty("status", "Accepted"))));
+
+            await WaitFor(() => CSMS.StationCertificates.Get("cs001", "ChargingStationCertificate")?.RenewalAnswer == "Accepted",
+                          "what the station answered was not noted");
+
+            // Looked at again the same day: asked once a day, not at every
+            // start and every check.
+            Assert.That(await CSMS.RenewDueCertificates("cs001"), Is.EqualTo(0), "asked again within the day");
+
+            // And the CSR it sends goes the way every other does: the new
+            // certificate is the one known now, and not due.
+            est.ValidFor = TimeSpan.FromDays(365);
+
+            await SignedACertificate(station, "cs001", "m2");
+
+            Assert.That(CSMS.IsDue(CSMS.StationCertificates.Get("cs001", "ChargingStationCertificate")!), Is.False);
+
+            await Booted(station, "b2");
+
+            Assert.That(async () => await Receive(station, TimeSpan.FromSeconds(2)), Throws.InstanceOf<OperationCanceledException>(),
+                        "asked for the certificate it was just signed");
+
+        }
+
+        #endregion
+
+        #region ACertificateThatHoldsLongIsNotRenewed()
+
+        [Test]
+        public async Task ACertificateThatHoldsLongIsNotRenewed()
+        {
+
+            using var station = await Connect("cs001");
+
+            await SignedACertificate(station, "cs001");
+            await Booted(station, "b1");
+
+            Assert.That(async () => await Receive(station, TimeSpan.FromSeconds(2)), Throws.InstanceOf<OperationCanceledException>(),
+                        "asked for a certificate that holds for a year");
+
+            Assert.That(await CSMS.RenewDueCertificates(), Is.EqualTo(0));
+
+        }
+
+        #endregion
+
+        #region AStationIsAskedByHandToRenew()
+
+        [Test]
+        public async Task AStationIsAskedByHandToRenew()
+        {
+
+            using var station = await Connect("cs001");
+            using var browser = await SignedIn();
+
+            await SignedACertificate(station, "cs001");
+
+            var asking  = browser.PostAsync("api/v1/configuration/certificate-signing/renew",
+                                            JSONBody(new JProperty("station", "cs001"), new JProperty("certificateType", "ChargingStationCertificate")));
+
+            var trigger = await Receive(station);
+
+            Assert.That(trigger[3]!["requestedMessage"]!.Value<String>(), Is.EqualTo("SignChargingStationCertificate"), trigger.ToString());
+
+            await Send(station, new JArray(3, trigger[1]!.Value<String>()!, new JObject(new JProperty("status", "Rejected"))));
+
+            using var asked   = await asking;
+            var answer        = JObject.Parse(await asked.Content.ReadAsStringAsync());
+
+            using var nobody  = await browser.PostAsync("api/v1/configuration/certificate-signing/renew",
+                                                        JSONBody(new JProperty("station", "cs999"), new JProperty("certificateType", "ChargingStationCertificate")));
+
+            using var noV2G   = await browser.PostAsync("api/v1/configuration/certificate-signing/renew",
+                                                        JSONBody(new JProperty("station", "cs001"), new JProperty("certificateType", "V2GCertificate")));
+
+            var shown         = JObject.Parse(await browser.GetStringAsync("api/v1/configuration/certificate-signing"));
+            var certificate   = shown["certificates"]!.Single(one => one["station"]!.Value<String>() == "cs001");
+
+            Assert.Multiple(() => {
+                Assert.That(asked.StatusCode,                                 Is.EqualTo(HttpStatusCode.OK), answer.ToString());
+                Assert.That(answer["answer"]!.Value<String>(),                Is.EqualTo("Rejected"));
+                Assert.That(nobody.StatusCode,                                Is.EqualTo(HttpStatusCode.Conflict), "not connected");
+                Assert.That(noV2G.StatusCode,                                 Is.EqualTo(HttpStatusCode.BadRequest), "no PKI signs it");
+                Assert.That(shown["renewDaysBefore"]!.Value<Int32>(),         Is.EqualTo(CertificateSigningConfiguration.DefaultRenewDaysBefore));
+                Assert.That(certificate["source"]!.Value<String>(),           Is.EqualTo("signed"));
+                Assert.That(certificate["connected"]!.Value<Boolean>(),       Is.True);
+                Assert.That(certificate["due"]!.Value<Boolean>(),             Is.False);
+                Assert.That(certificate["renewalAnswer"]!.Value<String>(),    Is.EqualTo("Rejected"));
+            });
+
+        }
+
+        #endregion
+
+        #region HowLongBeforeIsSaidInDays()
+
+        [Test]
+        public async Task HowLongBeforeIsSaidInDays()
+        {
+
+            using var browser = await SignedIn();
+
+            using var tooLong = await browser.PutAsync("api/v1/configuration/certificate-signing",
+                                                       new StringContent("""{ "renewDaysBefore": 1000 }""", Encoding.UTF8, "application/json"));
+
+            using var never   = await browser.PutAsync("api/v1/configuration/certificate-signing",
+                                                       new StringContent("""{ "renewDaysBefore": 0 }""", Encoding.UTF8, "application/json"));
+
+            var file = JObject.Parse(File.ReadAllText(Path.Combine(Directory, WWCPConfigFile.DefaultFileName)))[CertificateSigningConfiguration.SectionName]!;
+
+            Assert.Multiple(() => {
+                Assert.That(tooLong.StatusCode,                      Is.EqualTo(HttpStatusCode.BadRequest));
+                Assert.That(never.StatusCode,                        Is.EqualTo(HttpStatusCode.OK));
+                Assert.That(file["renewDaysBefore"]!.Value<Int32>(), Is.EqualTo(0));
+                Assert.That(CSMS.CertificateSigning.RenewBefore,     Is.EqualTo(TimeSpan.Zero));
+                Assert.That(CSMS.IsDue(new StationCertificate("cs001", "ChargingStationCertificate", "ab", DateTimeOffset.UtcNow.AddDays(1), "signed", DateTimeOffset.UtcNow)),
+                            Is.False, "never renewed");
+            });
+
+        }
+
+        #endregion
+
+        #region TheCertificatesOfTheStationsAreKeptInTheirFile()
+
+        [Test]
+        public void TheCertificatesOfTheStationsAreKeptInTheirFile()
+        {
+
+            var path   = Path.Combine(Directory, "kept", StationCertificates.DefaultFileName);
+            var now    = DateTimeOffset.UtcNow;
+
+            var first  = new StationCertificates(path);
+            first.Load();
+
+            Assert.Multiple(() => {
+                Assert.That(first.Note("cs001", "ChargingStationCertificate", "aa", now.AddDays(100), "signed",    now), Is.True);
+                Assert.That(first.Note("cs001", "ChargingStationCertificate", "bb", now.AddDays(10),  "presented", now), Is.False, "the later certificate wins");
+                Assert.That(first.Note("cs001", "V2GCertificate",             "cc", now.AddDays(20),  "signed",    now), Is.True);
+            });
+
+            first.NoteAsked("cs001", "V2GCertificate", now, "NotImplemented");
+
+            var second = new StationCertificates(path);
+            second.Load();
+
+            Assert.Multiple(() => {
+                Assert.That(second.All.Count,                                                   Is.EqualTo(2));
+                Assert.That(second.Get("cs001", "ChargingStationCertificate")!.Fingerprint,     Is.EqualTo("aa"));
+                Assert.That(second.Get("cs001", "V2GCertificate")!.RenewalAnswer,               Is.EqualTo("NotImplemented"));
+            });
+
+            File.WriteAllText(path, "{ not json");
+
+            var notices = new List<String>();
+            var third   = new StationCertificates(path);
+            third.OnNotice += (level, message) => notices.Add(message);
+            third.Load();
+
+            Assert.Multiple(() => {
+                Assert.That(third.All,                          Is.Empty);
+                Assert.That(File.Exists(path + ".unreadable"),  Is.True, "put aside, not overwritten");
+                Assert.That(notices,                            Has.Some.Contains("could not be read"));
+            });
+
+        }
+
+        #endregion
+
+
+        #region (private) SignedACertificate(Station, Id, MessageId = "m1") / Booted(Station, MessageId)
+
+        /// <summary>
+        /// A station asks for its certificate, and takes it: the one the CSMS
+        /// knows of now.
+        /// </summary>
+        private async Task SignedACertificate(ClientWebSocket Station, String Id, String MessageId = "m1")
+        {
+
+            var (key, csr) = KeyAndCSR(Id);
+
+            using (key)
+            {
+
+                await Send(Station, SignCertificate(MessageId, csr, "ChargingStationCertificate"));
+
+                var answer = await Receive(Station);
+                Assert.That(answer[2]!["status"]!.Value<String>(), Is.EqualTo("Accepted"), answer.ToString());
+
+                var signed = await Receive(Station);
+                Assert.That(signed[2]!.Value<String>(), Is.EqualTo("CertificateSigned"), signed.ToString());
+
+                var chain  = new X509Certificate2Collection();
+                chain.ImportFromPem(signed[3]!["certificateChain"]!.Value<String>()!);
+
+                var fingerprint = chain[0].GetCertHashString(HashAlgorithmName.SHA256).ToLowerInvariant();
+
+                await Send(Station, new JArray(3, signed[1]!.Value<String>()!, new JObject(new JProperty("status", "Accepted"))));
+
+                await WaitFor(() => CSMS.StationCertificates.Get(Id, "ChargingStationCertificate")?.Fingerprint == fingerprint,
+                              "the certificate the station took is not the one known");
+
+                foreach (var one in chain)
+                    one.Dispose();
+
+            }
+
+        }
+
+        /// <summary>
+        /// A station says it has started, and is accepted.
+        /// </summary>
+        private static async Task Booted(ClientWebSocket Station, String MessageId)
+        {
+
+            await Send(Station, new JArray(2, MessageId, "BootNotification",
+                                           new JObject(
+                                               new JProperty("chargingStation", new JObject(new JProperty("model", "Test"), new JProperty("vendorName", "OpenChargingCloud"))),
+                                               new JProperty("reason",          "PowerUp")
+                                           )));
+
+            var answer = await Receive(Station);
+
+            Assert.That(answer[0]!.Value<Int32>(),             Is.EqualTo(3), answer.ToString());
+            Assert.That(answer[2]!["status"]!.Value<String>(), Is.EqualTo("Accepted"), answer.ToString());
+
+        }
+
+        #endregion
+
+
         #region (private) WaitFor(Condition, Why)
 
         private static async Task WaitFor(Func<Boolean> Condition, String Why)
@@ -391,6 +650,7 @@ namespace cloud.charging.open.CSMS.Tests
             public ConcurrentQueue<String>            Requests  { get; } = new ();
             public ConcurrentQueue<String>            APIKeys   { get; } = new ();
             public String?                            Refuse    { get; set; }
+            public TimeSpan                           ValidFor  { get; set; } = TimeSpan.FromDays(365);
 
             public FakeEST()
             {
@@ -453,7 +713,7 @@ namespace cloud.charging.open.CSMS.Tests
                     else
                     {
                         var csr     = PemEncoding.WriteString("CERTIFICATE REQUEST", Convert.FromBase64String(Encoding.ASCII.GetString(body)));
-                        using var certificate = CA.Sign(csr, DateTimeOffset.UtcNow.AddMinutes(-5), DateTimeOffset.UtcNow.AddDays(30), ClientAuthentication: true);
+                        using var certificate = CA.Sign(csr, DateTimeOffset.UtcNow.AddMinutes(-5), DateTimeOffset.UtcNow.Add(ValidFor), ClientAuthentication: true);
                         status      = "200 OK";
                         answer      = Convert.ToBase64String(CertsOnly(certificate));
                     }

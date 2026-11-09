@@ -38,7 +38,8 @@ namespace cloud.charging.open.CSMS.Configuration
     /// "certificateSigning": {
     ///   "chargingStationCertificate": "https://pki.example.org/.well-known/est/stations",
     ///   "v2gCertificate":             "https://pki.example.org/.well-known/est/secc",
-    ///   "apiKey":                     "..."
+    ///   "apiKey":                     "...",
+    ///   "renewDaysBefore":            30
     /// }
     /// </code>
     /// <para>
@@ -50,6 +51,12 @@ namespace cloud.charging.open.CSMS.Configuration
     /// role of the PKI - and goes over HTTPS only, or to the loopback address.
     /// </para>
     /// <para>
+    /// A certificate this CSMS knows of - one it had signed and the station
+    /// took, or one a station signed in with - is renewed "renewDaysBefore"
+    /// days before it runs out: the station is asked with TriggerMessage for a
+    /// SignCertificate of that kind. 0 for never; 30 where nothing is said.
+    /// </para>
+    /// <para>
     /// Null is "the file does not say", as in every section: what is missing
     /// keeps whatever this CSMS had.
     /// </para>
@@ -57,9 +64,11 @@ namespace cloud.charging.open.CSMS.Configuration
     /// <param name="ChargingStationCertificate">The EST server a charging station's own certificate - its TLS client certificate towards this CSMS - is signed at; null for none.</param>
     /// <param name="V2GCertificate">The EST server a charging station's SECC certificate of ISO 15118-2 is signed at; null for none.</param>
     /// <param name="APIKey">The API key this CSMS signs in to the PKI with; null for none.</param>
+    /// <param name="RenewDaysBefore">How many days before a station's certificate runs out the station is asked for a new one; 0 for never, null for the default.</param>
     public sealed record CertificateSigningConfiguration(Uri?     ChargingStationCertificate   = null,
                                                          Uri?     V2GCertificate               = null,
-                                                         String?  APIKey                       = null)
+                                                         String?  APIKey                       = null,
+                                                         Int32?   RenewDaysBefore              = null)
     {
 
         #region Data
@@ -74,6 +83,18 @@ namespace cloud.charging.open.CSMS.Configuration
         /// </summary>
         public const Int32   MaxAPIKeyLength = 256;
 
+        /// <summary>
+        /// How many days before a station's certificate runs out it is renewed,
+        /// where nothing is said.
+        /// </summary>
+        public const Int32   DefaultRenewDaysBefore = 30;
+
+        /// <summary>
+        /// The most days before it runs out a certificate may be renewed: a
+        /// year, beyond which every certificate would be renewed every day.
+        /// </summary>
+        public const Int32   MaxRenewDaysBefore     = 365;
+
         #endregion
 
         #region Properties
@@ -83,6 +104,24 @@ namespace cloud.charging.open.CSMS.Configuration
         /// </summary>
         public Boolean Signs
             => ChargingStationCertificate is not null || V2GCertificate is not null;
+
+        /// <summary>
+        /// How long before a station's certificate runs out it is renewed;
+        /// zero for never.
+        /// </summary>
+        public TimeSpan RenewBefore
+            => TimeSpan.FromDays(RenewDaysBefore ?? DefaultRenewDaysBefore);
+
+        /// <summary>
+        /// The EST server where a kind of certificate is signed, or null.
+        /// </summary>
+        public Uri? ESTFor(String CertificateType)
+
+            => CertificateType switch {
+                   "ChargingStationCertificate"  => ChargingStationCertificate,
+                   "V2GCertificate"              => V2GCertificate,
+                   _                             => null
+               };
 
         #endregion
 
@@ -122,7 +161,23 @@ namespace cloud.charging.open.CSMS.Configuration
 
             }
 
-            Configuration = new CertificateSigningConfiguration(chargingStation, v2g, apiKey);
+            Int32? renewDaysBefore = null;
+
+            if (JSON["renewDaysBefore"] is JToken renewToken && renewToken.Type != JTokenType.Null)
+            {
+
+                if (renewToken.Type != JTokenType.Integer ||
+                    renewToken.Value<Int64>() is var days && (days < 0 || days > MaxRenewDaysBefore))
+                {
+                    Error = $"'{SectionName}.renewDaysBefore' is how many days before a station's certificate runs out it is renewed: 0 for never, up to {MaxRenewDaysBefore}.";
+                    return false;
+                }
+
+                renewDaysBefore = (Int32) renewToken.Value<Int64>();
+
+            }
+
+            Configuration = new CertificateSigningConfiguration(chargingStation, v2g, apiKey, renewDaysBefore);
             return true;
 
         }
@@ -194,7 +249,8 @@ namespace cloud.charging.open.CSMS.Configuration
 
             => new (Update.ChargingStationCertificate ?? ChargingStationCertificate,
                     Update.V2GCertificate             ?? V2GCertificate,
-                    Update.APIKey                     ?? APIKey);
+                    Update.APIKey                     ?? APIKey,
+                    Update.RenewDaysBefore            ?? RenewDaysBefore);
 
         /// <summary>
         /// This section without what the given names of it say: what a JSON
@@ -207,7 +263,8 @@ namespace cloud.charging.open.CSMS.Configuration
 
             return new (names.Contains("chargingStationCertificate") ? null : ChargingStationCertificate,
                         names.Contains("v2gCertificate")             ? null : V2GCertificate,
-                        names.Contains("apiKey")                     ? null : APIKey);
+                        names.Contains("apiKey")                     ? null : APIKey,
+                        names.Contains("renewDaysBefore")            ? null : RenewDaysBefore);
 
         }
 
@@ -227,6 +284,8 @@ namespace cloud.charging.open.CSMS.Configuration
 
             if (ChargingStationCertificate is not null)  json.Add("chargingStationCertificate", ChargingStationCertificate.ToString());
             if (V2GCertificate             is not null)  json.Add("v2gCertificate",             V2GCertificate.ToString());
+
+            if (RenewDaysBefore            is not null)  json.Add("renewDaysBefore",            RenewDaysBefore.Value);
 
             if (WithAPIKey)
             {
@@ -251,7 +310,8 @@ namespace cloud.charging.open.CSMS.Configuration
                                               ChargingStationCertificate is not null ? $"charging station certificates at {ChargingStationCertificate}" : null,
                                               V2GCertificate             is not null ? $"V2G certificates at {V2GCertificate}"                          : null
                                           }.OfType<String>()) +
-                     (APIKey is null ? ", signed in with no API key" : "")
+                     (APIKey is null ? ", signed in with no API key" : "") +
+                     (RenewBefore > TimeSpan.Zero ? $", renewed {RenewBefore.TotalDays:0} days before they run out" : ", never renewed by this CSMS")
                    : "no certificates signed for charging stations";
 
         #endregion

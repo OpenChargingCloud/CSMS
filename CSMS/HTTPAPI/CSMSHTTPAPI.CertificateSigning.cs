@@ -17,6 +17,8 @@
 
 #region Usings
 
+using Newtonsoft.Json.Linq;
+
 using org.GraphDefined.Vanaheimr.Hermod.HTTP;
 
 using cloud.charging.open.protocols.WWCP.Node.Web;
@@ -34,11 +36,13 @@ namespace cloud.charging.open.CSMS
     /// | | |
     /// |---|---|
     /// | <c>GET v1/configuration/certificate-signing</c> | where each kind of certificate is signed, whether there is an API key, and the latest requests |
-    /// | <c>PUT v1/configuration/certificate-signing</c> | <c>{ chargingStationCertificate, v2gCertificate, apiKey }</c>: what is named is changed, null removes it, and what is not named stays |
+    /// | <c>PUT v1/configuration/certificate-signing</c> | <c>{ chargingStationCertificate, v2gCertificate, apiKey, renewDaysBefore }</c>: what is named is changed, null removes it, and what is not named stays |
+    /// | <c>POST v1/configuration/certificate-signing/renew</c> | <c>{ station, certificateType }</c>: the station is asked for a new certificate of that kind now, and what it answered is said |
     /// <para>
     /// Reading at the stations' permission; changing at the certificates',
     /// which only the administrators have: where the CSRs go is who signs the
-    /// certificates the stations sign in with.
+    /// certificates the stations sign in with. Asking a station to renew is
+    /// at the certificates' permission as well: it has a certificate signed.
     /// </para>
     /// </remarks>
     public partial class CSMSHTTPAPI
@@ -53,6 +57,8 @@ namespace cloud.charging.open.CSMS
 
             AddHandler(root, GetCertificateSigning, HTTPMethod.GET);
             AddHandler(root, PutCertificateSigning, HTTPMethod.PUT);
+
+            AddHandler(root + "/renew", PostCertificateRenewal, HTTPMethod.POST);
 
         }
 
@@ -91,6 +97,49 @@ namespace cloud.charging.open.CSMS
             Log.Info($"'{user.Id}' changed where the certificates of the charging stations are signed: {CSMS.CertificateSigning}.", "ocpp", "certificate", "config", "web");
 
             return Task.FromResult(JSONResponse(Request, HTTPStatusCode.OK, CSMS.CertificateSigningJSON()));
+
+        }
+
+        #endregion
+
+        #region (private) PostCertificateRenewal(Request)
+
+        /// <summary>
+        /// POST /api/v1/configuration/certificate-signing/renew: 200 with what
+        /// the station answered, whatever it answered; 409 where it is not
+        /// connected; 400 where the kind of certificate is one this CSMS does
+        /// not sign.
+        /// </summary>
+        private async Task<HTTPResponse> PostCertificateRenewal(HTTPRequest Request)
+        {
+
+            if (!TryAuthorize(Request, Permission.Edit(NodeResources.Certificates), true, out var user, out var refused))
+                return refused;
+
+            if (!TryParseJSONObject(Request, out var json, out var errorResponse))
+                return errorResponse;
+
+            var station = json["station"]?.        Type == JTokenType.String ? json["station"]!.        Value<String>()!.Trim() : null;
+            var type    = json["certificateType"]?.Type == JTokenType.String ? json["certificateType"]!.Value<String>()!.Trim() : null;
+
+            if (String.IsNullOrEmpty(station) || station.Length > 255 || String.IsNullOrEmpty(type))
+                return ErrorJSON(Request, HTTPStatusCode.BadRequest, "Say which station, and which certificate: { \"station\", \"certificateType\" }.");
+
+            var renewal = await CSMS.AskToRenew(station, type);
+
+            if (!renewal.Asked)
+                return ErrorJSON(Request,
+                                 renewal.Answer == CSMS.NotConnected ? HTTPStatusCode.Conflict : HTTPStatusCode.BadRequest,
+                                 renewal.Detail ?? renewal.Answer);
+
+            Log.Info($"'{user.Id}' asked '{station}' for a new {type}: {renewal.Answer}.", "ocpp", "certificate", "web");
+
+            return JSONResponse(Request,
+                                HTTPStatusCode.OK,
+                                new JObject(
+                                    new JProperty("answer",  renewal.Answer),
+                                    new JProperty("detail",  renewal.Detail)
+                                ));
 
         }
 

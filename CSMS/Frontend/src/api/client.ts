@@ -588,7 +588,10 @@ export const api = {
 
         get:   ()                                  => request<CertificateSigning>('GET', '/configuration/certificate-signing'),
         /** What is named is changed, null removes it, what is not named stays: the API key above all. */
-        save:  (update: CertificateSigningUpdate)  => request<CertificateSigning>('PUT', '/configuration/certificate-signing', update)
+        save:  (update: CertificateSigningUpdate)  => request<CertificateSigning>('PUT', '/configuration/certificate-signing', update),
+        /** Ask a connected station with TriggerMessage for a new certificate of that kind, now. */
+        renew: (station: string, certificateType: string) =>
+                   request<CertificateRenewal>('POST', '/configuration/certificate-signing/renew', { station, certificateType })
 
     },
 
@@ -738,12 +741,39 @@ export interface CertificateSigningEntry {
     notAfter:         string | null;
 }
 
+/** A certificate a charging station has, as the CSMS knows of it, and what came of asking it to renew. */
+export interface StationCertificate {
+    station:          string;
+    certificateType:  string;
+    /** The SHA-256 fingerprint. */
+    fingerprint:      string;
+    notAfter:         string;
+    /** Signed here and taken by the station; or what the station signed in with. */
+    source:           'signed' | 'presented';
+    noted:            string;
+    renewalAsked:     string | null;
+    /** "Accepted", "Rejected", "NotImplemented" - or "failed". */
+    renewalAnswer:    string | null;
+    /** Whether it runs out within the days it is renewed before. */
+    due:              boolean;
+    connected:        boolean;
+}
+
+/** What a station answered when it was asked by hand to renew. */
+export interface CertificateRenewal {
+    answer:  string;
+    detail:  string | null;
+}
+
 /** Where the CSRs of the charging stations go: the EST server of a PKI for each kind of certificate. */
 export interface CertificateSigning {
     chargingStationCertificate:  string | null;
     v2gCertificate:              string | null;
     /** Whether there is an API key; the key itself is never read back. */
     apiKey:                      boolean;
+    /** How many days before a certificate runs out the station is asked for a new one; 0 for never. */
+    renewDaysBefore:             number;
+    certificates:                StationCertificate[];
     requests:                    CertificateSigningEntry[];
 }
 
@@ -752,4 +782,5 @@ export interface CertificateSigningUpdate {
     chargingStationCertificate?:  string | null;
     v2gCertificate?:              string | null;
     apiKey?:                      string | null;
+    renewDaysBefore?:             number | null;
 }

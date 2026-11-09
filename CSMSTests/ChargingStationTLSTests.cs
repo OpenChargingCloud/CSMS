@@ -256,6 +256,56 @@ namespace cloud.charging.open.CSMS.Tests
 
         #endregion
 
+        #region AStationSigningInWithItsCertificateHasItNoted()
+
+        /// <summary>
+        /// A station on security profile 3 signs in with its own certificate,
+        /// which runs out within the days it is renewed before: this CSMS knows
+        /// of it now, and will ask the station for a new one.
+        /// </summary>
+        [Test]
+        public async Task AStationSigningInWithItsCertificateHasItNoted()
+        {
+
+            Assert.That(CSMS.TryUpdateOCPPServerConfiguration(JObject.Parse("""{ "securityProfiles": [ 2, 3 ] }"""), out var error),
+                        Is.True, error);
+
+            Assert.That(CSMS.ClientTrust.TryAdd(TestCA.ToPEM(ca.Intermediate!, ca.Certificate), null, out _, out _, out var trustError),
+                        Is.True, trustError);
+
+            // A key of the station's own, in the machine's key store as a
+            // PKCS#12 would put it: SChannel shows no ephemeral key as a client
+            // certificate.
+            using var key         = System.Security.Cryptography.ECDsa.Create(System.Security.Cryptography.ECCurve.NamedCurves.nistP256);
+            var csr               = new CertificateRequest("CN=cs003", key, System.Security.Cryptography.HashAlgorithmName.SHA256).CreateSigningRequestPem();
+            using var signed      = ca.Sign(csr, DateTimeOffset.UtcNow.AddDays(-1), DateTimeOffset.UtcNow.AddDays(20), ClientAuthentication: true);
+            using var withKey     = signed.CopyWithPrivateKey(key);
+            using var certificate = X509CertificateLoader.LoadPkcs12(withKey.Export(X509ContentType.Pkcs12, "station"), "station", X509KeyStorageFlags.Exportable);
+
+            using var client      = new ClientWebSocket();
+            using var timeout     = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+
+            client.Options.AddSubProtocol("ocpp2.1");
+            client.Options.ClientCertificates                  = [ certificate ];
+            client.Options.RemoteCertificateValidationCallback = (_, _, _, _) => true;
+
+            await client.ConnectAsync(new Uri($"wss://127.0.0.1:{port}"), timeout.Token);
+
+            var noted = CSMS.StationCertificates.Get("cs003", "ChargingStationCertificate");
+
+            Assert.That(noted, Is.Not.Null, "the certificate the station signed in with is not known");
+
+            Assert.Multiple(() => {
+                Assert.That(noted!.Source,       Is.EqualTo("presented"));
+                Assert.That(noted.Fingerprint,   Is.EqualTo(certificate.GetCertHashString(System.Security.Cryptography.HashAlgorithmName.SHA256).ToLowerInvariant()));
+                Assert.That(CSMS.IsDue(noted),   Is.True, "20 days left, and renewed 30 days before");
+                Assert.That(CSMS.IsConnected("cs003"), Is.True);
+            });
+
+        }
+
+        #endregion
+
         #region AStationGetsTheCertificateTheStoreChose()
 
         /// <summary>

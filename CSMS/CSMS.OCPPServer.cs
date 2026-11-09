@@ -739,6 +739,10 @@ namespace cloud.charging.open.CSMS
             {
                 ServerCertificates.CheckExpiry(ocppServerSettings.ReachableAs ?? []);
                 ClientTrust.       CheckExpiry();
+
+                // And the stations' own, which this CSMS can do something
+                // about: ask the connected ones for new ones.
+                _ = Task.Run(() => RenewDueCertificates());
             }
             catch (Exception e)
             {
@@ -826,6 +830,11 @@ namespace cloud.charging.open.CSMS
                              "ocpp", "station", "auth");
 
                 Connection.TryAddCustomData(StationIdKey, who);
+
+                // What it signed in with is what runs out, and what it is
+                // asked to renew before it does.
+                if (!named.IsNullOrEmpty())
+                    NotePresentedCertificate(named, Connection.ClientCertificate);
 
                 return Task.FromResult<HTTPResponse?>(null);
 

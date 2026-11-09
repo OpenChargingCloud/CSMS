@@ -104,7 +104,7 @@ handed a role rather than a socket.
 | Server certificates | the keys and chains this CSMS presents | `certificates:edit` |
 | Client trust | the chains a station's certificate may come from | `certificates:edit` |
 | Station logins | who may sign in, and with what | `stations:edit` |
-| Certificate signing | where the CSRs of the charging stations go - the EST server of a PKI - and what became of the latest | `certificates:edit` |
+| Certificate signing | where the CSRs of the charging stations go - the EST server of a PKI - the certificates the stations have, and what became of the latest; a station asked for a new certificate by hand | `certificates:edit` |
 | OCPI | nothing - who this operator is and where its partners find it | `roaming:read` |
 | Roaming partners | the EMSPs it is peered with, and the peering itself | `roaming:edit` |
 | Locations | the charging locations it publishes | `locations:edit` |
@@ -298,7 +298,8 @@ to the station with `CertificateSigned`, with the CAs above it but the root:
 "certificateSigning": {
   "chargingStationCertificate": "https://pki.example.org/.well-known/est/stations",
   "v2gCertificate":             "https://pki.example.org/.well-known/est/secc",
-  "apiKey":                     "<an API key of the PKI>"
+  "apiKey":                     "<an API key of the PKI>",
+  "renewDaysBefore":            30
 }
 ```
 
@@ -324,6 +325,28 @@ became of the latest hundred: signed, rejected, not signed by the PKI, or not
 taken by the station. The API key is never shown again, only whether there is
 one; `PUT` changes what it names, removes what it sets to `null`, and keeps the
 rest.
+
+### Renewed before they run out
+
+The CSMS keeps the certificate of each kind of each station it knows of in
+`ocpp-station-certificates.json`, beside the configuration file: the one it had
+signed and the station took, or the one a station signed in with at security
+profile 3 - the later of the two where it knows both. A station whose
+certificate runs out within `renewDaysBefore` days, 30 where nothing is said, is
+asked with `TriggerMessage` for a `SignCertificate` of that kind, OCPP 2.0.1 and
+2.1, A02: once it was accepted with its `BootNotification`, and every day while
+it stays connected. Its CSR goes the way every other does, and the certificate
+signed is the one known from then on. A station is asked once a day at most for
+the same certificate, so that one that says no, or never sends its CSR, is
+asked again the next day rather than at every reconnection; a kind of
+certificate the CSMS sends to no PKI is not asked for at all. `0` is never.
+
+The page shows the certificates, until when they hold, which are due, which
+stations are connected, and what each said when it was last asked; **Renew
+now**, or `POST /api/v1/configuration/certificate-signing/renew` with
+`{ "station", "certificateType" }`, asks a connected station at once, whatever is
+due - its first certificate, for a station that signs in with a password. It
+answers what the station said, `409` where the station is not connected.
 
 
 ## Running it

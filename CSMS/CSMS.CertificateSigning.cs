@@ -177,6 +177,8 @@ namespace cloud.charging.open.CSMS
             certificateSigning             = Configuration ?? new CertificateSigningConfiguration();
             csms01.SignCertificateProcessor = SignCertificate;
 
+            BuildCertificateRenewal();
+
             Log.Info($"Certificate signing: {certificateSigning}.", "ocpp", "certificate");
 
         }
@@ -234,8 +236,9 @@ namespace cloud.charging.open.CSMS
         #region CertificateSigningJSON()
 
         /// <summary>
-        /// Where the CSRs go, whether there is an API key - and what became of
-        /// the latest requests.
+        /// Where the CSRs go, whether there is an API key, how long before they
+        /// run out the certificates are renewed - and the certificates of the
+        /// stations, and what became of the latest requests.
         /// </summary>
         public JObject CertificateSigningJSON()
         {
@@ -244,6 +247,14 @@ namespace cloud.charging.open.CSMS
 
             json["chargingStationCertificate"] ??= null;
             json["v2gCertificate"]             ??= null;
+            json["renewDaysBefore"]              = (Int32) certificateSigning.RenewBefore.TotalDays;
+
+            json.Add("certificates", new JArray(StationCertificates.All.Select(certificate => {
+                                                    var one = certificate.ToJSON();
+                                                    one.Add("due",        IsDue(certificate));
+                                                    one.Add("connected",  IsConnected(certificate.Station));
+                                                    return one;
+                                                })));
 
             json.Add("requests", new JArray(CertificateSignings.Select(entry => entry.ToJSON())));
 
@@ -453,6 +464,8 @@ namespace cloud.charging.open.CSMS
                 }
 
                 Remember(new CertificateSigningEntry(At, station, Type.ToString(), "signed", null, fingerprint, certificate.NotAfter));
+
+                StationCertificates.Note(station, Type.ToString(), fingerprint, certificate.NotAfter.ToUniversalTime(), "signed", TimeProvider.GetUtcNow());
 
                 Log.Notice($"'{station}' took the {Type} {fingerprint}, signed by '{certificate.Issuer}' and valid until {certificate.NotAfter.ToUniversalTime():u}.",
                            "ocpp", "certificate", "station", "security");
