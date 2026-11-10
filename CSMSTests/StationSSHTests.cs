@@ -155,6 +155,70 @@ namespace cloud.charging.open.CSMS.Tests
 
         }
 
+        #region AStationsNextKey_IsEnrolled_AndItsOldOne_TakenAway()
+
+        /// <summary>
+        /// A station that signs in over SSH shows its next key in SignSSHKey: the CSMS puts it beside the
+        /// current one, says so with SSHKeySigned, and once the station took it, the old one goes
+        /// (white paper "OCPP over SSH", section 10.3).
+        /// </summary>
+        [Test]
+        public async Task AStationsNextKey_IsEnrolled_AndItsOldOne_TakenAway()
+        {
+
+            GiveAKey("cs001", cs001Key);
+
+            var answers   = new System.Collections.Concurrent.ConcurrentDictionary<String, Newtonsoft.Json.Linq.JArray>();
+            var signed    = new TaskCompletionSource<JObject>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+            await using var client = new SshMessageClient(new SshMessageClientOptions {
+                                                              Host          = "127.0.0.1",
+                                                              Port          = CSMS.SSHPort!.Value.ToUInt16(),
+                                                              Ssh           = SSHAs("cs001", cs001Key),
+                                                              Subsystem     = Subsystem,
+                                                              Subprotocols  = [ "ocpp2.1" ]
+                                                          });
+
+            client.OnTextMessageReceived += async (timestamp, sender, connection, text, cancellationToken) => {
+
+                var message = JArray.Parse(text);
+
+                if (message[0].Value<Int32>() == 2 && message[2].Value<String>() == "SSHKeySigned")
+                {
+                    signed.TrySetResult((JObject) message[3]!);
+                    await connection.SendTextMessage(new JArray(3, message[1], new JObject(new JProperty("status", "Accepted"))).ToString(Newtonsoft.Json.Formatting.None));
+                }
+
+                else if (message[0].Value<Int32>() is 3 or 4)
+                    answers[message[1]!.Value<String>()!] = message;
+
+            };
+
+            var connected = await client.ConnectAsync().WaitAsync(TimeSpan.FromSeconds(15));
+
+            Assert.That(await RegisteredWithin("cs001", TimeSpan.FromSeconds(10)), Is.True);
+
+            await connected.SendTextMessage(new JArray(2, "sign1", "SignSSHKey", new JObject(new JProperty("purpose",   "OCPP"),
+                                                                                             new JProperty("publicKey", LineOf(cs002Key)))).ToString(Newtonsoft.Json.Formatting.None));
+
+            var confirmed = await signed.Task.WaitAsync(TimeSpan.FromSeconds(10));
+
+            var until = DateTime.UtcNow + TimeSpan.FromSeconds(10);
+            while (DateTime.UtcNow < until &&
+                   CSMS.StationLogins.Logins.Single(login => login.Id == "cs001").Keys.Select(key => key.Fingerprint).SequenceEqual([ FingerprintOf(cs002Key) ]) == false)
+                await Task.Delay(50);
+
+            Assert.Multiple(() => {
+                Assert.That(answers.TryGetValue("sign1", out var answer) ? answer[2]!.Value<String>("status") : null, Is.EqualTo("Accepted"));
+                Assert.That(confirmed.Value<String>("publicKey"),  Is.EqualTo(LineOf(cs002Key)));
+                Assert.That(CSMS.StationLogins.Logins.Single(login => login.Id == "cs001").Keys.Select(key => key.Fingerprint),
+                            Is.EqualTo(new[] { FingerprintOf(cs002Key) }), "The next key was not enrolled, or the old one stayed.");
+            });
+
+        }
+
+        #endregion
+
         private static async Task<Boolean> EndsWithin(SshMessageConnection Connection, TimeSpan Within)
         {
 

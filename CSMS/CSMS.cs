@@ -378,6 +378,8 @@ namespace cloud.charging.open.CSMS
 
             csms01 = BuildOCPPNode(this.OCPP);
 
+            AttachSSHKeyEnrolment(csms01);
+
             this.Log.Info($"OCPP 2.1 CSMS '{csms01.Id}' is set up as {csms01.VendorName} {csms01.Model}.", "ocpp");
 
             // The CSRs of the charging stations, to the PKI the file names -
