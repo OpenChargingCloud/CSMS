@@ -17,6 +17,7 @@ everyPageIn(new URL('./', import.meta.url), {
         'ocppServer.ts',
         'partners.ts',
         'serverCertificates.ts',
+        'stationRoots.ts',
         'stationLogins.ts'
     ]
 

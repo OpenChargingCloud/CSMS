@@ -42,6 +42,7 @@ namespace cloud.charging.open.CSMS.OCPP
     /// <param name="RenewalAsked">When the station was last asked for a new one, for this certificate.</param>
     /// <param name="RenewalAnswer">What the station answered: "Accepted", "Rejected", "NotImplemented" - or why it could not be asked.</param>
     /// <param name="NotBefore">From when it holds; not known of the certificates noted before it was kept.</param>
+    /// <param name="SerialNumber">Its serial number in hexadecimal, as X.509 writes it; not known of the certificates noted before it was kept.</param>
     public sealed record StationCertificate(String           Station,
                                             String           CertificateType,
                                             String           Fingerprint,
@@ -50,8 +51,19 @@ namespace cloud.charging.open.CSMS.OCPP
                                             DateTimeOffset   Noted,
                                             DateTimeOffset?  RenewalAsked    = null,
                                             String?          RenewalAnswer   = null,
-                                            DateTimeOffset?  NotBefore       = null)
+                                            DateTimeOffset?  NotBefore       = null,
+                                            String?          SerialNumber    = null)
     {
+
+        /// <summary>
+        /// Whether this is the certificate of the given serial number, in
+        /// hexadecimal of either case, with leading zeros or without.
+        /// </summary>
+        public Boolean HasSerialNumber(String Serial)
+
+            => SerialNumber is not null &&
+               String.Equals(SerialNumber.TrimStart('0'), Serial.Trim().TrimStart('0'), StringComparison.OrdinalIgnoreCase);
+
 
         public JObject ToJSON()
 
@@ -59,6 +71,7 @@ namespace cloud.charging.open.CSMS.OCPP
                    new JProperty("station",          Station),
                    new JProperty("certificateType",  CertificateType),
                    new JProperty("fingerprint",      Fingerprint),
+                   new JProperty("serialNumber",     SerialNumber),
                    new JProperty("notBefore",        NotBefore?.ToUniversalTime().ToString("o")),
                    new JProperty("notAfter",         NotAfter.ToUniversalTime().ToString("o")),
                    new JProperty("source",           Source),
@@ -95,7 +108,8 @@ namespace cloud.charging.open.CSMS.OCPP
                                               JSON["renewalAnswer"]?.Type == JTokenType.String ? JSON["renewalAnswer"]!.Value<String>() : null,
                                               JSON["notBefore"] is JToken notBefore && notBefore.Type != JTokenType.Null
                                                   ? DateTimeOffset.Parse(notBefore.Value<String>()!, null, System.Globalization.DateTimeStyles.RoundtripKind)
-                                                  : null);
+                                                  : null,
+                                              JSON["serialNumber"]?.Type == JTokenType.String ? JSON["serialNumber"]!.Value<String>() : null);
 
             }
             catch (Exception e) when (e is FormatException or InvalidCastException or ArgumentException)
@@ -266,7 +280,7 @@ namespace cloud.charging.open.CSMS.OCPP
 
         #endregion
 
-        #region Note(Station, CertificateType, Fingerprint, NotAfter, Source, At, NotBefore = null)
+        #region Note(Station, CertificateType, Fingerprint, NotAfter, Source, At, NotBefore = null, SerialNumber = null)
 
         /// <summary>
         /// A certificate of a station: kept where it is the first of its kind,
@@ -279,7 +293,8 @@ namespace cloud.charging.open.CSMS.OCPP
                             DateTimeOffset   NotAfter,
                             String           Source,
                             DateTimeOffset   At,
-                            DateTimeOffset?  NotBefore   = null)
+                            DateTimeOffset?  NotBefore     = null,
+                            String?          SerialNumber  = null)
         {
 
             lock (updateLock)
@@ -289,10 +304,13 @@ namespace cloud.charging.open.CSMS.OCPP
                     (known.Fingerprint == Fingerprint || known.NotAfter > NotAfter))
                 {
 
-                    // Known from before its first day was kept: learned now.
-                    if (known.Fingerprint == Fingerprint && known.NotBefore is null && NotBefore is not null)
+                    // Known from before its first day and its serial number
+                    // were kept: learned now.
+                    if (known.Fingerprint == Fingerprint &&
+                        ((known.NotBefore is null && NotBefore is not null) || (known.SerialNumber is null && SerialNumber is not null)))
                     {
-                        certificates[(Station, CertificateType)] = known with { NotBefore = NotBefore };
+                        certificates[(Station, CertificateType)] = known with { NotBefore     = known.NotBefore    ?? NotBefore,
+                                                                                SerialNumber  = known.SerialNumber ?? SerialNumber };
                         Save();
                     }
 
@@ -300,7 +318,7 @@ namespace cloud.charging.open.CSMS.OCPP
 
                 }
 
-                certificates[(Station, CertificateType)] = new StationCertificate(Station, CertificateType, Fingerprint, NotAfter, Source, At, NotBefore: NotBefore);
+                certificates[(Station, CertificateType)] = new StationCertificate(Station, CertificateType, Fingerprint, NotAfter, Source, At, NotBefore: NotBefore, SerialNumber: SerialNumber);
 
                 Save();
                 return true;

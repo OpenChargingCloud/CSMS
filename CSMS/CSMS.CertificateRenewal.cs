@@ -153,7 +153,8 @@ namespace cloud.charging.open.CSMS
                                          Certificate.NotAfter.ToUniversalTime(),
                                          "presented",
                                          TimeProvider.GetUtcNow(),
-                                         Certificate.NotBefore.ToUniversalTime());
+                                         Certificate.NotBefore.ToUniversalTime(),
+                                         Certificate.SerialNumber);
 
             }
             catch (Exception e)

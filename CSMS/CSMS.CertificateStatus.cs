@@ -252,7 +252,19 @@ namespace cloud.charging.open.CSMS
                                                 read.NextUpdate));
 
             if (outcome == "revoked")
+            {
+
                 Log.Warning($"'{station}' asked about the certificate {serial}: '{responder}' says it was revoked{(read.RevokedAt is DateTimeOffset at ? $" on {at:u}" : "")}.", "ocpp", "certificate", "station");
+
+                // A certificate of its own, revoked: the station is asked for
+                // a new one now, and not when the old one would run out.
+                foreach (var revoked in StationCertificates.All.Where(known => known.Station == station && known.HasSerialNumber(serial)))
+                {
+                    Log.Notice($"The {revoked.CertificateType} of '{station}' is revoked: the station is asked for a new one.", "ocpp", "certificate", "station");
+                    _ = Task.Run(() => AskToRenew(station, revoked.CertificateType));
+                }
+
+            }
             else
                 Log.Info   ($"'{station}' asked about the certificate {serial}: '{responder}' says {outcome}.", "ocpp", "certificate", "station");
 

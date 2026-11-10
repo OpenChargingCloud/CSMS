@@ -91,6 +91,7 @@ namespace cloud.charging.open.CSMS
             RegisterOCPPServerRoutes();
             RegisterOCPIRoutes();
             RegisterCertificateSigningRoutes();
+            RegisterStationRootRoutes();
 
         }
 

@@ -179,6 +179,7 @@ namespace cloud.charging.open.CSMS
 
             BuildCertificateRenewal();
             BuildCertificateStatus();
+            BuildStationRoots();
 
             Log.Info($"Certificate signing: {certificateSigning}.", "ocpp", "certificate");
 
@@ -472,7 +473,8 @@ namespace cloud.charging.open.CSMS
                 Remember(new CertificateSigningEntry(At, station, Type.ToString(), "signed", null, fingerprint, certificate.NotAfter));
 
                 StationCertificates.Note(station, Type.ToString(), fingerprint, certificate.NotAfter.ToUniversalTime(), "signed", TimeProvider.GetUtcNow(),
-                                         certificate.NotBefore.ToUniversalTime());
+                                         certificate.NotBefore.ToUniversalTime(),
+                                         certificate.SerialNumber);
 
                 Log.Notice($"'{station}' took the {Type} {fingerprint}, signed by '{certificate.Issuer}' and valid until {certificate.NotAfter.ToUniversalTime():u}.",
                            "ocpp", "certificate", "station", "security");

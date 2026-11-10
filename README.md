@@ -105,6 +105,7 @@ handed a role rather than a socket.
 | Client trust | the chains a station's certificate may come from | `certificates:edit` |
 | Station logins | who may sign in, and with what | `stations:edit` |
 | Certificate signing | where the CSRs of the charging stations go - the EST server of a PKI - the certificates the stations have, and what became of the latest; a station asked for a new certificate by hand; what the stations asked of the OCSP responder | `certificates:edit` |
+| Station roots | the root certificates the stations are installed - by hand, on every station connected, or on every station that starts without one - what a station has, and a certificate deleted from it | `certificates:edit` |
 | OCPI | nothing - who this operator is and where its partners find it | `roaming:read` |
 | Roaming partners | the EMSPs it is peered with, and the peering itself | `roaming:edit` |
 | Locations | the charging locations it publishes | `locations:edit` |
@@ -382,6 +383,46 @@ no OCSP request, is answered `Failed`, as is one the responder does not answer
 successfully. The **Certificate signing** page shows the latest hundred: the
 station, the serial number, the responder, and what it said - good, revoked or
 unknown - and until when.
+
+Where the certificate revoked is the station's own - one the CSMS signed for
+it, or one it signed in with, known by its serial number - the station is asked
+for a new one at once, with `TriggerMessage`, and not when the old one would
+run out.
+
+### Root certificates on the stations
+
+A station trusts what it is installed, by kind: the root above the CSMS's TLS
+certificate, which it signs in to it by, the V2G root of ISO 15118, the roots of
+mobility operators, of manufacturers and of OEMs. The **Station roots** page
+keeps the roots the CSMS installs, in `ocpp-station-roots.json` beside the
+configuration file - a CA that signed itself, of one of the kinds of
+`InstallCertificate` - and installs them, OCPP 2.0.1 and 2.1, M05: on a station,
+on every station connected, or, for a root marked as one every station is to
+have, on every station that is accepted with its `BootNotification` and does
+not have it. The new root of a rollover is on the stations that way before the
+first certificate below it is.
+
+**Take the roots of the PKI** adds the CAs the EST servers name in `cacerts`
+that signed themselves: the one above the V2G certificates as the V2G root, and
+the one above the CSMS's own TLS certificate as its root.
+
+The page asks a station what it has, `GetInstalledCertificateIds`, M03, names
+the roots of the CSMS among it, and deletes a certificate from it,
+`DeleteCertificate`, M04. The latest hundred changes are shown, and logged.
+Behind it, `/api/v1/configuration/station-roots`:
+
+| | |
+|---|---|
+| `GET` | the roots, the stations connected, and the latest changes |
+| `POST` | `{ "pem", "certificateType", "everywhere" }`: a root added |
+| `POST .../from-pki` | the roots of the PKI added |
+| `PUT .../{type}/{id}` | `{ "everywhere" }` |
+| `DELETE .../{type}/{id}` | no longer installed; it stays where it is |
+| `POST .../{type}/{id}/install` | `{ "station" }`: on that station, or on every one connected where none is named |
+| `GET .../stations/{station}` | what the station has |
+| `POST .../stations/{station}/delete` | `{ "certificateType", "hashAlgorithm", "issuerNameHash", "issuerKeyHash", "serialNumber" }` |
+
+Reading is at the stations' permission, changing at the certificates'.
 
 
 ## Running it

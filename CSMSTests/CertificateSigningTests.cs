@@ -794,6 +794,86 @@ namespace cloud.charging.open.CSMS.Tests
         #endregion
 
 
+        #region ARevokedCertificateOfAStationIsReplaced()
+
+        /// <summary>
+        /// A station asks about its own certificate, and the responder says it
+        /// is revoked: the station is asked for a new one at once, and not when
+        /// the old one would run out.
+        /// </summary>
+        [Test]
+        public async Task ARevokedCertificateOfAStationIsReplaced()
+        {
+
+            using var station = await Connect("cs001");
+
+            await SignedACertificate(station, "cs001");
+
+            var serial = CSMS.StationCertificates.Get("cs001", "ChargingStationCertificate")!.SerialNumber;
+
+            Assert.That(serial, Is.Not.Null, "its serial number is kept");
+
+            est!.Revoked.TryAdd(serial!.TrimStart('0').ToLowerInvariant(), 0);
+
+            await Send(station, GetCertificateStatus("s1", serial, $"http://127.0.0.1:{estPort}/api/v1/pki/ocsp"));
+
+            // The answer and the TriggerMessage, in whichever order they come.
+            var first   = await Receive(station);
+            var second  = await Receive(station);
+            var answer  = first[0]!.Value<Int32>() == 3 ? first  : second;
+            var trigger = first[0]!.Value<Int32>() == 3 ? second : first;
+
+            Assert.Multiple(() => {
+                Assert.That(answer[2]!["status"]!.Value<String>(),                Is.EqualTo("Accepted"), answer.ToString());
+                Assert.That(trigger[2]!.Value<String>(),                          Is.EqualTo("TriggerMessage"), trigger.ToString());
+                Assert.That(trigger[3]!["requestedMessage"]!.Value<String>(),     Is.EqualTo("SignChargingStationCertificate"));
+            });
+
+            await Send(station, new JArray(3, trigger[1]!.Value<String>()!, new JObject(new JProperty("status", "Accepted"))));
+
+            await WaitFor(() => CSMS.StationCertificates.Get("cs001", "ChargingStationCertificate")?.RenewalAnswer == "Accepted",
+                          "what the station answered was not noted");
+
+        }
+
+        #endregion
+
+        #region TheRootsAreTakenFromThePKI()
+
+        /// <summary>
+        /// The CAs the EST servers name that signed themselves: the one above
+        /// the V2G certificates added as the V2G root - once.
+        /// </summary>
+        [Test]
+        public async Task TheRootsAreTakenFromThePKI()
+        {
+
+            using var browser = await SignedIn();
+
+            using var v2g     = await browser.PutAsync("api/v1/configuration/certificate-signing",
+                                                       new StringContent($$"""{ "v2gCertificate": "http://127.0.0.1:{{estPort}}/.well-known/est/secc" }""", Encoding.UTF8, "application/json"));
+
+            using var taken   = await browser.PostAsync("api/v1/configuration/station-roots/from-pki", JSONBody());
+            var shown         = JObject.Parse(await taken.Content.ReadAsStringAsync());
+
+            using var again   = await browser.PostAsync("api/v1/configuration/station-roots/from-pki", JSONBody());
+            var shownAgain    = JObject.Parse(await again.Content.ReadAsStringAsync());
+
+            Assert.Multiple(() => {
+                Assert.That(v2g.StatusCode,                                             Is.EqualTo(HttpStatusCode.OK));
+                Assert.That(taken.StatusCode,                                           Is.EqualTo(HttpStatusCode.OK), shown.ToString());
+                Assert.That(shown["added"]!.Count(),                                    Is.EqualTo(1), shown.ToString());
+                Assert.That(shown["added"]![0]!["certificateType"]!.Value<String>(),    Is.EqualTo("V2GRootCertificate"));
+                Assert.That(shown["added"]![0]!["id"]!.Value<String>(),                 Is.EqualTo(est!.CA.Certificate.GetCertHashString(HashAlgorithmName.SHA256).ToLowerInvariant()));
+                Assert.That(shownAgain["added"]!.Count(),                               Is.EqualTo(0), "not twice");
+                Assert.That(CSMS.StationRoots.All.Count,                                Is.EqualTo(1));
+            });
+
+        }
+
+        #endregion
+
+
         #region (private) GetCertificateStatus(MessageId, SerialNumber, Responder, NameHash = null)
 
         /// <summary>

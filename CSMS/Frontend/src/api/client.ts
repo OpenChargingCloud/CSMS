@@ -599,6 +599,36 @@ export const api = {
 
     },
 
+    stationRoots: {
+
+        get:      ()  => request<StationRoots>('GET', '/configuration/station-roots'),
+        add:      (pem: string, certificateType: string, everywhere: boolean) =>
+                      request<StationRoots>('POST', '/configuration/station-roots', { pem, certificateType, everywhere }),
+        /** The roots the EST servers of the PKI name, added. */
+        fromPKI:  ()  => request<StationRoots & { added: StationRoot[]; problems: string[] }>('POST', '/configuration/station-roots/from-pki', {}),
+        setEverywhere: (root: StationRoot, everywhere: boolean) =>
+                      request<StationRoots>('PUT', `/configuration/station-roots/${encodeURIComponent(root.certificateType)}/${encodeURIComponent(root.id)}`, { everywhere }),
+        remove:   (root: StationRoot) =>
+                      request<StationRoots>('DELETE', `/configuration/station-roots/${encodeURIComponent(root.certificateType)}/${encodeURIComponent(root.id)}`),
+        /** On the station named, or on every one connected where none is. */
+        install:  (root: StationRoot, station: string | null) =>
+                      request<StationRoots & { results: StationRootResult[] }>('POST',
+                          `/configuration/station-roots/${encodeURIComponent(root.certificateType)}/${encodeURIComponent(root.id)}/install`,
+                          station === null ? {} : { station }),
+        /** What a station has: it is asked, with GetInstalledCertificateIds. */
+        installedOn: (station: string) =>
+                      request<{ station: string; installed: InstalledCertificate[] }>('GET', `/configuration/station-roots/stations/${encodeURIComponent(station)}`),
+        deleteFrom: (station: string, certificate: InstalledCertificate) =>
+                      request<{ answer: string; detail: string | null }>('POST', `/configuration/station-roots/stations/${encodeURIComponent(station)}/delete`, {
+                          certificateType:  certificate.certificateType,
+                          hashAlgorithm:    certificate.hashAlgorithm,
+                          issuerNameHash:   certificate.issuerNameHash,
+                          issuerKeyHash:    certificate.issuerKeyHash,
+                          serialNumber:     certificate.serialNumber
+                      })
+
+    },
+
     ocppServer: {
 
         get:   ()                          => request<OCPPServerConfiguration>('GET', '/configuration/ocpp-server'),
@@ -743,6 +773,61 @@ export interface CertificateSigningEntry {
     /** The SHA-256 fingerprint of the certificate signed. */
     certificate:      string | null;
     notAfter:         string | null;
+}
+
+/** A root certificate the CSMS installs on its charging stations. */
+export interface StationRoot {
+    /** The SHA-256 fingerprint. */
+    id:               string;
+    /** CSMSRootCertificate, V2GRootCertificate, MORootCertificate, ManufacturerRootCertificate, OEMRootCertificate. */
+    certificateType:  string;
+    subject:          string;
+    serialNumber:     string;
+    notAfter:         string;
+    added:            string;
+    /** Installed on every station that starts without it. */
+    everywhere:       boolean;
+    pem:              string;
+}
+
+/** A root installed on a station, or a certificate deleted from one. */
+export interface StationRootChange {
+    at:               string;
+    station:          string;
+    action:           'install' | 'delete';
+    certificateType:  string;
+    /** The subject of the root installed; the serial number of the certificate deleted. */
+    certificate:      string;
+    answer:           string;
+    detail:           string | null;
+    automatic:        boolean;
+}
+
+export interface StationRoots {
+    roots:             StationRoot[];
+    certificateTypes:  string[];
+    connected:         string[];
+    changes:           StationRootChange[];
+}
+
+/** What one station answered to InstallCertificate. */
+export interface StationRootResult {
+    station:  string;
+    answer:   string;
+    detail:   string | null;
+}
+
+/** A certificate a station says it has, and the root of the CSMS it is, where it is one. */
+export interface InstalledCertificate {
+    certificateType:  string;
+    hashAlgorithm:    string;
+    issuerNameHash:   string;
+    issuerKeyHash:    string;
+    serialNumber:     string;
+    /** How many certificates below it, for a V2G certificate chain. */
+    children:         number;
+    root:             string | null;
+    subject:          string | null;
 }
 
 /** What became of one GetCertificateStatus request of a charging station. */
