@@ -215,7 +215,7 @@ namespace cloud.charging.open.CSMS.Tests
         private async Task<String[]> Run(params String[] Words)
         {
 
-            using var cli    = new CSMSCommandLine(CSMS);
+            using var cli    = new CSMSCLI(CSMS);
             var       lines  = await new StationSyncNTSCommand(cli).Execute(Words, CancellationToken.None);
 
             TestContext.Out.WriteLine(String.Join(Environment.NewLine, lines));
@@ -393,7 +393,7 @@ namespace cloud.charging.open.CSMS.Tests
         /// <summary>
         /// Whoever signs in over SSH gets the command line of the CSMS, with
         /// its commands, without the program that runs it having to say so:
-        /// the test environment runs a CSMS without CSMSCLI.
+        /// the test environment runs a CSMS without the program CSMSCLI.
         /// </summary>
         [Test]
         public async Task OverSSHTheCSMSHasItsOwnCommands()
@@ -404,7 +404,7 @@ namespace cloud.charging.open.CSMS.Tests
             await using var terminal  = new VT100Terminal((bytes, cancellationToken) => ValueTask.CompletedTask);
             using       var cli       = CSMS.CommandLines!(terminal, CLICaller.Console);
 
-            Assert.That(cli, Is.InstanceOf<CSMSCommandLine>());
+            Assert.That(cli, Is.InstanceOf<CSMSCLI>());
 
             foreach (var command in new[] { "stationSyncNTS", "stationQueryDNS", "stationKeys" })
                 Assert.That(String.Join(" | ", await cli.Execute(command)), Does.Not.StartWith("Unknown command"), command);

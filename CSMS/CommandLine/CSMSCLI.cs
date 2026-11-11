@@ -35,7 +35,7 @@ namespace cloud.charging.open.CSMS.CommandLine
     /// <para>
     /// The node's command line, with the commands every node has - syncNTS
     /// among them - and the console until 'quit', Ctrl+C or SIGTERM. What only
-    /// a CSMS can be told is a command built from a CSMSCommandLine in this
+    /// a CSMS can be told is a command built from a CSMSCLI in this
     /// assembly, found as the node's are: a new command is a new file and
     /// nothing else.
     /// </para>
@@ -44,11 +44,12 @@ namespace cloud.charging.open.CSMS.CommandLine
     /// CSMS can be told is the CSMS's, and is told over SSH as well as at the
     /// console. The CSMS hands it to whoever signs in over SSH by itself (see
     /// CSMS.cs), so that a CSMS run by another program - the test environment
-    /// - has the same commands as one run by CSMSCLI. A program with commands
-    /// of its own derives from this one and sets WWCPNode.CommandLines anew.
+    /// - has the same commands as one run by the program CSMSCLI. A program
+    /// with commands of its own derives from this one and sets
+    /// WWCPNode.CommandLines anew.
     /// </para>
     /// </remarks>
-    public class CSMSCommandLine : NodeCLI
+    public class CSMSCLI : NodeCLI
     {
 
         #region Properties
@@ -67,7 +68,7 @@ namespace cloud.charging.open.CSMS.CommandLine
         /// </summary>
         /// <param name="CSMS">The running CSMS.</param>
         /// <param name="AssembliesWithCLICommands">Further assemblies to search for commands. This one is searched either way.</param>
-        public CSMSCommandLine(CSMS               CSMS,
+        public CSMSCLI(CSMS               CSMS,
                                params Assembly[]  AssembliesWithCLICommands)
 
             : base(CSMS, AssembliesWithCLICommands)
@@ -76,7 +77,7 @@ namespace cloud.charging.open.CSMS.CommandLine
 
             this.CSMS = CSMS;
 
-            RegisterCLIType(typeof(CSMSCommandLine));
+            RegisterCLIType(typeof(CSMSCLI));
 
         }
 
@@ -88,7 +89,7 @@ namespace cloud.charging.open.CSMS.CommandLine
         /// <param name="Terminal">What the command line is typed at and written on.</param>
         /// <param name="Caller">Who is typing at it.</param>
         /// <param name="AssembliesWithCLICommands">Further assemblies to search for commands. This one and the node's are searched either way.</param>
-        public CSMSCommandLine(CSMS               CSMS,
+        public CSMSCLI(CSMS               CSMS,
                                ICLITerminal       Terminal,
                                CLICaller          Caller,
                                params Assembly[]  AssembliesWithCLICommands)
@@ -99,7 +100,7 @@ namespace cloud.charging.open.CSMS.CommandLine
 
             this.CSMS = CSMS;
 
-            RegisterCLIType(typeof(CSMSCommandLine));
+            RegisterCLIType(typeof(CSMSCLI));
 
         }
 

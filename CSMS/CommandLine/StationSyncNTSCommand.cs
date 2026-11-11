@@ -70,8 +70,8 @@ namespace cloud.charging.open.CSMS.CommandLine
     /// </para>
     /// </remarks>
     /// <param name="CLI">The command line.</param>
-    public class StationSyncNTSCommand(CSMSCommandLine CLI) : ACLICommand<CSMSCommandLine>(CLI),
-                                                            ICLICommand
+    public class StationSyncNTSCommand(CSMSCLI CLI) : ACLICommand<CSMSCLI>(CLI),
+                                                              ICLICommand
     {
 
         #region Data

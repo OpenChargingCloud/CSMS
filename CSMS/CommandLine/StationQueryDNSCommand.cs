@@ -63,8 +63,8 @@ namespace cloud.charging.open.CSMS.CommandLine
     /// </para>
     /// </remarks>
     /// <param name="CLI">The command line.</param>
-    public class StationQueryDNSCommand(CSMSCommandLine CLI) : ACLICommand<CSMSCommandLine>(CLI),
-                                                             ICLICommand
+    public class StationQueryDNSCommand(CSMSCLI CLI) : ACLICommand<CSMSCLI>(CLI),
+                                                               ICLICommand
     {
 
         #region Data

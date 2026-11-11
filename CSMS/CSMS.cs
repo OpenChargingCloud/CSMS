@@ -415,10 +415,10 @@ namespace cloud.charging.open.CSMS
             #region What somebody signed in over SSH gets
 
             // A CSMS's command line, with its commands beside the node's -
-            // whichever program runs this CSMS, and not only CSMSCLI. Before
-            // the node starts, as the node asks; a program with a command line
-            // of its own sets another after this.
-            CommandLines = (terminal, caller) => new CSMSCommandLine(this, terminal, caller);
+            // whichever program runs this CSMS, not only the program CSMSCLI.
+            // Before the node starts, as the node asks; a program with a
+            // command line of its own sets another after this.
+            CommandLines = (terminal, caller) => new CSMSCLI(this, terminal, caller);
 
             #endregion
 
