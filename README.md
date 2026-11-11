@@ -463,10 +463,14 @@ to the END line, to be saved as a file only you can read. See
 
 Whoever signs in over SSH gets the command line of the CSMS, whichever program
 runs it: the commands every node has, `syncNTS` among them, and beside them
-what only a CSMS can be told - `stationKeys`, `stationQueryDNS` and
-`stationSyncNTS`. They are this library's, in `CSMS/CommandLine/`, and not the
-program's, so that a CSMS in the test environment can be told the same as one
-run by CSMSCLI.
+what only a CSMS can be told - `stationKeys`, `stationQueryDNS`,
+`stationSyncNTS`, `connections`, and `use`, which chooses a connected charging
+station for the OCPP library's operator commands: `reset`, `remoteStart`,
+`changeAvailability`, `getBaseReport` and the rest. Those need the role that
+may run the stations, `cpo` or an administrator's (`stations:run`), and are
+asked for it every time they run. They are this library's, in
+`CSMS/CommandLine/`, and not the program's, so that a CSMS in the test
+environment can be told the same as one run by CSMSCLI.
 
 Port 2351 and not 2348 or 2350: an OpenChargingCloud charging station uses 2348
 and 2349 and a local controller 2350, and all three are routinely tried out on
@@ -779,7 +783,7 @@ the partners it is peered with.
 | Role | May |
 |------|-----|
 | `viewer` | read everything: `*:read` |
-| `cpo` | that, and run the charging stations: change the name and time servers and ask them (`dns` and `nts`, `edit` and `run`), and change the charging stations and the locations (`stations:edit`, `locations:edit`) |
+| `cpo` | that, and run the charging stations: change the name and time servers and ask them (`dns` and `nts`, `edit` and `run`), change the charging stations and the locations (`stations:edit`, `locations:edit`), and operate the stations over OCPP from the command line (`stations:run`) |
 | `systemadmin` | everything this CSMS can be told, the certificates and the roaming included |
 
 The viewer and the administrators are the node's, the CPO is the CSMS's - see

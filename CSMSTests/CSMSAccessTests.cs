@@ -234,8 +234,9 @@ namespace cloud.charging.open.CSMS.Tests
         /// <summary>
         /// What each role could do before roles were data, permission by
         /// permission: the viewer looks, the CPO runs the charging stations -
-        /// their name and time servers, the stations and their locations - and
-        /// only the administrators touch the certificates and the roaming.
+        /// their name and time servers, the stations, operating them, and their
+        /// locations - and only the administrators touch the certificates and
+        /// the roaming.
         /// </summary>
         [TestCase("viewer",       "configuration:read",  true)]
         [TestCase("viewer",       "dns:read",            true)]
@@ -246,6 +247,7 @@ namespace cloud.charging.open.CSMS.Tests
         [TestCase("viewer",       "dns:edit",            false)]
         [TestCase("viewer",       "dns:run",             false)]
         [TestCase("viewer",       "stations:edit",       false)]
+        [TestCase("viewer",       "stations:run",        false)]
         [TestCase("viewer",       "locations:edit",      false)]
         [TestCase("viewer",       "roaming:edit",        false)]
         [TestCase("viewer",       "certificates:edit",   false)]
@@ -257,6 +259,7 @@ namespace cloud.charging.open.CSMS.Tests
         [TestCase("cpo",          "nts:edit",            true)]
         [TestCase("cpo",          "nts:run",             true)]
         [TestCase("cpo",          "stations:edit",       true)]
+        [TestCase("cpo",          "stations:run",        true)]
         [TestCase("cpo",          "locations:edit",      true)]
         [TestCase("cpo",          "roaming:edit",        false)]
         [TestCase("cpo",          "certificates:edit",   false)]
@@ -265,6 +268,7 @@ namespace cloud.charging.open.CSMS.Tests
         [TestCase("systemadmin",  "certificates:edit",   true)]
         [TestCase("systemadmin",  "roaming:edit",        true)]
         [TestCase("systemadmin",  "stations:edit",       true)]
+        [TestCase("systemadmin",  "stations:run",        true)]
         [TestCase("systemadmin",  "locations:edit",      true)]
         public void EachRoleMayDoWhatItAlwaysMayDo(String Role, String Permission, Boolean Allowed)
         {

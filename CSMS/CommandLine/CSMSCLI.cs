@@ -21,7 +21,11 @@ using System.Reflection;
 
 using org.GraphDefined.Vanaheimr.CLI;
 
+using cloud.charging.open.protocols.WWCP.NetworkingNode;
 using cloud.charging.open.protocols.WWCP.Node.CommandLine;
+
+using OCPPAdapter = cloud.charging.open.protocols.OCPPv2_1.NetworkingNode.OCPPAdapter;
+using ICSMSCLI    = cloud.charging.open.protocols.OCPPv2_1.CSMS.CommandLine.ICSMSCLI;
 
 #endregion
 
@@ -48,8 +52,18 @@ namespace cloud.charging.open.CSMS.CommandLine
     /// with commands of its own derives from this one and sets
     /// WWCPNode.CommandLines anew.
     /// </para>
+    /// <para>
+    /// And the OCPP library's operator commands - reset, remoteStart,
+    /// getBaseReport, changeAvailability and the rest - sent to the charging
+    /// station chosen with 'use'. They ask nobody whether they may: each is
+    /// wrapped here in a <see cref="StationOperation"/>, which asks whether
+    /// whoever is typing may run the stations before it lets one go. One whose
+    /// name a command here already has is left out - the library's queryDNS,
+    /// which stationQueryDNS is.
+    /// </para>
     /// </remarks>
-    public class CSMSCLI : NodeCLI
+    public class CSMSCLI : NodeCLI,
+                           ICSMSCLI
     {
 
         #region Properties
@@ -58,6 +72,27 @@ namespace cloud.charging.open.CSMS.CommandLine
         /// The CSMS these commands are about.
         /// </summary>
         public CSMS CSMS { get; }
+
+        /// <summary>
+        /// What the OCPP library's commands send through: the OCPP node of
+        /// this CSMS.
+        /// </summary>
+        OCPPAdapter ICSMSCLI.OCPP
+            => CSMS.Node.OCPP;
+
+        /// <summary>
+        /// The charging stations connected now, as the OCPP library's commands
+        /// ask for them.
+        /// </summary>
+        IEnumerable<NetworkingNode_Id> ICSMSCLI.ConnectedNetworkingNodeIds
+        {
+            get
+            {
+                foreach (var station in CSMS.ConnectedStations)
+                    if (NetworkingNode_Id.TryParse(station, out var id))
+                        yield return id;
+            }
+        }
 
         #endregion
 
@@ -69,7 +104,7 @@ namespace cloud.charging.open.CSMS.CommandLine
         /// <param name="CSMS">The running CSMS.</param>
         /// <param name="AssembliesWithCLICommands">Further assemblies to search for commands. This one is searched either way.</param>
         public CSMSCLI(CSMS               CSMS,
-                               params Assembly[]  AssembliesWithCLICommands)
+                       params Assembly[]  AssembliesWithCLICommands)
 
             : base(CSMS, AssembliesWithCLICommands)
 
@@ -78,6 +113,7 @@ namespace cloud.charging.open.CSMS.CommandLine
             this.CSMS = CSMS;
 
             RegisterCLIType(typeof(CSMSCLI));
+            RegisterStationOperations();
 
         }
 
@@ -90,9 +126,9 @@ namespace cloud.charging.open.CSMS.CommandLine
         /// <param name="Caller">Who is typing at it.</param>
         /// <param name="AssembliesWithCLICommands">Further assemblies to search for commands. This one and the node's are searched either way.</param>
         public CSMSCLI(CSMS               CSMS,
-                               ICLITerminal       Terminal,
-                               CLICaller          Caller,
-                               params Assembly[]  AssembliesWithCLICommands)
+                       ICLITerminal       Terminal,
+                       CLICaller          Caller,
+                       params Assembly[]  AssembliesWithCLICommands)
 
             : base(CSMS, Terminal, Caller, AssembliesWithCLICommands)
 
@@ -101,11 +137,59 @@ namespace cloud.charging.open.CSMS.CommandLine
             this.CSMS = CSMS;
 
             RegisterCLIType(typeof(CSMSCLI));
+            RegisterStationOperations();
 
         }
 
         #endregion
 
+
+        #region (private) RegisterStationOperations()
+
+        /// <summary>
+        /// The OCPP library's operator commands, each wrapped in what asks
+        /// first whether whoever is typing may run the stations.
+        /// </summary>
+        /// <remarks>
+        /// Not registered by their type, as the commands here are: that would
+        /// let them go unasked. After everything else, so that a name already
+        /// taken here is known to be.
+        /// </remarks>
+        private void RegisterStationOperations()
+        {
+
+            var taken = Commands.Select(command => NameOf(command.GetType())).
+                                 OfType<String>().
+                                 ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            RegisterCommands([
+                .. typeof(ICSMSCLI).Assembly.GetTypes().
+                       Where (type => typeof(ICLICommand).IsAssignableFrom(type) &&
+                                      !type.IsAbstract &&
+                                      !type.IsInterface &&
+                                      type.GetConstructor([ typeof(ICSMSCLI) ]) is not null &&
+                                      NameOf(type) is String name &&
+                                      !taken.Contains(name)).
+                       Select(type => new StationOperation(this,
+                                                           NameOf(type)!,
+                                                           (ICLICommand) Activator.CreateInstance(type, this)!))
+            ]);
+
+        }
+
+        #endregion
+
+        #region (private static) NameOf(CommandType)
+
+        /// <summary>
+        /// What a command is typed as: its static CommandName, as every
+        /// command of these libraries has one.
+        /// </summary>
+        private static String? NameOf(Type CommandType)
+
+            => CommandType.GetField("CommandName", BindingFlags.Public | BindingFlags.Static)?.GetValue(null) as String;
+
+        #endregion
 
         #region (protected override) GetPrompt()
 
@@ -114,10 +198,15 @@ namespace cloud.charging.open.CSMS.CommandLine
         /// with a charging station and a vehicle, and three consoles should not
         /// have to be told apart by what scrolls past on them. It is the name
         /// the stations know it by, and the "ocpp" section of the file sets it.
+        /// And the charging station chosen with 'use', where one is: what the
+        /// OCPP commands send goes to it, and that should not have to be
+        /// remembered.
         /// </summary>
         protected override String GetPrompt()
 
-            => $"{CSMS.Node.Id}> ";
+            => Environment.TryGetValue(EnvironmentKey.RemoteSystemId, out var station) && station.FirstOrDefault() is String inUse
+                   ? $"{CSMS.Node.Id} [{inUse}]> "
+                   : $"{CSMS.Node.Id}> ";
 
         #endregion
 

@@ -36,6 +36,24 @@ namespace cloud.charging.open.CSMS
 {
 
     /// <summary>
+    /// One charging station connected now, as 'connections' shows it.
+    /// </summary>
+    /// <param name="Station">The charging station, as this CSMS let it in.</param>
+    /// <param name="OverSSH">Whether it is connected over SSH rather than a WebSocket.</param>
+    /// <param name="From">Where it connects from; not known over SSH.</param>
+    /// <param name="FramesIn">How many WebSocket frames came from it.</param>
+    /// <param name="FramesOut">How many went to it.</param>
+    /// <param name="LastIn">When the last came.</param>
+    /// <param name="LastOut">When the last went.</param>
+    public sealed record StationConnection(String           Station,
+                                           Boolean          OverSSH,
+                                           String?          From,
+                                           UInt64?          FramesIn,
+                                           UInt64?          FramesOut,
+                                           DateTimeOffset?  LastIn,
+                                           DateTimeOffset?  LastOut);
+
+    /// <summary>
     /// A certificate a charging station says it has, as GetInstalledCertificateIds
     /// names it - and the root of this CSMS it is, where it is one.
     /// </summary>
@@ -213,6 +231,50 @@ namespace cloud.charging.open.CSMS
                    Where(station => station.Length > 0).
                    Distinct().
                    Order(StringComparer.OrdinalIgnoreCase)];
+
+        #endregion
+
+        #region StationConnections
+
+        /// <summary>
+        /// The charging stations connected now, one connection each: over a
+        /// WebSocket from where, and how much went each way since and when it
+        /// last did - or over SSH, which says no more than that.
+        /// </summary>
+        public IReadOnlyList<StationConnection> StationConnections
+        {
+            get
+            {
+
+                var connections = new List<StationConnection>();
+
+                foreach (var connection in ocppWebSocketServer?.WebSocketConnections ?? [])
+                    connections.Add(new StationConnection(
+                                        Station:    StationOn(connection),
+                                        OverSSH:    false,
+                                        From:       connection.RemoteSocket.ToString(),
+                                        FramesIn:   connection.FramesReceivedCounter,
+                                        FramesOut:  connection.FramesSentCounter,
+                                        LastIn:     connection.LastReceivedTimestamp,
+                                        LastOut:    connection.LastSentTimestamp
+                                    ));
+
+                if (ocppOverSSHServed)
+                    foreach (var id in ocppSshServer?.ConnectedNetworkingNodeIds ?? [])
+                        connections.Add(new StationConnection(
+                                            Station:    id.ToString(),
+                                            OverSSH:    true,
+                                            From:       null,
+                                            FramesIn:   null,
+                                            FramesOut:  null,
+                                            LastIn:     null,
+                                            LastOut:    null
+                                        ));
+
+                return [.. connections.OrderBy(connection => connection.Station, StringComparer.OrdinalIgnoreCase)];
+
+            }
+        }
 
         #endregion
 

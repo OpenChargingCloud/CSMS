@@ -56,9 +56,18 @@ namespace cloud.charging.open.CSMS
         /// groups.
         /// </summary>
         /// <remarks>
+        /// <para>
         /// The logins with the server rather than a resource of their own: a
         /// port nobody may come through is the same as no port, and one
         /// question to whoever runs the stations is what the page asks.
+        /// </para>
+        /// <para>
+        /// To run it is to operate the stations themselves over OCPP: reset
+        /// one, start or stop a charge, change its availability, install a
+        /// certificate on it - what the command line sends a station after
+        /// 'use'. Not the same as editing the server: a station told to reset
+        /// is told by somebody who may run it, and a viewer may not.
+        /// </para>
         /// </remarks>
         public const String  Stations   = "stations";
 
@@ -86,12 +95,14 @@ namespace cloud.charging.open.CSMS
         /// <summary>
         /// Whoever runs the charging stations: may point this CSMS at other
         /// name and time servers and ask whether they work, adds and takes out
-        /// charging stations, and publishes the locations they stand at - but
-        /// may not touch the certificates or the roaming partners.
+        /// charging stations, operates them over OCPP, and publishes the
+        /// locations they stand at - but may not touch the certificates or the
+        /// roaming partners.
         /// </summary>
         /// <remarks>
         /// Day-to-day operation. A name server that moved, a charging station
-        /// that was replaced or a location that opened is theirs to put right.
+        /// that was replaced, one that hangs and wants a reset, or a location
+        /// that opened is theirs to put right.
         /// </remarks>
         public static readonly Role  CPO    = new ("cpo",
                                                    [ Permission.Read(Permission.AnyResource),
@@ -100,8 +111,9 @@ namespace cloud.charging.open.CSMS
                                                      Permission.Edit(NodeResources.NTS),
                                                      Permission.Run (NodeResources.NTS),
                                                      Permission.Edit(Stations),
+                                                     Permission.Run (Stations),
                                                      Permission.Edit(Locations) ],
-                                                   "runs the charging stations: their name and time servers, the stations and their locations");
+                                                   "runs the charging stations: their name and time servers, the stations, operating them, and their locations");
 
         /// <summary>
         /// The one role a CSMS adds to the node's.

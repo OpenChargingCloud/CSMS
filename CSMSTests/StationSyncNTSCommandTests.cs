@@ -17,10 +17,6 @@
 
 #region Usings
 
-using System.Collections.Concurrent;
-using System.Net.WebSockets;
-using System.Text;
-
 using Newtonsoft.Json.Linq;
 
 using NUnit.Framework;
@@ -28,7 +24,6 @@ using NUnit.Framework;
 using org.GraphDefined.Vanaheimr.CLI;
 
 using cloud.charging.open.protocols.WWCP.Node.CommandLine;
-using cloud.charging.open.protocols.WWCP.Node.TestKit;
 
 using cloud.charging.open.CSMS.CommandLine;
 
@@ -50,162 +45,9 @@ namespace cloud.charging.open.CSMS.Tests
     /// waits for the result of its own request and of no other, and what it
     /// writes.
     /// </para>
-    /// <para>
-    /// The station is a plain WebSocket that answers every CALL as the test
-    /// says, rather than a charging station of the OCPP library: one that
-    /// asked its time servers for real would make the test depend on the
-    /// network, and one that answers as told can also answer wrongly.
-    /// </para>
     /// </remarks>
-    public class StationSyncNTSCommandTests : ACSMSTests
+    public class StationSyncNTSCommandTests : AConnectedStationTests
     {
-
-        #region Data
-
-        private const String ThePassword = "a-password-long-enough-for-ocpp";
-
-        private ClientWebSocket?          station;
-        private CancellationTokenSource   stop    = new();
-        private Task?                     loop;
-
-        /// <summary>
-        /// Every CALL the station got, in its order.
-        /// </summary>
-        private readonly ConcurrentQueue<JArray>  calls  = new();
-
-        /// <summary>
-        /// What the station sends for a CALL: its action and payload, and how
-        /// many came before it. "{id}" in a frame is the id of that CALL.
-        /// Nothing at all is answered with a CALLERROR NotImplemented.
-        /// </summary>
-        private Func<String, JObject, Int32, JArray[]>  onCall  = (action, payload, n) => [];
-
-        #endregion
-
-        #region (override) Configuration
-
-        /// <summary>
-        /// A CSMS whose charging station server is switched on, on the
-        /// loopback address, over security profile 1.
-        /// </summary>
-        protected override JObject Configuration
-            => new (
-                   new JProperty("nts",  new JObject(new JProperty("groups", new JObject(new JProperty("legal", new JObject(new JProperty("enabled", false))))))),
-                   new JProperty("ocppServer", new JObject(
-                       new JProperty("enabled",           true),
-                       new JProperty("address",           "127.0.0.1"),
-                       new JProperty("port",              TestPorts.Free()),
-                       new JProperty("securityProfiles",  new JArray(1)),
-                       new JProperty("subprotocols",      new JArray("ocpp2.1"))
-                   ))
-               );
-
-        #endregion
-
-        #region SetUp / TearDown
-
-        /// <summary>
-        /// The charging station cs001, connected and counted as connected.
-        /// </summary>
-        /// <remarks>
-        /// After the base class's SetUp, which NUnit runs first. The fields are
-        /// made again for every test: NUnit keeps one instance of a fixture for
-        /// all of its tests.
-        /// </remarks>
-        [SetUp]
-        public async Task ConnectTheStation()
-        {
-
-            stop    = new CancellationTokenSource();
-            onCall  = (action, payload, n) => [];
-            calls.Clear();
-
-            Assert.That(CSMS.StationLogins.TrySetPassword("cs001", ThePassword, null, null, out _, out var error), Is.True, error);
-
-            station = new ClientWebSocket();
-            station.Options.AddSubProtocol("ocpp2.1");
-            station.Options.SetRequestHeader("Authorization", "Basic " + Convert.ToBase64String(Encoding.UTF8.GetBytes($"cs001:{ThePassword}")));
-
-            await station.ConnectAsync(new Uri($"ws://127.0.0.1:{CSMS.OCPPServerSettings.TCPPort}"), CancellationToken.None);
-
-            loop = Task.Run(Answer);
-
-            for (var i = 0; i < 50 && !CSMS.IsConnected("cs001"); i++)
-                await Task.Delay(100);
-
-            Assert.That(CSMS.IsConnected("cs001"), Is.True, "the station never counted as connected");
-
-        }
-
-        [TearDown]
-        public async Task DisconnectTheStation()
-        {
-
-            stop.Cancel();
-
-            try { station?.Abort(); }               catch { }
-            try { if (loop is not null) await loop; } catch { }
-
-            station?.Dispose();
-            stop.Dispose();
-
-        }
-
-        #endregion
-
-        #region (private) Answer()
-
-        /// <summary>
-        /// What the station does while it is connected: reads a frame, and
-        /// answers a CALL with what <see cref="onCall"/> says.
-        /// </summary>
-        private async Task Answer()
-        {
-
-            var buffer  = new Byte[1 << 16];
-            var n       = 0;
-
-            while (!stop.IsCancellationRequested && station!.State == WebSocketState.Open)
-            {
-
-                var text = new StringBuilder();
-                WebSocketReceiveResult result;
-
-                do
-                {
-                    result = await station.ReceiveAsync(buffer, stop.Token);
-                    text.Append(Encoding.UTF8.GetString(buffer, 0, result.Count));
-                }
-                while (!result.EndOfMessage);
-
-                if (result.MessageType == WebSocketMessageType.Close)
-                    return;
-
-                var frame = JArray.Parse(text.ToString());
-
-                // A response to one of the station's own CALLs.
-                if (frame[0]!.Value<Int32>() != 2)
-                    continue;
-
-                calls.Enqueue(frame);
-
-                var id       = frame[1]!.Value<String>()!;
-                var answers  = onCall(frame[2]!.Value<String>()!, (JObject) frame[3]!, n++);
-
-                if (answers.Length == 0)
-                    answers = [ new JArray(4, "{id}", "NotImplemented", "", new JObject()) ];
-
-                foreach (var answer in answers)
-                    await station.SendAsync(Encoding.UTF8.GetBytes(answer.ToString(Newtonsoft.Json.Formatting.None).Replace("\"{id}\"", $"\"{id}\"")),
-                                            WebSocketMessageType.Text,
-                                            true,
-                                            stop.Token);
-
-            }
-
-        }
-
-        #endregion
 
         #region (private) Run(params Words)
 
@@ -226,23 +68,6 @@ namespace cloud.charging.open.CSMS.Tests
 
         #endregion
 
-        #region (private static) Notify(Payload) / Accepted
-
-        /// <summary>
-        /// What a station sends when it has the result: a CALL of its own.
-        /// </summary>
-        private static JArray Notify(JObject Payload)
-            => new (2, Guid.NewGuid().ToString(), "NotifyNetworkTimeResult", Payload);
-
-        /// <summary>
-        /// The station takes the request on.
-        /// </summary>
-        private static JArray Accepted
-            => new (3, "{id}", new JObject(new JProperty("status", "Accepted")));
-
-        #endregion
-
-
         #region ARoundOfTheLegalGroupIsAskedForAndToldInTheLinesOfSyncNTS()
 
         /// <summary>
@@ -253,7 +78,7 @@ namespace cloud.charging.open.CSMS.Tests
         public async Task ARoundOfTheLegalGroupIsAskedForAndToldInTheLinesOfSyncNTS()
         {
 
-            onCall = (action, payload, n) => action == "SyncNetworkTime"
+            OnCall = (action, payload, n) => action == "SyncNetworkTime"
                 ? [ Accepted,
                     Notify(JObject.Parse($$"""
                         { "requestId": {{payload["requestId"]}}, "generatedAt": "2026-11-10T16:00:00Z",
@@ -266,7 +91,7 @@ namespace cloud.charging.open.CSMS.Tests
 
             var lines = await Run("stationSyncNTS", "cs001");
 
-            Assert.That(calls.Single(call => call[2]!.Value<String>() == "SyncNetworkTime")[3]!["group"], Is.Null, "no group was typed");
+            Assert.That(Calls.Single(call => call[2]!.Value<String>() == "SyncNetworkTime")[3]!["group"], Is.Null, "no group was typed");
 
             Assert.That(lines, Is.EqualTo(new[] {
                 "Asked of the charging station 'cs001', NTS group 'legal':",
@@ -290,13 +115,13 @@ namespace cloud.charging.open.CSMS.Tests
         public async Task AGroupNamedIsSentAndItsRefusalSaid()
         {
 
-            onCall = (action, payload, n) => action == "SyncNetworkTime"
+            OnCall = (action, payload, n) => action == "SyncNetworkTime"
                 ? [ new JArray(3, "{id}", JObject.Parse("""{ "status": "Rejected", "statusInfo": { "reasonCode": "UnknownGroup", "additionalInfo": "There is no NTS group 'grid' here; there are legal, local." } }""")) ]
                 : [];
 
             var lines = await Run("stationSyncNTS", "cs001", "grid");
 
-            Assert.That(calls.Single()[3]!["group"]?.Value<String>(), Is.EqualTo("grid"));
+            Assert.That(Calls.Single()[3]!["group"]?.Value<String>(), Is.EqualTo("grid"));
             Assert.That(lines, Is.EqualTo(new[] { "'cs001' asked nobody: Rejected, UnknownGroup - There is no NTS group 'grid' here; there are legal, local." }));
 
         }
@@ -315,7 +140,7 @@ namespace cloud.charging.open.CSMS.Tests
         public async Task ATestOfAClientIsToldStepByStepWithWhereItFailed()
         {
 
-            onCall = (action, payload, n) => action == "TestTimeServer"
+            OnCall = (action, payload, n) => action == "TestTimeServer"
                 ? [ Notify(JObject.Parse("""{ "requestId": 1, "generatedAt": "2026-11-10T16:00:00Z", "test": { "host": "x", "ok": true, "duration": 0, "steps": [] } }""")),
                     Notify(JObject.Parse($$"""
                         { "requestId": {{payload["requestId"]}}, "generatedAt": "2026-11-10T16:00:00Z",
@@ -329,7 +154,7 @@ namespace cloud.charging.open.CSMS.Tests
 
             var lines = await Run("stationSyncNTS", "cs001", "@ptb2");
 
-            Assert.That(calls.Single(call => call[2]!.Value<String>() == "TestTimeServer")[3]!["client"]?.Value<String>(), Is.EqualTo("ptb2"));
+            Assert.That(Calls.Single(call => call[2]!.Value<String>() == "TestTimeServer")[3]!["client"]?.Value<String>(), Is.EqualTo("ptb2"));
 
             Assert.That(lines, Is.EqualTo(new[] {
                 "Asked of the charging station 'cs001':",
@@ -353,7 +178,7 @@ namespace cloud.charging.open.CSMS.Tests
             var lines = await Run("stationSyncNTS", "cs404");
 
             Assert.That(lines, Is.EqualTo(new[] { "The charging station 'cs404' is not connected." }));
-            Assert.That(calls, Is.Empty);
+            Assert.That(Calls, Is.Empty);
 
         }
 
@@ -368,7 +193,7 @@ namespace cloud.charging.open.CSMS.Tests
             Assert.That((await Run("stationSyncNTS")).Single(),                             Does.StartWith("Usage: stationSyncNTS <station> [<group> | @<client>]"));
             Assert.That((await Run("stationSyncNTS", "cs001", "@")).Single(),               Does.StartWith("Usage: "));
             Assert.That((await Run("stationSyncNTS", "cs001", "legal", "@ptb1")).Single(),  Does.StartWith("Usage: "));
-            Assert.That(calls, Is.Empty);
+            Assert.That(Calls, Is.Empty);
 
         }
 
@@ -380,7 +205,7 @@ namespace cloud.charging.open.CSMS.Tests
         public async Task ACallErrorIsSaid()
         {
 
-            onCall = (action, payload, n) => [ new JArray(4, "{id}", "NotImplemented", "SyncNetworkTime is unknown here.", new JObject()) ];
+            OnCall = (action, payload, n) => [ new JArray(4, "{id}", "NotImplemented", "SyncNetworkTime is unknown here.", new JObject()) ];
 
             Assert.That((await Run("stationSyncNTS", "cs001")).Single(), Does.StartWith("'cs001' did not answer: "));
 
