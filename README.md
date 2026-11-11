@@ -461,6 +461,13 @@ private key once, below the password, from `-----BEGIN OPENSSH PRIVATE KEY-----`
 to the END line, to be saved as a file only you can read. See
 [CSMSCLI](https://github.com/OpenChargingCloud/CSMSCLI) for signing in with it.
 
+Whoever signs in over SSH gets the command line of the CSMS, whichever program
+runs it: the commands every node has, `syncNTS` among them, and beside them
+what only a CSMS can be told - `stationKeys`, `stationQueryDNS` and
+`stationSyncNTS`. They are this library's, in `CSMS/CommandLine/`, and not the
+program's, so that a CSMS in the test environment can be told the same as one
+run by CSMSCLI.
+
 Port 2351 and not 2348 or 2350: an OpenChargingCloud charging station uses 2348
 and 2349 and a local controller 2350, and all three are routinely tried out on
 the same bench.

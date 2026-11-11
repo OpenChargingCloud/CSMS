@@ -37,6 +37,7 @@ using cloud.charging.open.protocols.WWCP.Node.SecureShell;
 using OCPPv2_1_CSMS = cloud.charging.open.protocols.OCPPv2_1.CSMS;
 
 using cloud.charging.open.CSMS.Configuration;
+using cloud.charging.open.CSMS.CommandLine;
 
 #endregion
 
@@ -408,6 +409,16 @@ namespace cloud.charging.open.CSMS
             // port the charging stations dial into, which is the other
             // protocol entirely.
             BuildOCPI(configuration.OCPI ?? OCPI);
+
+            #endregion
+
+            #region What somebody signed in over SSH gets
+
+            // A CSMS's command line, with its commands beside the node's -
+            // whichever program runs this CSMS, and not only CSMSCLI. Before
+            // the node starts, as the node asks; a program with a command line
+            // of its own sets another after this.
+            CommandLines = (terminal, caller) => new CSMSCommandLine(this, terminal, caller);
 
             #endregion
 
