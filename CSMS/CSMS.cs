@@ -397,6 +397,11 @@ namespace cloud.charging.open.CSMS
             // and not to the test CA of the node.
             BuildCertificateSigning(configuration.CertificateSigning);
 
+            // The cards of the charging stations, by the tokens the roaming
+            // partners sent - and not by the list of the node, which nothing
+            // fills, and the three tokens it accepts for testing.
+            BuildAuthorization();
+
             #endregion
 
             #region The server the charging stations connect to
