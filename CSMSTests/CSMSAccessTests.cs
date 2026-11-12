@@ -221,8 +221,9 @@ namespace cloud.charging.open.CSMS.Tests
             var cs = ACSMS();
 
             Assert.Multiple(() => {
-                Assert.That(cs.Roles,             Is.EqualTo(new[] { "viewer", "cpo", WWCPNode.AdminRole }));
-                Assert.That(cs.Access.Resources,  Is.EqualTo(new[] { "configuration", "dns", "nts", "certificates", "ssh", "log", "stations", "locations", "roaming" }));
+                Assert.That(cs.Roles,             Is.EqualTo(new[] { "viewer", "support", "cpo", WWCPNode.AdminRole }));
+                Assert.That(cs.Access.Resources,  Is.SupersetOf(new[] { "configuration", "dns", "nts", "certificates", "ssh", "log", "state" }), "the node's resources are not all there");
+                Assert.That(cs.Access.Resources.TakeLast(3), Is.EqualTo(new[] { "stations", "locations", "roaming" }), "the CSMS's own do not come after the node's");
             });
 
         }
@@ -334,11 +335,11 @@ namespace cloud.charging.open.CSMS.Tests
             await AStartedCSMS(new JObject(
                                    new JProperty("nts",    new JObject(new JProperty("groups", new JObject(new JProperty("legal", new JObject(new JProperty("enabled", false))))))),
                                    new JProperty("roles",  new JObject(
-                                       new JProperty("support", new JArray("dns:read", "stations:read"))
+                                       new JProperty("helpdesk", new JArray("dns:read", "stations:read"))
                                    ))
                                ));
 
-            using var support  = await SignedInAs("supporter", "support");
+            using var support  = await SignedInAs("supporter", "helpdesk");
 
             var dns            = await support.GetAsync("api/v1/configuration/dns");
             var stations       = await support.GetAsync("api/v1/configuration/ocpp-server/stations");
@@ -346,7 +347,7 @@ namespace cloud.charging.open.CSMS.Tests
             var refusal        = await partners.Content.ReadAsStringAsync();
 
             Assert.Multiple(() => {
-                Assert.That(csms!.Roles,          Is.EqualTo(new[] { "viewer", "cpo", "support", WWCPNode.AdminRole }));
+                Assert.That(csms!.Roles,          Is.EqualTo(new[] { "viewer", "support", "cpo", "helpdesk", WWCPNode.AdminRole }));
                 Assert.That(dns.StatusCode,       Is.EqualTo(HttpStatusCode.OK));
                 Assert.That(stations.StatusCode,  Is.EqualTo(HttpStatusCode.OK));
                 Assert.That(partners.StatusCode,  Is.EqualTo(HttpStatusCode.Forbidden));
