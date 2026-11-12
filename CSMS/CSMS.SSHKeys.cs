@@ -83,7 +83,7 @@ namespace cloud.charging.open.CSMS
                 return;
             }
 
-            var signed = await Node.OCPP.OUT.SSHKeySigned(new OCPPv2_1_CSMS.SSHKeySignedRequest(SourceRouting.To(Station), OCPPv2_1.SSHKeyPurpose.OCPP, PublicKey));
+            var signed = await Node.OCPP.OUT.SSHKeySigned(new OCPPv2_1_CSMS.SSHKeySignedRequest(SourceRouting.To(Station), OCPPv2_1.SSHKeyPurpose.OCPP, PublicKey, NetworkPath: NetworkPath.From(Node.Id)));
 
             if (signed.Status != OCPPv2_1.GenericStatus.Accepted)
             {
@@ -114,9 +114,12 @@ namespace cloud.charging.open.CSMS
                                                   String                      PublicKey)
         {
 
+            // In the overlay network a request names where it comes from, and one that names nobody is
+            // answered to nobody: from this CSMS, as every request of it.
             var to         = SourceRouting.To(LocalController);
-            var listed     = await Node.OCPP.OUT.GetInstalledSSHKeys(new OCPPv2_1_CSMS.GetInstalledSSHKeysRequest(to, Station, OCPPv2_1.SSHKeyPurpose.OCPP));
-            var installed  = await Node.OCPP.OUT.InstallSSHKey      (new OCPPv2_1_CSMS.InstallSSHKeyRequest      (to, Station, OCPPv2_1.SSHKeyPurpose.OCPP, PublicKey));
+            var from       = NetworkPath.From(Node.Id);
+            var listed     = await Node.OCPP.OUT.GetInstalledSSHKeys(new OCPPv2_1_CSMS.GetInstalledSSHKeysRequest(to, Station, OCPPv2_1.SSHKeyPurpose.OCPP,            NetworkPath: from));
+            var installed  = await Node.OCPP.OUT.InstallSSHKey      (new OCPPv2_1_CSMS.InstallSSHKeyRequest      (to, Station, OCPPv2_1.SSHKeyPurpose.OCPP, PublicKey, NetworkPath: from));
 
             if (installed.Status != OCPPv2_1.GenericStatus.Accepted)
             {
@@ -125,7 +128,7 @@ namespace cloud.charging.open.CSMS
                 return;
             }
 
-            var signed = await Node.OCPP.OUT.SSHKeySigned(new OCPPv2_1_CSMS.SSHKeySignedRequest(SourceRouting.To(Station), OCPPv2_1.SSHKeyPurpose.OCPP, PublicKey));
+            var signed = await Node.OCPP.OUT.SSHKeySigned(new OCPPv2_1_CSMS.SSHKeySignedRequest(SourceRouting.To(Station), OCPPv2_1.SSHKeyPurpose.OCPP, PublicKey, NetworkPath: from));
 
             if (signed.Status != OCPPv2_1.GenericStatus.Accepted)
                 return;
@@ -133,7 +136,7 @@ namespace cloud.charging.open.CSMS
             var next = PublicKey.Split(' ', 3) is [ _, var base64, .. ] ? base64 : PublicKey;
 
             foreach (var old in listed.Keys.Where(key => !key.PublicKey.Contains(next, StringComparison.Ordinal)))
-                await Node.OCPP.OUT.DeleteSSHKey(new OCPPv2_1_CSMS.DeleteSSHKeyRequest(to, Station, old.KeyFingerprint));
+                await Node.OCPP.OUT.DeleteSSHKey(new OCPPv2_1_CSMS.DeleteSSHKeyRequest(to, Station, old.KeyFingerprint, NetworkPath: from));
 
             Log.Notice($"The charging station '{Station}' behind '{LocalController}' signs in there with its next SSH key from now on.", "ocpp", "station", "ssh");
 

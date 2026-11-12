@@ -54,6 +54,7 @@ namespace cloud.charging.open.CSMS.OCPP
     /// <param name="AddedAt">When it was added.</param>
     /// <param name="Note">What it is, for whoever reads the list later.</param>
     /// <param name="SSHKeys">The SSH public keys it signs in with for OCPP over SSH, as authorized_keys lines; null or none when it has none.</param>
+    /// <param name="LocalController">Whether it is a local controller's login: one that may send, in the overlay network, in the name of the charging stations behind it. Any other speaks for itself alone.</param>
     public sealed record ChargingStationLogin(String                     Id,
                                               String                     GroupId,
                                               SecurePassword?            Password,
@@ -61,7 +62,8 @@ namespace cloud.charging.open.CSMS.OCPP
                                               Boolean                    Enabled,
                                               DateTimeOffset             AddedAt,
                                               String?                    Note,
-                                              IReadOnlyList<UserSSHKey>? SSHKeys = null)
+                                              IReadOnlyList<UserSSHKey>? SSHKeys          = null,
+                                              Boolean                    LocalController  = false)
     {
 
         #region Data
@@ -294,7 +296,8 @@ namespace cloud.charging.open.CSMS.OCPP
                         JSON.Value<Boolean?>("enabled") ?? true,
                         addedAt,
                         JSON.Value<String>("note")?.Trim() is { Length: > 0 } note ? note : null,
-                        sshKeys
+                        sshKeys,
+                        JSON["localController"]?.Type == JTokenType.Boolean && JSON.Value<Boolean>("localController")
                     );
 
             return true;
@@ -319,7 +322,8 @@ namespace cloud.charging.open.CSMS.OCPP
                            new JProperty("addedAt",      AddedAt.ToString("o")),
                            new JProperty("hasPassword",  HasPassword),
                            new JProperty("hasTOTP",      HasTOTP),
-                           new JProperty("hasSSHKey",    HasSSHKey)
+                           new JProperty("hasSSHKey",    HasSSHKey),
+                           new JProperty("localController", LocalController)
                        );
 
             if (Note is not null)
@@ -345,7 +349,7 @@ namespace cloud.charging.open.CSMS.OCPP
 
         public override String ToString()
 
-            => $"{Id} in '{GroupId}' ({(Enabled ? "on" : "off")}): " +
+            => $"{Id}{(LocalController ? " (local controller)" : "")} in '{GroupId}' ({(Enabled ? "on" : "off")}): " +
                $"{(HasPassword || HasTOTP || HasSSHKey ? String.Join(" and ", Credentials.Select(method => method.AsText())) : "no credentials")}";
 
         #endregion

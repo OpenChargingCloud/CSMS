@@ -294,7 +294,7 @@ namespace cloud.charging.open.CSMS
             {
 
                 var response = await csms01.OCPP.OUT.GetInstalledCertificateIds(
-                                         new GetInstalledCertificateIdsRequest(SourceRouting.To(id))
+                                         new GetInstalledCertificateIdsRequest(SourceRouting.To(id), NetworkPath: FromThisCSMS)
                                      );
 
                 var answer   = response.Status.ToString();
@@ -362,7 +362,8 @@ namespace cloud.charging.open.CSMS
                                              new InstallCertificateRequest(
                                                  SourceRouting.To(id),
                                                  InstallCertificateUse.Parse(Root.CertificateType),
-                                                 OCPPCommon.Certificate.Parse(Root.PEM)
+                                                 OCPPCommon.Certificate.Parse(Root.PEM),
+                                                 NetworkPath: FromThisCSMS
                                              )
                                          );
 
@@ -419,7 +420,8 @@ namespace cloud.charging.open.CSMS
                                                  new CertificateHashData(protocols.OCPPv2_1.HashAlgorithm.Parse(HashAlgorithm),
                                                                          IssuerNameHash,
                                                                          IssuerKeyHash,
-                                                                         SerialNumber)
+                                                                         SerialNumber),
+                                                 NetworkPath: FromThisCSMS
                                              )
                                          );
 

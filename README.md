@@ -103,7 +103,7 @@ handed a role rather than a socket.
 | Charging station server | the port, TLS, the security profiles it accepts | `stations:edit` |
 | Server certificates | the keys and chains this CSMS presents | `certificates:edit` |
 | Client trust | the chains a station's certificate may come from | `certificates:edit` |
-| Station logins | who may sign in, and with what | `stations:edit` |
+| Station logins | who may sign in, and with what; which login is a local controller's | `stations:edit` |
 | Certificate signing | where the CSRs of the charging stations go - the EST server of a PKI - the certificates the stations have, and what became of the latest; a station asked for a new certificate by hand; what the stations asked of the OCSP responder | `certificates:edit` |
 | Station roots | the root certificates the stations are installed - by hand, on every station connected, or on every station that starts without one - what a station has, and a certificate deleted from it | `certificates:edit` |
 | OCPI | nothing - who this operator is and where its partners find it | `roaming:read` |
@@ -424,6 +424,91 @@ Behind it, `/api/v1/configuration/station-roots`:
 
 Reading is at the stations' permission, changing at the certificates'.
 
+### Local controllers, and who may send in whose name
+
+In the overlay network a frame names its sender itself - `[2, destination,
+path, id, action, payload]` - and whom it names is whom the CSMS takes it for:
+the station whose SSH key a `SignSSHKey` enrols, whose CSR a `SignCertificate`
+has signed, whose transaction a `TransactionEvent` is. So every request and
+every send message, JSON or binary, is taken only where the connection it came
+over may send it in that name:
+
+- the last hop of its path is the node that connection signed in as: a node
+  that forwards a frame puts itself at the end of its path;
+- a connection speaks for itself, and a local controller's login for the
+  stations behind it. Whether a login is a local controller's is the
+  operator's to say, as any station can dial in the overlay network and name
+  itself the way to another: `localControllers <login> on|off`, "Local
+  controller" on the Station logins page, or `{"localController": true}` in a
+  `PUT /api/v1/configuration/ocpp-server/stations/{id}`, at `stations:edit`.
+
+A frame that is not taken is dropped, unanswered - an answer would go to the
+station it names - and the log says who sent what in whose name, and how to mark
+a local controller nobody marked yet. In standard mode a frame names no path,
+and the CSMS puts in the connection's, as it always did. A local controller
+that dials in the overlay network - its default since 2026-11-12 - needs its
+login marked here before what it forwards of its stations is taken.
+
+### Key pins of the stations behind a local controller
+
+A station behind a local controller may believe the controller by the key pin
+of its server key rather than by a CA ("Key Pins and TLS 1.3 Raw Public Keys
+for Local Controllers", sections 5.5 to 5.7). The CSMS hands it those pins in
+a pin set: one `SetVariables` of the station's
+`TLSClientController[<connection>]`, `ServerKeyPins` and a higher
+`ServerKeyPinsVersion`, signed with the CSMS's signing key for pin sets. That
+key is made once, on demand - `keyPins signer create`, or
+`POST /api/v1/key-pins/signer` - kept for its owner in
+`ocpp-pin-set-signing-key.json` beside the configuration file, and never made
+anew; its public key, `keyPins signer`, is what a station is given as a pin set
+signer at commissioning.
+
+The CSMS learns which stations are behind which controller from their
+`BootNotification`s, which come with the controller as their last hop where the
+controller dials in the overlay network (`"networkingMode": "overlay"` in its
+`csms` section), and keeps them in `ocpp-key-pins.json`, with the controller's
+pins as last read (`EVQICtrlr[TLSServer]`) and per station the endpoint the
+pins are for, the version last sent and whether it was taken. The routes to
+those stations are put back from it at the next start.
+
+The first controller a station comes through keeps it. Any node that dials in
+the overlay network - a charging station as well as a controller - can name
+itself the last hop of any station; a frame that names another node than the
+station's controller moves nothing, and a `KeyPinLearned` sent up that way gets
+no pin set: the log names who tried. A station that really moved is forgotten
+by hand, `keyPins forget <station>`, and its next `BootNotification` notes it
+behind the controller it comes through.
+
+- A station that reports `KeyPinLearned` is handed the controller's pins as
+  the controller reports them - current, and next where one is announced -
+  with the version above its own: the pin it learned is confirmed, or, where it
+  is not the controller's, refused. Without a signing key nothing is sent, and
+  the log says so.
+- `keyPins rollover <controller> [grace]` rolls the controller over to its
+  announced next key (`serverKeys next` at the controller): every station is
+  handed [current, next], asked whether it has the next pin, and only then is
+  the controller switched (`ActiveKeyPin`); after the grace period, 30 seconds
+  unless given (`0`, `45s`, `5m`, `1h`), every station is handed [next]. A
+  station without the next pin stops it before the switch.
+- `keyPins confirm <station|controller>` hands a station, or every station
+  behind a controller that does not hold exactly them, the controller's pins
+  now; `keyPins` and `keyPins show <controller>` list them.
+
+Behind it, `/api/v1/key-pins`:
+
+| | |
+|---|---|
+| `GET` | the signer's public key, and every controller with its pins and stations |
+| `GET .../local-controllers/{controller}` | one of them |
+| `POST .../local-controllers/{controller}/rollover` | `{ "graceSeconds" }`, optional: answered when done, 200, or 409 with what stopped it |
+| `POST .../confirm/{station or controller}` | 200, or 409 |
+| `DELETE .../stations/{station}` | a station that moved, forgotten behind its controller: 200; 404 where it was behind none |
+| `GET .../signer` | the public key |
+| `POST .../signer` | made: 201; 409 where there is one |
+
+Reading is at the stations' permission; a pin set, a rollover, forgetting where
+a station is and the signing key at the certificates'.
+
 
 ## Running it
 
@@ -464,7 +549,7 @@ to the END line, to be saved as a file only you can read. See
 Whoever signs in over SSH gets the command line of the CSMS, whichever program
 runs it: the commands every node has, `syncNTS` among them, and beside them
 what only a CSMS can be told - `stationKeys`, `stationQueryDNS`,
-`stationSyncNTS`, `connections`, and `use`, which chooses a connected charging
+`stationSyncNTS`, `keyPins`, `localControllers`, `connections`, and `use`, which chooses a connected charging
 station for the OCPP library's operator commands: `reset`, `remoteStart`,
 `changeAvailability`, `getBaseReport` and the rest. Those need the role that
 may run the stations, `cpo` or an administrator's (`stations:run`), and are

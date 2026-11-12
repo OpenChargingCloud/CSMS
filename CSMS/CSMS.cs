@@ -379,7 +379,17 @@ namespace cloud.charging.open.CSMS
 
             csms01 = BuildOCPPNode(this.OCPP);
 
+            // Before anything that takes a request in a station's name: in the
+            // overlay network a frame names its sender itself, and a station's
+            // connection speaks for itself alone (see CSMS.SenderGate.cs).
+            AttachSenderGate(csms01);
+
             AttachSSHKeyEnrolment(csms01);
+
+            // The key pins of the stations behind the local controllers: the
+            // signing key of the pin sets, the store, and the stations'
+            // security events of key pins (see CSMS.KeyPins.cs).
+            BuildKeyPins();
 
             this.Log.Info($"OCPP 2.1 CSMS '{csms01.Id}' is set up as {csms01.VendorName} {csms01.Model}.", "ocpp");
 

@@ -81,6 +81,7 @@ async function opened(): Promise<HTMLElement> {
 }
 
 const switchOf  = (root: HTMLElement, id: string) => root.querySelector<HTMLInputElement>(`.station-enabled[data-id="${id}"]`)!;
+const markOf    = (root: HTMLElement, id: string) => root.querySelector<HTMLInputElement>(`.station-localcontroller[data-id="${id}"]`)!;
 const chooserOf = (root: HTMLElement, id: string) => root.querySelector<HTMLSelectElement>(`.station-group[data-id="${id}"]`)!;
 const putsSent  = () => asked.filter(one => one.method === 'PUT').length;
 
@@ -126,6 +127,28 @@ describe('the logins and groups', () => {
         assert.match(said[0]!, /the group is full/);
         assert.equal(switchOf(root, 'cs001').checked,  true,       'the switch says what was clicked');
         assert.equal(chooserOf(root, 'cs002').value,   'default',  'the chooser says what was chosen');
+
+    });
+
+    it('mark a login as a local controller\'s, and put the mark the CSMS refused back to what it has', async () => {
+
+        const root = await opened();
+
+        assert.equal(markOf(root, 'cs001').checked, false, 'a login nobody marked is drawn as a local controller\'s');
+
+        change(markOf(root, 'cs001'), true);
+        await until(() => held.stations[0]!.localController === true && markOf(root, 'cs001').checked, 'the mark was not drawn');
+
+        assert.deepEqual(asked.find(one => one.method === 'PUT')?.body, { localController: true });
+        assert.equal(asked.find(one => one.method === 'PUT')?.path, '/configuration/ocpp-server/stations/cs001');
+
+        refuseChanges = true;
+
+        change(markOf(root, 'cs002'), true);
+        await until(() => said.length === 1 && asked.filter(one => one.method === 'GET').length === 2, 'the refused mark was not loaded again');
+        await settled();
+
+        assert.equal(markOf(root, 'cs002').checked, false, 'the mark says what was clicked, not what the CSMS has');
 
     });
 

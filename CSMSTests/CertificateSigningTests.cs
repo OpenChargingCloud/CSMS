@@ -105,7 +105,8 @@ namespace cloud.charging.open.CSMS.Tests
 
         #region (private) A charging station speaking OCPP 2.1 JSON, and nothing else
 
-        private async Task<ClientWebSocket> Connect(String Id)
+        private async Task<ClientWebSocket> Connect(String   Id,
+                                                    Boolean  Overlay = false)
         {
 
             Assert.That(CSMS.StationLogins.TrySetPassword(Id, ThePassword, null, null, out _, out var error), Is.True, error);
@@ -113,6 +114,9 @@ namespace cloud.charging.open.CSMS.Tests
             var client = new ClientWebSocket();
             client.Options.AddSubProtocol("ocpp2.1");
             client.Options.SetRequestHeader("Authorization", "Basic " + Convert.ToBase64String(Encoding.UTF8.GetBytes($"{Id}:{ThePassword}")));
+
+            if (Overlay)
+                client.Options.SetRequestHeader("X-OCPP-NetworkingMode", "OverlayNetwork");
 
             using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
             await client.ConnectAsync(new Uri($"ws://127.0.0.1:{CSMS.OCPPServerSettings.TCPPort}"), timeout.Token);
@@ -406,6 +410,42 @@ namespace cloud.charging.open.CSMS.Tests
 
             Assert.That(async () => await Receive(station, TimeSpan.FromSeconds(2)), Throws.InstanceOf<OperationCanceledException>(),
                         "asked for the certificate it was just signed");
+
+        }
+
+        #endregion
+
+        #region ARenewal_AskedOfAStationInTheOverlayNetwork_NamesTheCSMS()
+
+        /// <summary>
+        /// A station in the overlay network is asked with TriggerMessage for a new certificate: the request
+        /// names the CSMS as where it comes from, as the overlay network wants it - one that names nobody is
+        /// answered to nobody.
+        /// </summary>
+        [Test]
+        public async Task ARenewal_AskedOfAStationInTheOverlayNetwork_NamesTheCSMS()
+        {
+
+            using var station  = await Connect("cs009", Overlay: true);
+
+            var asking         = CSMS.AskToRenew("cs009", "ChargingStationCertificate");
+            var trigger        = await Receive(station);
+
+            // [2, destination, path, id, action, payload]: answered, so that the CSMS does not wait.
+            if (trigger.Count == 6)
+                await Send(station, new JArray(3, trigger[2], "cs009", trigger[3], new JObject(new JProperty("status", "Accepted"))));
+
+            await Task.WhenAny(asking, Task.Delay(TimeSpan.FromSeconds(15)));
+
+            var path = trigger.Count == 6
+                           ? trigger[2] is JArray hops ? hops.FirstOrDefault()?.Value<String>() : trigger[2]?.Value<String>()
+                           : null;
+
+            Assert.Multiple(() => {
+                Assert.That(trigger.Count,               Is.EqualTo(6),             $"not a frame of the overlay network: {trigger.ToString(Newtonsoft.Json.Formatting.None)}");
+                Assert.That(trigger[4]?.Value<String>(), Is.EqualTo("TriggerMessage"));
+                Assert.That(path,                        Is.EqualTo(CSMS.Node.Id.ToString()), $"the request names no CSMS as where it comes from: {trigger.ToString(Newtonsoft.Json.Formatting.None)}");
+            });
 
         }
 

@@ -1124,6 +1124,88 @@ namespace cloud.charging.open.CSMS.OCPP
 
         #endregion
 
+        #region TrySetLocalController(Id, LocalController, out Error [, out NotSaved]) / IsLocalController(Id)
+
+        /// <summary>
+        /// Mark a login as a local controller's, which may send in the name of
+        /// the charging stations behind it - or no longer.
+        /// </summary>
+        public Boolean TrySetLocalController(String                            Id,
+                                             Boolean                           LocalController,
+                                             [NotNullWhen(false)] out String?  Error)
+
+            => TrySetLocalController(Id, LocalController, out Error, out _);
+
+        /// <summary>
+        /// Mark a login as a local controller's, or no longer - and say whether
+        /// a refusal was the file's rather than the change's.
+        /// </summary>
+        /// <remarks>
+        /// In the overlay network a frame names whom it comes from itself: a
+        /// login that is not marked sends in its own name alone, and a frame of
+        /// it in another station's is dropped. A local controller's speaks for
+        /// whatever station is behind it - which a station's must not, or any
+        /// station could have the SSH key of another enrolled as its own.
+        /// </remarks>
+        /// <param name="NotSaved">True where the file could not be written: see <see cref="TryRemove(String, out String?, out Boolean)"/>.</param>
+        public Boolean TrySetLocalController(String                            Id,
+                                             Boolean                           LocalController,
+                                             [NotNullWhen(false)] out String?  Error,
+                                             out Boolean                       NotSaved)
+        {
+
+            Error     = null;
+            NotSaved  = false;
+
+            lock (updateLock)
+            {
+
+                if (!logins.TryGetValue(Id, out var login))
+                {
+                    Error = $"This CSMS has never heard of a charging station called '{Id}'.";
+                    return false;
+                }
+
+                if (login.LocalController == LocalController)
+                    return true;
+
+                logins[Id] = login with { LocalController = LocalController };
+
+                if (!TrySave(out Error))
+                {
+                    NotSaved    = true;
+                    logins[Id]  = login;
+                    return false;
+                }
+
+                OnNotice?.Invoke(
+                    LogLevel.Notice,
+                    LocalController
+                        ? $"'{Id}' is a local controller now: in the overlay network it may send in the name of the charging stations behind it."
+                        : $"'{Id}' is no local controller any more: it sends in its own name alone."
+                );
+
+            }
+
+            OnChanged?.Invoke();
+
+            return true;
+
+        }
+
+        /// <summary>
+        /// Whether the given login is a local controller's.
+        /// </summary>
+        public Boolean IsLocalController(String Id)
+        {
+            lock (updateLock)
+            {
+                return logins.TryGetValue(Id, out var login) && login.LocalController;
+            }
+        }
+
+        #endregion
+
         #region TryRemove(Id, out Error [, out NotSaved])
 
         /// <summary>

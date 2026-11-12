@@ -306,6 +306,8 @@ export interface StationLogin {
     hasSSHKey?:   boolean;
     sshKeys?:     StationSSHKey[];
     note?:        string;
+    /** A local controller's login: it may send in the name of the stations behind it. */
+    localController?: boolean;
 }
 
 /** A group of logins, and what its members are allowed to do. */
@@ -709,6 +711,13 @@ export const api = {
 
             move:     (id: string, group: string) =>
                           request<StationLogins>('PUT', `/configuration/ocpp-server/stations/${encodeURIComponent(id)}`, { group }),
+
+            /**
+             * Mark a login as a local controller's, which may send in the
+             * name of the stations behind it - or no longer.
+             */
+            markLocalController: (id: string, localController: boolean) =>
+                          request<StationLogins>('PUT', `/configuration/ocpp-server/stations/${encodeURIComponent(id)}`, { localController }),
 
             remove:   (id: string) =>
                           request<StationLogins>('DELETE', `/configuration/ocpp-server/stations/${encodeURIComponent(id)}`),

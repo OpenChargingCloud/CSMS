@@ -709,9 +709,11 @@ namespace cloud.charging.open.CSMS
         }
 
         /// <summary>
-        /// PUT .../stations/{id} with {"enabled"} and/or {"group"}: let a
-        /// charging station in, stop letting it in, or move it to another
-        /// group - without losing what it signs in with.
+        /// PUT .../stations/{id} with {"enabled"}, {"group"} and/or
+        /// {"localController"}: let a charging station in, stop letting it in,
+        /// move it to another group, or mark it as a local controller's login,
+        /// which may send in the name of the stations behind it - without
+        /// losing what it signs in with.
         /// </summary>
         private Task<HTTPResponse> PutStation(HTTPRequest Request)
         {
@@ -725,11 +727,19 @@ namespace cloud.charging.open.CSMS
             if (!TryParseJSONObject(Request, out var json, out var errorResponse))
                 return Task.FromResult(errorResponse);
 
-            var enabled  = json.Value<Boolean?>("enabled");
-            var group    = json.Value<String>("group");
+            var enabled          = json.Value<Boolean?>("enabled");
+            var group            = json.Value<String>("group");
+            var marking          = json["localController"];
 
-            if (enabled is null && group is null)
-                return Task.FromResult(ErrorJSON(Request, HTTPStatusCode.BadRequest, "An 'enabled' of true or false, or a 'group', is required."));
+            if (marking is not null && marking.Type is not (JTokenType.Boolean or JTokenType.Null))
+                return Task.FromResult(ErrorJSON(Request, HTTPStatusCode.BadRequest, "'localController' is true or false."));
+
+            var localController  = marking?.Type == JTokenType.Boolean
+                                       ? marking.Value<Boolean>()
+                                       : (Boolean?) null;
+
+            if (enabled is null && group is null && localController is null)
+                return Task.FromResult(ErrorJSON(Request, HTTPStatusCode.BadRequest, "An 'enabled' of true or false, a 'group', or a 'localController' of true or false, is required."));
 
             if (group is not null &&
                 !CSMS.StationLogins.TrySetGroup(id, group, out var groupError, out var groupNotSaved))
@@ -742,6 +752,18 @@ namespace cloud.charging.open.CSMS
             {
                 return Task.FromResult(NotChanged(Request, HTTPStatusCode.NotFound, error, notSaved));
             }
+
+            if (localController is Boolean marked &&
+                !CSMS.StationLogins.TrySetLocalController(id, marked, out var markError, out var markNotSaved))
+            {
+                return Task.FromResult(NotChanged(Request, HTTPStatusCode.NotFound, markError, markNotSaved));
+            }
+
+            if (localController is Boolean isController)
+                Log.Notice(isController
+                               ? $"'{user.Id}' marked '{id}' as a local controller."
+                               : $"'{user.Id}' took the mark of a local controller from '{id}'.",
+                           "ocpp", "station", "security", "web");
 
             if (group is not null)
                 Log.Info($"'{user.Id}' moved the charging station '{id}' into the login group '{group}'.", "ocpp", "station", "auth", "web");

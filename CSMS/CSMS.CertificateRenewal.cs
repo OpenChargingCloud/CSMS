@@ -316,7 +316,8 @@ namespace cloud.charging.open.CSMS
                 var response = await csms01.OCPP.OUT.TriggerMessage(
                                          new TriggerMessageRequest(
                                              SourceRouting.To(id),
-                                             trigger.Value
+                                             trigger.Value,
+                                             NetworkPath: FromThisCSMS
                                          )
                                      );
 
