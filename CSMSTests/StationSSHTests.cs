@@ -707,6 +707,31 @@ namespace cloud.charging.open.CSMS.Tests
 
         #endregion
 
+        #region TheLargestMessage_IsWhatAWebSocketTakes()
+
+        /// <summary>
+        /// With nothing configured, OCPP over SSH takes a message as large as
+        /// OCPP over a WebSocket does: 64 MiB. At 16 MiB, a message between
+        /// the two got in over a WebSocket and not out over SSH.
+        /// </summary>
+        [Test]
+        public void TheLargestMessage_IsWhatAWebSocketTakes()
+        {
+
+            Assert.Multiple(() => {
+
+                Assert.That((CSMS.OCPPServerConfigurationJSON()["ssh"]?["maxMessageSize"]?.Value<UInt64>()),
+                            Is.EqualTo(org.GraphDefined.Vanaheimr.Hermod.WebSocket.WebSocketFrame.DefaultMaxPayloadSize));
+
+                Assert.That((CSMS.OCPPServerConfigurationJSON()["ssh"]?["maxMessageSize"]?.Value<UInt64>()),
+                            Is.EqualTo(64UL * 1024 * 1024));
+
+            });
+
+        }
+
+        #endregion
+
         #region TheSettings_SayWhatIsWrong_AndWhatWaitsForARestart()
 
         [Test]
