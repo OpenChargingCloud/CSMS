@@ -44,7 +44,7 @@ namespace cloud.charging.open.CSMS
 
             Node.OCPP.IN.OnSignSSHKey += (timestamp, sender, connection, request, cancellationToken) => {
 
-                if (request.Purpose != OCPPv2_1.SSHKeyPurpose.OCPP)
+                if (request.Purpose != OCPPv2_1.SSHKeyPurpose.Station)
                     return Task.FromResult(new OCPPv2_1_CSMS.SignSSHKeyResponse(request, OCPPv2_1.GenericStatus.Rejected,
                                                                                 new OCPPv2_1.StatusInfo("NotSupported", "This CSMS enrolls the keys of OCPP only.")));
 
@@ -83,7 +83,7 @@ namespace cloud.charging.open.CSMS
                 return;
             }
 
-            var signed = await Node.OCPP.OUT.SSHKeySigned(new OCPPv2_1_CSMS.SSHKeySignedRequest(SourceRouting.To(Station), OCPPv2_1.SSHKeyPurpose.OCPP, PublicKey, NetworkPath: NetworkPath.From(Node.Id)));
+            var signed = await Node.OCPP.OUT.SSHKeySigned(new OCPPv2_1_CSMS.SSHKeySignedRequest(SourceRouting.To(Station), OCPPv2_1.SSHKeyPurpose.Station, PublicKey, NetworkPath: NetworkPath.From(Node.Id)));
 
             if (signed.Status != OCPPv2_1.GenericStatus.Accepted)
             {
@@ -118,8 +118,8 @@ namespace cloud.charging.open.CSMS
             // answered to nobody: from this CSMS, as every request of it.
             var to         = SourceRouting.To(LocalController);
             var from       = NetworkPath.From(Node.Id);
-            var listed     = await Node.OCPP.OUT.GetInstalledSSHKeys(new OCPPv2_1_CSMS.GetInstalledSSHKeysRequest(to, Station, OCPPv2_1.SSHKeyPurpose.OCPP,            NetworkPath: from));
-            var installed  = await Node.OCPP.OUT.InstallSSHKey      (new OCPPv2_1_CSMS.InstallSSHKeyRequest      (to, Station, OCPPv2_1.SSHKeyPurpose.OCPP, PublicKey, NetworkPath: from));
+            var listed     = await Node.OCPP.OUT.GetInstalledSSHKeys(new OCPPv2_1_CSMS.GetInstalledSSHKeysRequest(to, Station, OCPPv2_1.SSHKeyPurpose.Station,            NetworkPath: from));
+            var installed  = await Node.OCPP.OUT.InstallSSHKey      (new OCPPv2_1_CSMS.InstallSSHKeyRequest      (to, Station, OCPPv2_1.SSHKeyPurpose.Station, PublicKey, NetworkPath: from));
 
             if (installed.Status != OCPPv2_1.GenericStatus.Accepted)
             {
@@ -128,7 +128,7 @@ namespace cloud.charging.open.CSMS
                 return;
             }
 
-            var signed = await Node.OCPP.OUT.SSHKeySigned(new OCPPv2_1_CSMS.SSHKeySignedRequest(SourceRouting.To(Station), OCPPv2_1.SSHKeyPurpose.OCPP, PublicKey, NetworkPath: from));
+            var signed = await Node.OCPP.OUT.SSHKeySigned(new OCPPv2_1_CSMS.SSHKeySignedRequest(SourceRouting.To(Station), OCPPv2_1.SSHKeyPurpose.Station, PublicKey, NetworkPath: from));
 
             if (signed.Status != OCPPv2_1.GenericStatus.Accepted)
                 return;
