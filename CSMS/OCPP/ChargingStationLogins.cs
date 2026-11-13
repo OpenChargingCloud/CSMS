@@ -385,6 +385,24 @@ namespace cloud.charging.open.CSMS.OCPP
                                            String?                           Note,
                                            [NotNullWhen(false)] out String?  Error,
                                            out Boolean                       NotSaved)
+
+            => TryAddOrUpdateGroup(Id, Name, Enabled, AuthMethods, SecurityProfiles, Note, null, out Error, out NotSaved);
+
+        /// <summary>
+        /// Make a group, or change what one allows - and what its members
+        /// have over their SSH connection besides OCPP.
+        /// </summary>
+        /// <param name="SSHChannels">Of <see cref="LoginGroup.KnownSSHChannels"/>; null to leave what the group gives as it is, which for a new group is nothing.</param>
+        /// <param name="NotSaved">True where the file could not be written: see <see cref="TryRemove(String, out String?, out Boolean)"/>.</param>
+        public Boolean TryAddOrUpdateGroup(String?                           Id,
+                                           String?                           Name,
+                                           Boolean                           Enabled,
+                                           IEnumerable<AuthMethod>?          AuthMethods,
+                                           IEnumerable<Byte>?                SecurityProfiles,
+                                           String?                           Note,
+                                           IEnumerable<String>?              SSHChannels,
+                                           [NotNullWhen(false)] out String?  Error,
+                                           out Boolean                       NotSaved)
         {
 
             NotSaved = false;
@@ -408,6 +426,19 @@ namespace cloud.charging.open.CSMS.OCPP
                                           out Error))
                 {
                     return false;
+                }
+
+                if (SSHChannels is null)
+                    group = group with { SSHChannels = existing?.SSHChannels };
+
+                else
+                {
+
+                    if (!LoginGroup.TryChannels(SSHChannels, out var channels, out Error))
+                        return false;
+
+                    group = group with { SSHChannels = channels };
+
                 }
 
                 if (existing is null && groups.Count >= LoginGroup.MaxGroups)

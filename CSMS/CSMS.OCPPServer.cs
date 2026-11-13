@@ -395,7 +395,8 @@ namespace cloud.charging.open.CSMS
                                     StationLogins,
                                     OCPPSshServer.OCPPSubsystem,
                                     () => ocppOverSSHServed,
-                                    TimeProvider
+                                    TimeProvider,
+                                    () => SSHSubsystems.Select(subsystem => subsystem.Name)
                                 );
 
             stationSSHSignIns.OnNotice += (level, message) => {

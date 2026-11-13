@@ -321,6 +321,8 @@ export interface LoginGroup {
     addedAt:           string;
     authMethods:       AuthMethod[];
     securityProfiles:  number[];
+    /** What its stations have over their SSH connection besides OCPP: the names of SSH subsystems. */
+    sshChannels?:      string[];
     members:           number;
     note?:             string;
 }
@@ -345,6 +347,8 @@ export interface LoginGroupUpdate {
     enabled:           boolean;
     authMethods:       AuthMethod[];
     securityProfiles:  number[];
+    /** Replaced like everything else about a group: left out, its stations have OCPP alone. */
+    sshChannels?:      string[];
     note?:             string;
 }
 

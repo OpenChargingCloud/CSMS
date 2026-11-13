@@ -1057,7 +1057,7 @@ namespace cloud.charging.open.CSMS
 
         /// <summary>
         /// POST .../groups with {"id", "name", "enabled", "authMethods",
-        /// "securityProfiles", "note"}: make a login group.
+        /// "securityProfiles", "sshChannels", "note"}: make a login group.
         /// </summary>
         private Task<HTTPResponse> PostGroup(HTTPRequest Request)
         {
@@ -1150,6 +1150,25 @@ namespace cloud.charging.open.CSMS
 
             #endregion
 
+            #region What its stations have over SSH besides OCPP
+
+            // Replaced like everything else about a group: a form that sends
+            // none of it takes it away.
+            var channels = new List<String>();
+
+            if (JSON["sshChannels"] is JToken said)
+            {
+
+                if (said is not JArray channelArray ||
+                    channelArray.Any(token => token.Type != JTokenType.String))
+                    return ErrorJSON(Request, HTTPStatusCode.BadRequest, "'sshChannels' must be a list of the names of SSH subsystems.");
+
+                channels.AddRange(channelArray.Select(token => token.Value<String>()!));
+
+            }
+
+            #endregion
+
             if (!CSMS.StationLogins.TryAddOrUpdateGroup(
                      Id,
                      JSON.Value<String>("name"),
@@ -1157,6 +1176,7 @@ namespace cloud.charging.open.CSMS
                      methods,
                      profiles,
                      JSON.Value<String>("note"),
+                     channels,
                      out var error,
                      out var notSaved))
             {
