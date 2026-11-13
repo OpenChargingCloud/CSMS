@@ -19,6 +19,7 @@
 
 using Newtonsoft.Json.Linq;
 
+using org.GraphDefined.Vanaheimr.Hermod;
 using org.GraphDefined.Vanaheimr.Hermod.HTTP;
 
 using cloud.charging.open.protocols.WWCP.Node.Web;
@@ -39,6 +40,7 @@ namespace cloud.charging.open.CSMS
     /// | <c>GET v1/key-pins</c> | the signing key's public part, and every local controller with the key pins last read of it and the stations behind it |
     /// | <c>GET v1/key-pins/local-controllers/{controller}</c> | one of them; 404 where it is not known |
     /// | <c>POST v1/key-pins/local-controllers/{controller}/rollover</c> | <c>{ graceSeconds }</c>, optional: rolled over to its announced next key, answered when it is done - 200 with what came of it, 409 where it was refused or stopped |
+    /// | <c>POST v1/key-pins/local-controllers/{controller}/uplink</c> | <c>{ pins }</c>, optional: a signed pin set for the controller's own line to this CSMS - this CSMS's own key pins, or the given ones: 200 or 409 as above |
     /// | <c>POST v1/key-pins/confirm/{station or controller}</c> | the controller's key pins as it reports them now, handed to the station or to every station behind it: 200 or 409 as above |
     /// | <c>DELETE v1/key-pins/stations/{station}</c> | a station that moved: the controller it was behind forgotten, and the route through it - 200 with the controller; 404 where it was known behind none |
     /// | <c>GET v1/key-pins/signer</c> | the public key of the signing key, as a station's pin set signers take it |
@@ -62,6 +64,7 @@ namespace cloud.charging.open.CSMS
             AddHandler(root,                                                GetKeyPins,              HTTPMethod.GET);
             AddHandler(root + "/local-controllers/{localController}",          GetLocalControllerPins,  HTTPMethod.GET);
             AddHandler(root + "/local-controllers/{localController}/rollover", PostRollover,            HTTPMethod.POST);
+            AddHandler(root + "/local-controllers/{localController}/uplink",   PostUplink,              HTTPMethod.POST);
             AddHandler(root + "/confirm/{node}",                            PostConfirm,             HTTPMethod.POST);
             AddHandler(root + "/stations/{station}",                        DeleteStationBehind,     HTTPMethod.DELETE);
             AddHandler(root + "/signer",                                    GetPinSetSigner,         HTTPMethod.GET);
@@ -144,6 +147,61 @@ namespace cloud.charging.open.CSMS
             Log.Notice($"'{user.Id}' rolls the local controller '{controller}' over to its next key.", "ocpp", "keypins", "security", "web");
 
             var run = await CSMS.RolloverAsync(controller, grace);
+
+            return JSONResponse(Request, run.Done ? HTTPStatusCode.OK : HTTPStatusCode.Conflict, run.ToJSON());
+
+        }
+
+        #endregion
+
+        #region (private) PostUplink(Request)
+
+        /// <summary>
+        /// POST /api/v1/key-pins/local-controllers/{localController}/uplink, answered once it is done.
+        /// </summary>
+        private async Task<HTTPResponse> PostUplink(HTTPRequest Request)
+        {
+
+            if (!TryAuthorize(Request, Permission.Edit(NodeResources.Certificates), true, out var user, out var refused))
+                return refused;
+
+            var controller = Request.ParsedURLParameters.ElementAtOrDefault(0)?.Trim() ?? "";
+
+            List<KeyPin>? pins = null;
+
+            if (Request.HTTPBody is { Length: > 0 })
+            {
+
+                if (!TryParseJSONObject(Request, out var json, out var errorResponse))
+                    return errorResponse;
+
+                if (json["pins"] is JToken token && token.Type != JTokenType.Null)
+                {
+
+                    if (token is not JArray array || array.Count == 0 || array.Count > 8 || array.Any(pin => pin.Type != JTokenType.String))
+                        return ErrorJSON(Request, HTTPStatusCode.BadRequest, "'pins' is a list of 1 to 8 key pins, each as 64 hexadecimal digits.");
+
+                    pins = [];
+
+                    foreach (var text in array.Select(pin => pin.Value<String>()))
+                    {
+
+                        if (!KeyPin.TryParse(text, out var pin))
+                            return ErrorJSON(Request, HTTPStatusCode.BadRequest, $"'{text}' is no key pin: the SHA-256 of a public key, as 64 hexadecimal digits.");
+
+                        pins.Add(pin);
+
+                    }
+
+                }
+
+            }
+
+            Log.Notice($"'{user.Id}' hands the local controller '{controller}' " +
+                       (pins is null ? "this CSMS's key pins" : $"the key pins {String.Join(", ", pins.Select(pin => pin.ToHex()))}") +
+                       " for its own line to this CSMS.", "ocpp", "keypins", "security", "web");
+
+            var run = await CSMS.ConfirmUplinkAsync(controller, pins);
 
             return JSONResponse(Request, run.Done ? HTTPStatusCode.OK : HTTPStatusCode.Conflict, run.ToJSON());
 

@@ -493,14 +493,28 @@ behind the controller it comes through.
 - `keyPins confirm <station|controller>` hands a station, or every station
   behind a controller that does not hold exactly them, the controller's pins
   now; `keyPins` and `keyPins show <controller>` list them.
+- A local controller that reports `KeyPinLearned` on its own line - it trusts
+  this CSMS on first use - learned a key this CSMS can name itself. Where the
+  pin is the one of the key this CSMS presents at its charging station port,
+  the controller is handed it at once, signed, for the endpoint it named.
+  Where it is not - TLS ends at a proxy before this CSMS, or somebody answered
+  in its place - or where this CSMS presents no key itself, nothing is sent:
+  the pin is noted beside this CSMS's own and said in the log.
+  `keyPins uplink <controller> <pin>[,<pin>...]` then hands the controller the
+  pins named, once they were compared with the key of what ends TLS; a
+  controller whose learned pin is not among them refuses the server it learned
+  it of. `keyPins uplink <controller>` without pins hands this CSMS's own.
+  The controller holds the signing key's public key as one of its pin set
+  signers, as a station does.
 
 Behind it, `/api/v1/key-pins`:
 
 | | |
 |---|---|
-| `GET` | the signer's public key, and every controller with its pins and stations |
+| `GET` | the signer's public key, this CSMS's own key pins, and every controller with its pins, its own line and its stations |
 | `GET .../local-controllers/{controller}` | one of them |
 | `POST .../local-controllers/{controller}/rollover` | `{ "graceSeconds" }`, optional: answered when done, 200, or 409 with what stopped it |
+| `POST .../local-controllers/{controller}/uplink` | `{ "pins" }`, optional: a pin set for the controller's own line - this CSMS's own pins, or those given: 200, or 409 |
 | `POST .../confirm/{station or controller}` | 200, or 409 |
 | `DELETE .../stations/{station}` | a station that moved, forgotten behind its controller: 200; 404 where it was behind none |
 | `GET .../signer` | the public key |

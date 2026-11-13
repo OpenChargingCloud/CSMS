@@ -470,6 +470,11 @@ namespace cloud.charging.open.CSMS
                                   ? path.Last.ToString()
                                   : null;
 
+            // A Local Controller's own line to this CSMS: the key pin is this
+            // CSMS's own (see CSMS.KeyPins.Uplink.cs).
+            if (controller is null && OnUplinkKeyPinEvent(source, type, techInfo))
+                return;
+
             switch (type)
             {
 
@@ -946,6 +951,7 @@ namespace cloud.charging.open.CSMS
 
             => new (
                    new JProperty("signer",            PinSetSigner.ToJSON()),
+                   new JProperty("serverKeyPins",     new JArray(ServerKeyPins().Select(pin => pin.ToHex()))),
                    new JProperty("defaultGrace",      (Int32) DefaultRolloverGrace.TotalSeconds),
                    new JProperty("localControllers",  new JArray(KeyPins.All.Select(LocalControllerJSON)))
                );
@@ -1155,7 +1161,7 @@ namespace cloud.charging.open.CSMS
 
         #endregion
 
-        #region (private) SendPinSet(Station, Connection, Pins, Version)
+        #region (private) SendPinSet(Station, Connection, Pins, Version, What = "charging station")
 
         /// <summary>
         /// Sign and send a pin set, note it, and say what the station answered.
@@ -1163,7 +1169,8 @@ namespace cloud.charging.open.CSMS
         private async Task<PinSetOutcome> SendPinSet(String                 Station,
                                                      String                 Connection,
                                                      IReadOnlyList<KeyPin>  Pins,
-                                                     UInt64                 Version)
+                                                     UInt64                 Version,
+                                                     String                 What   = "charging station")
         {
 
             var hex = Pins.Select(pin => pin.ToHex()).ToArray();
@@ -1218,10 +1225,10 @@ namespace cloud.charging.open.CSMS
             KeyPins.NoteSent(Station, Connection, Version, hex, TimeProvider.GetUtcNow(), answer, accepted);
 
             if (accepted)
-                Log.Info   ($"The charging station '{Station}' took the pin set of version {Version} for its endpoint '{Connection}': {String.Join(", ", hex)}.",
+                Log.Info   ($"The {What} '{Station}' took the pin set of version {Version} for its endpoint '{Connection}': {String.Join(", ", hex)}.",
                             "ocpp", "keypins", "security");
             else
-                Log.Warning($"The charging station '{Station}' did not take the pin set of version {Version} for its endpoint '{Connection}': {answer}",
+                Log.Warning($"The {What} '{Station}' did not take the pin set of version {Version} for its endpoint '{Connection}': {answer}",
                             "ocpp", "keypins", "security");
 
             return new PinSetOutcome(Station, Connection, Version, hex, accepted, answer);

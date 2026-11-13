@@ -109,10 +109,32 @@ namespace cloud.charging.open.CSMS.Tests
 
             #endregion
 
+            #region The controller's own line to the CSMS
+
+            public const String   UplinkEndpoint      = "csms";
+
+            public List<KeyPin>   UplinkPins          { get; set; } = [];
+            public UInt64         UplinkVersion       { get; set; } = 5;
+            public KeyPin?        UplinkLearned       { get; set; }
+            public String         UplinkState         { get; set; } = "Configured";
+
+            /// <summary>
+            /// The pin sets the controller took for its own line: version and pins.
+            /// </summary>
+            public ConcurrentQueue<(UInt64 Version, String Pins)>  UplinkTaken    { get; } = new ();
+
+            /// <summary>
+            /// Why the controller refused pin sets for its own line.
+            /// </summary>
+            public ConcurrentQueue<String>                         UplinkRefused  { get; } = new ();
+
+            #endregion
+
             #region The station
 
             /// <summary>
             /// The public key the station believes pin sets of: the CSMS's, given at commissioning - or none.
+            /// The controller believes the same one.
             /// </summary>
             public String?        PinSetSigner        { get; set; }
 
@@ -329,8 +351,21 @@ namespace cloud.charging.open.CSMS.Tests
 
                 if (Destination == this.Id)
                 {
-                    await Send(new JArray(3, from, this.Id, Id, AsTheController(Action, Payload)));
+
+                    await Send(new JArray(3, from, this.Id, Id, AsTheController(Action, Payload, Id)));
+
+                    // Its own report follows the answer to GetReport.
+                    if (Action == "GetReport")
+                        _ = Task.Run(() => AsController("NotifyReport", new JObject(
+                                                            new JProperty("requestId",    Payload["requestId"]),
+                                                            new JProperty("seqNo",        0),
+                                                            new JProperty("generatedAt",  DateTimeOffset.UtcNow.ToString("o")),
+                                                            new JProperty("tbc",          false),
+                                                            new JProperty("reportData",   new JArray(UplinkReport()))
+                                                        )));
+
                     return;
+
                 }
 
                 if (Destination == StationId)
@@ -357,8 +392,19 @@ namespace cloud.charging.open.CSMS.Tests
             #region (private) AsTheController(Action, Payload)
 
             private JObject AsTheController(String   Action,
-                                            JObject  Payload)
+                                            JObject  Payload,
+                                            String   RequestId)
             {
+
+                if (Action == "GetReport")
+                    return new JObject(new JProperty("status", "Accepted"));
+
+                // A pin set for its own line to the CSMS.
+                if (Action == "SetVariables" &&
+                    (Payload["setVariableData"] as JArray ?? []).OfType<JObject>().Any(data => data["component"]?["name"]?.Value<String>() == "TLSClientController"))
+                {
+                    return new JObject(new JProperty("setVariableResult", new JArray(TakeUplinkPinSet(Payload, RequestId))));
+                }
 
                 if (Action == "GetVariables")
                     return new JObject(new JProperty("getVariableResult", new JArray(
@@ -414,6 +460,107 @@ namespace cloud.charging.open.CSMS.Tests
                            )));
 
                 return [];
+
+            }
+
+            #endregion
+
+            #region (private) TakeUplinkPinSet(Payload, RequestId) / UplinkReport()
+
+            /// <summary>
+            /// A pin set for the controller's own line, taken as a station takes one: verified by the key it
+            /// believes, for the controller itself, without the time window - and only with a higher version.
+            /// </summary>
+            private IEnumerable<JObject> TakeUplinkPinSet(JObject  Payload,
+                                                          String   RequestId)
+            {
+
+                var entries  = (Payload["setVariableData"] as JArray ?? []).OfType<JObject>().ToArray();
+
+                IEnumerable<JObject> All(String Status, String? Reason = null)
+
+                    => entries.Select(data => {
+
+                           var result = new JObject(
+                                            new JProperty("attributeStatus",  Status),
+                                            new JProperty("component",        data["component"]),
+                                            new JProperty("variable",         data["variable"])
+                                        );
+
+                           if (Reason is not null)
+                               result.Add("attributeStatusInfo", new JObject(new JProperty("reasonCode", Reason)));
+
+                           return result;
+
+                       });
+
+                if (PinSetSigner is null)
+                {
+                    UplinkRefused.Enqueue("Unsigned: no signer believed");
+                    return All("Rejected", "Unsigned");
+                }
+
+                var request = AsTheStationChecks.Received(Payload, RequestId, Id);
+
+                if (!AsTheStationChecks.Verifies(request, PinSetSigner, Id, WithoutTimeWindow: true, out var error))
+                {
+                    UplinkRefused.Enqueue($"Unsigned: {error}");
+                    return All("Rejected", "Unsigned");
+                }
+
+                var values   = entries.ToDictionary(data => data["variable"]?["name"]?.Value<String>() ?? "",
+                                                    data => data["attributeValue"]?.Value<String>() ?? "");
+
+                if (entries.Any(data => data["component"]?["instance"]?.Value<String>() != UplinkEndpoint) ||
+                    !values.TryGetValue("ServerKeyPins", out var pins) ||
+                    !values.TryGetValue("ServerKeyPinsVersion", out var versionText) ||
+                    !UInt64.TryParse(versionText, out var version))
+                {
+                    UplinkRefused.Enqueue("InvalidValue: not a pin set of the endpoint");
+                    return All("Rejected", "InvalidValue");
+                }
+
+                if (version <= UplinkVersion)
+                {
+                    UplinkRefused.Enqueue($"InvalidValue: version {version} is not above {UplinkVersion}");
+                    return All("Rejected", "InvalidValue");
+                }
+
+                UplinkPins     = [.. pins.Split(',').Select(KeyPin.Parse)];
+                UplinkVersion  = version;
+
+                if (UplinkLearned is not null)
+                {
+                    UplinkState    = UplinkPins.Contains(UplinkLearned) ? "Confirmed" : "Configured";
+                    UplinkLearned  = null;
+                }
+
+                UplinkTaken.Enqueue((version, pins));
+
+                return All("Accepted");
+
+            }
+
+            /// <summary>
+            /// The controller's report of TLSClientController: its one endpoint, to the CSMS.
+            /// </summary>
+            private IEnumerable<JObject> UplinkReport()
+            {
+
+                static JObject Data(String Variable, String Value)
+
+                    => new (
+                           new JProperty("component",          new JObject(new JProperty("name", "TLSClientController"), new JProperty("instance", UplinkEndpoint))),
+                           new JProperty("variable",           new JObject(new JProperty("name", Variable))),
+                           new JProperty("variableAttribute",  new JArray(new JObject(new JProperty("type", "Actual"), new JProperty("value", Value))))
+                       );
+
+                yield return Data("ServerKeyPins",         String.Join(",", UplinkPins.Select(pin => pin.ToHex())));
+                yield return Data("ServerKeyPinsVersion",  UplinkVersion.ToString());
+                yield return Data("ServerKeyPinState",     UplinkLearned is not null ? "Learned" : UplinkState);
+                yield return Data("LearnedKeyPin",         UplinkLearned?.ToHex() ?? "");
+                yield return Data("KeyPinShown",           UplinkLearned?.ToHex() ?? "");
+                yield return Data("URL",                   $"wss://csms.example.org/{Id}");
 
             }
 
@@ -1607,6 +1754,348 @@ namespace cloud.charging.open.CSMS.Tests
                 Assert.That(listed,     Is.EqualTo(new[] { csms }), "GetInstalledCertificateIds");
                 Assert.That(installed,  Is.EqualTo(new[] { csms }), "InstallCertificate");
                 Assert.That(deleted,    Is.EqualTo(new[] { csms }), "DeleteCertificate");
+            });
+
+        }
+
+        #endregion
+
+
+        #region (private) UplinkKeyPinLearned(Learned, By = null) / UplinkEvent(Type, TechInfo)
+
+        /// <summary>
+        /// The controller's own KeyPinLearned for its endpoint to the CSMS, as the controller words it.
+        /// </summary>
+        private Task<JArray> UplinkKeyPinLearned(KeyPin Learned, Controller? By = null)
+
+            => (By ?? lc).AsController("SecurityEventNotification", new JObject(
+                                           new JProperty("type",       "KeyPinLearned"),
+                                           new JProperty("timestamp",  DateTimeOffset.UtcNow.ToString("o")),
+                                           new JProperty("techInfo",   $"Key pin {Learned.ToHex()} of endpoint '{Controller.UplinkEndpoint}' (wss://csms.example.org/{(By ?? lc).Id}) learned on first use, on probation")
+                                       ));
+
+        private Task<JArray> UplinkEvent(String Type, String TechInfo)
+
+            => lc.AsController("SecurityEventNotification", new JObject(
+                                   new JProperty("type",       Type),
+                                   new JProperty("timestamp",  DateTimeOffset.UtcNow.ToString("o")),
+                                   new JProperty("techInfo",   TechInfo)
+                               ));
+
+        #endregion
+
+        #region AControllersOwnKeyPinLearned_ThatIsThisCSMSs_IsConfirmedAtOnce()
+
+        /// <summary>
+        /// A local controller that learned the key pin of this CSMS on first use, on its own line, is handed
+        /// this CSMS's own key pins at once where the pin it learned is one of them: signed, for its endpoint
+        /// 'csms', addressed to the controller itself, with the version above the one it holds. Nothing goes to
+        /// the station behind it, and the controller's station port is not asked.
+        /// </summary>
+        [Test]
+        public async Task AControllersOwnKeyPinLearned_ThatIsThisCSMSs_IsConfirmedAtOnce()
+        {
+
+            var own = APin();
+
+            CSMS.ServerKeyPinsForTests  = () => [ own ];
+            lc.PinSetSigner             = ASigningKey();
+            lc.UplinkLearned            = own;
+
+            await UplinkKeyPinLearned(own);
+
+            await Until(() => !lc.UplinkTaken.IsEmpty || !lc.UplinkRefused.IsEmpty, "a pin set reaching the controller");
+            await Until(() => CSMS.KeyPins.Get("lc001")?.Uplink?.Accepted == true,  "the CSMS noting the pin set taken");
+
+            var noted = CSMS.KeyPins.Get("lc001")?.Uplink;
+
+            Assert.Multiple(() => {
+
+                Assert.That(lc.UplinkRefused,                                 Is.Empty, String.Join("; ", lc.UplinkRefused));
+                Assert.That(lc.UplinkTaken.Select(taken => taken.Version),    Is.EqualTo(new[] { 6UL }), "not one pin set of the version above the controller's");
+                Assert.That(lc.UplinkTaken.FirstOrDefault().Pins,             Is.EqualTo(own.ToHex()));
+                Assert.That(lc.UplinkState,                                   Is.EqualTo("Confirmed"));
+
+                Assert.That(IndexOf("lc001", "GetReport"),                    Is.GreaterThanOrEqualTo(0), Asked);
+                Assert.That(IndexOf("lc001", "SetVariables"),                 Is.GreaterThan(IndexOf("lc001", "GetReport")), $"the pin set was not sent after the report: {Asked}");
+                Assert.That(IndexOf("lc001", "GetVariables"),                 Is.EqualTo(-1), $"the controller's station port was asked: {Asked}");
+                Assert.That(IndexOf(Controller.StationId, "SetVariables"),    Is.EqualTo(-1), $"the station was sent a pin set: {Asked}");
+                Assert.That(lc.AskedBy.Where(asked => asked.Action == "SetVariables").Select(asked => asked.From),
+                                                                              Is.EqualTo(new[] { CSMS.Node.Id.ToString() }), "the pin set does not name the CSMS as where it comes from");
+
+                Assert.That(noted?.Endpoint,                                  Is.EqualTo(Controller.UplinkEndpoint));
+                Assert.That(noted?.LearnedKeyPin,                             Is.EqualTo(own.ToHex()));
+                Assert.That(noted?.OursWhenLearned,                           Is.True);
+                Assert.That(noted?.Version,                                   Is.EqualTo(6));
+                Assert.That(noted?.Pins,                                      Is.EqualTo(new[] { own.ToHex() }));
+
+            });
+
+        }
+
+        #endregion
+
+        #region AControllersOwnKeyPinLearned_ThatIsNotThisCSMSs_IsShown_AndNothingIsSent()
+
+        /// <summary>
+        /// A key pin the controller learned that is not the pin of the key this CSMS presents - a proxy ends TLS
+        /// before it, or somebody answered in its place - is noted and said, with what to do, and no pin set is
+        /// sent: not this CSMS's own pins either, which would cut off a controller behind a proxy. Asked to
+        /// confirm it without pins, the CSMS refuses as well.
+        /// </summary>
+        [Test]
+        public async Task AControllersOwnKeyPinLearned_ThatIsNotThisCSMSs_IsShown_AndNothingIsSent()
+        {
+
+            var own      = APin();
+            var foreign  = APin();
+
+            CSMS.ServerKeyPinsForTests  = () => [ own ];
+            lc.PinSetSigner             = ASigningKey();
+            lc.UplinkLearned            = foreign;
+
+            await UplinkKeyPinLearned(foreign);
+
+            await Until(() => said.Any(line => line.Contains("NOT the key pin")), "the log saying whose key pin it is not");
+
+            await Task.Delay(500);
+
+            var byHand  = await CSMS.ConfirmUplinkAsync("lc001");
+            var noted   = CSMS.KeyPins.Get("lc001")?.Uplink;
+
+            Assert.Multiple(() => {
+                Assert.That(IndexOf("lc001", "SetVariables"),  Is.EqualTo(-1), $"a pin set was sent: {Asked}");
+                Assert.That(said,                              Has.Some.Contains(foreign.ToHex()).And.Contains(own.ToHex()).And.Contains("keyPins uplink lc001"));
+                Assert.That(noted?.LearnedKeyPin,              Is.EqualTo(foreign.ToHex()));
+                Assert.That(noted?.OursWhenLearned,            Is.False);
+                Assert.That(noted?.State,                      Is.EqualTo("Learned"));
+                Assert.That(byHand.Done,                       Is.False);
+                Assert.That(byHand.Said,                       Has.Some.Contains("not the key pin of the key this CSMS presents"));
+                Assert.That(lc.UplinkTaken,                    Is.Empty);
+            });
+
+        }
+
+        #endregion
+
+        #region PinsNamedByHand_AreSigned_WhateverTheControllerLearned()
+
+        /// <summary>
+        /// Whoever runs the CSMS names the pins: with the learned one among them the controller is confirmed;
+        /// without it the controller takes them all the same, which refuses the server it learned of - and the
+        /// run says so before it does.
+        /// </summary>
+        [Test]
+        public async Task PinsNamedByHand_AreSigned_WhateverTheControllerLearned()
+        {
+
+            var proxy      = APin();
+            var proxyNext  = APin();
+
+            lc.PinSetSigner   = ASigningKey();
+            lc.UplinkLearned  = proxy;
+
+            await UplinkKeyPinLearned(proxy);
+
+            await Until(() => said.Any(line => line.Contains("presents no key of its own")), "the log saying there is nothing to compare with");
+
+            var confirmed  = await CSMS.ConfirmUplinkAsync("lc001", [ proxy, proxyNext ]);
+            var stateThen  = lc.UplinkState;
+
+            // Learned again, and now handed pins without it.
+            var impostor   = APin();
+            lc.UplinkLearned = impostor;
+            await UplinkKeyPinLearned(impostor);
+
+            var refusing   = await CSMS.ConfirmUplinkAsync("lc001", [ proxy ]);
+
+            Assert.Multiple(() => {
+                Assert.That(CSMS.KeyPins.Get("lc001")?.Uplink?.OursWhenLearned,  Is.Null, "a CSMS without a key of its own said whose the pin is");
+                Assert.That(confirmed.Done,                                      Is.True, String.Join(" ", confirmed.Said));
+                Assert.That(stateThen,                                           Is.EqualTo("Confirmed"));
+                Assert.That(refusing.Done,                                       Is.True, String.Join(" ", refusing.Said));
+                Assert.That(refusing.Said,                                       Has.Some.Contains(impostor.ToHex()).And.Contains("will refuse the server"));
+                Assert.That(lc.UplinkState,                                      Is.Not.EqualTo("Confirmed"), "the impostor's pin was confirmed");
+                Assert.That(lc.UplinkTaken.Select(taken => (taken.Version, taken.Pins)),
+                                                                                 Is.EqualTo(new[] { (6UL, $"{proxy.ToHex()},{proxyNext.ToHex()}"), (7UL, proxy.ToHex()) }));
+            });
+
+        }
+
+        #endregion
+
+        #region WithoutASigningKey_OrALoginThatIsNoControllers_NoPinSetGoesUpTheLine()
+
+        /// <summary>
+        /// Without a signing key the controller is not sent a pin set, and the log says how to make one; and a
+        /// login that is not marked as a local controller's is no controller: its KeyPinLearned is a station's,
+        /// as before, and it cannot be confirmed as one.
+        /// </summary>
+        [Test]
+        public async Task WithoutASigningKey_OrALoginThatIsNoControllers_NoPinSetGoesUpTheLine()
+        {
+
+            var own = APin();
+
+            CSMS.ServerKeyPinsForTests = () => [ own ];
+
+            lc.UplinkLearned = own;
+            await UplinkKeyPinLearned(own);
+
+            await Until(() => said.Any(line => line.Contains("keyPins uplink lc001") && line.Contains("no signing key for pin sets")),
+                        "the log saying why no pin set was sent");
+
+            Assert.That(CSMS.StationLogins.TrySetPassword("cs009", ThePassword, null, null, out _, out var error), Is.True, error);
+
+            await using var station = await Controller.Connect(CSMS.OCPPServerSettings.TCPPort!.Value.ToUInt16(), ThePassword, "cs009", Overlay: true);
+            await Until(() => CSMS.IsConnected("cs009"), "'cs009' counting as connected");
+
+            await UplinkKeyPinLearned(own, station);
+
+            await Until(() => said.Any(line => line.Contains("'cs009'") && line.Contains("is behind no local controller")), "the station's event said as a station's");
+
+            ASigningKey();
+
+            var asController = await CSMS.ConfirmUplinkAsync("cs009");
+
+            await Task.Delay(300);
+
+            Assert.Multiple(() => {
+                Assert.That(IndexOf("lc001", "SetVariables"),   Is.EqualTo(-1), $"a pin set was sent without a signing key: {Asked}");
+                Assert.That(CSMS.KeyPins.Get("cs009"),          Is.Null, "a station was noted as a local controller");
+                Assert.That(asController.Done,                  Is.False);
+                Assert.That(asController.Said,                  Has.Some.Contains("no login marked as a local controller's"));
+                Assert.That(station.Asked,                      Is.Empty, "the station was asked something");
+            });
+
+        }
+
+        #endregion
+
+        #region WhatBecameOfTheControllersKeyPin_IsNoted()
+
+        /// <summary>
+        /// Confirmed, rejected, run out, and a key that is not the pinned one: each noted for the controller's
+        /// own line, and none of them taken for a station's.
+        /// </summary>
+        [Test]
+        public async Task WhatBecameOfTheControllersKeyPin_IsNoted()
+        {
+
+            var pin    = APin();
+            var states = new List<String?>();
+
+            String? State() => CSMS.KeyPins.Get("lc001")?.Uplink?.State;
+
+            foreach (var (type, techInfo, expected) in new[] {
+                         ("KeyPinConfirmed",         $"Key pin {pin.ToHex()} of endpoint 'csms' confirmed by the pin set of version 6",          "Confirmed"),
+                         ("KeyPinRejected",          $"Key pin {pin.ToHex()} of endpoint 'csms' is not in the pin set of version 6; discarded",  "Rejected"),
+                         ("KeyPinProbationExpired",  $"Key pin {pin.ToHex()} of endpoint 'csms' not confirmed within 600 s; discarded",          "Expired"),
+                         ("InvalidCsmsCertificate",  $"Key pin mismatch: {pin.ToHex()} at endpoint 'csms' (wss://csms.example.org/lc001)",       "Mismatch")
+                     })
+            {
+                await UplinkEvent(type, techInfo);
+                await Until(() => State() == expected, $"{type} noted as {expected}");
+                states.Add(State());
+            }
+
+            Assert.Multiple(() => {
+                Assert.That(states,                                         Is.EqualTo(new[] { "Confirmed", "Rejected", "Expired", "Mismatch" }));
+                Assert.That(CSMS.KeyPins.Get("lc001")?.Uplink?.Endpoint,    Is.EqualTo("csms"));
+                Assert.That(said.Where(line => line.Contains("The charging station 'lc001'") && line.Contains("key pin")), Is.Empty, "taken for a station's");
+                Assert.That(CSMS.KeyPinsJSON("lc001")?["uplink"]?["state"]?.Value<String>(), Is.EqualTo("Mismatch"));
+            });
+
+        }
+
+        #endregion
+
+        #region TheControllersOwnLine_IsConfirmed_AtTheConsole_AndShown()
+
+        /// <summary>
+        /// keyPins uplink: refused to a cpo; what is no key pin is said; with pins, the controller is handed
+        /// them; and keyPins show says what it learned, whose that is, and what it took.
+        /// </summary>
+        [Test]
+        public async Task TheControllersOwnLine_IsConfirmed_AtTheConsole_AndShown()
+        {
+
+            var own    = APin();
+            var proxy  = APin();
+
+            CSMS.ServerKeyPinsForTests  = () => [ own ];
+            lc.PinSetSigner             = ASigningKey();
+            lc.UplinkLearned            = proxy;
+
+            await UplinkKeyPinLearned(proxy);
+            await Until(() => CSMS.KeyPins.Get("lc001")?.Uplink?.LearnedKeyPin == proxy.ToHex(), "the key pin noted");
+
+            using var console  = Console();
+            using var cpo      = await OverSSHAs("carla", "cpo");
+
+            var cpoUplink      = await Run(cpo,     $"keyPins uplink lc001 {proxy.ToHex()}");
+            var shownBefore    = await Run(console, "keyPins show lc001");
+            var noPin          = await Run(console, "keyPins uplink lc001 not-a-pin");
+            var withoutPins    = await Run(console, "keyPins uplink lc001");
+            var taken          = await Run(console, $"keyPins uplink lc001 {proxy.ToHex()},{own.ToHex()}");
+            var shownAfter     = await Run(console, "keyPins show lc001");
+            var list           = await Run(console, "keyPins");
+
+            Assert.Multiple(() => {
+                Assert.That(cpoUplink,                              Does.Contain("'carla' may not do that here"));
+                Assert.That(shownBefore,                            Does.Contain(proxy.ToHex()).And.Contain("NOT this CSMS's").And.Contain("no pin set sent yet"));
+                Assert.That(noPin,                                  Does.Contain("'not-a-pin' is no key pin"));
+                Assert.That(withoutPins,                            Does.Contain("not the key pin of the key this CSMS presents"));
+                Assert.That(taken,                                  Does.Contain("'lc001' took the pin set of version 6 for its endpoint 'csms'"));
+                Assert.That(lc.UplinkTaken.Select(pinSet => pinSet.Pins), Is.EqualTo(new[] { $"{proxy.ToHex()},{own.ToHex()}" }), "only the pin set named at the console was to be taken");
+                Assert.That(lc.UplinkState,                         Is.EqualTo("Confirmed"));
+                Assert.That(shownAfter,                             Does.Contain("took [").And.Contain("of version 6"));
+                Assert.That(list,                                   Does.Contain($"This CSMS presents the key pin {own.ToHex()}"));
+            });
+
+        }
+
+        #endregion
+
+        #region TheControllersOwnLine_IsConfirmed_ByTheAPI_AtTheCertificatesPermission()
+
+        /// <summary>
+        /// POST /api/v1/key-pins/local-controllers/{controller}/uplink: refused to a cpo, done for an
+        /// administrator with the pins it names, 400 for what is no key pin, and this CSMS's own key pins in
+        /// GET /api/v1/key-pins.
+        /// </summary>
+        [Test]
+        public async Task TheControllersOwnLine_IsConfirmed_ByTheAPI_AtTheCertificatesPermission()
+        {
+
+            var own    = APin();
+            var proxy  = APin();
+
+            CSMS.ServerKeyPinsForTests  = () => [ own ];
+            lc.PinSetSigner             = ASigningKey();
+            lc.UplinkLearned            = proxy;
+
+            var (_, cpoPassword) = await AnAccount("carla", "cpo");
+
+            var admin   = await SignedIn();
+            var cpo     = await SignedInAs("carla", cpoPassword);
+
+            StringContent Body(String JSON) => new (JSON, Encoding.UTF8, "application/json");
+
+            var refused = await cpo.  PostAsync("/api/v1/key-pins/local-controllers/lc001/uplink", Body($"{{\"pins\":[\"{proxy.ToHex()}\"]}}"));
+            var noPin   = await admin.PostAsync("/api/v1/key-pins/local-controllers/lc001/uplink", Body("{\"pins\":[\"not-a-pin\"]}"));
+            var done    = await admin.PostAsync("/api/v1/key-pins/local-controllers/lc001/uplink", Body($"{{\"pins\":[\"{proxy.ToHex()}\"]}}"));
+            var all     = JObject.Parse(await (await admin.GetAsync("/api/v1/key-pins")).Content.ReadAsStringAsync());
+
+            Assert.Multiple(() => {
+                Assert.That(refused.StatusCode,                               Is.EqualTo(HttpStatusCode.Forbidden));
+                Assert.That(noPin.StatusCode,                                 Is.EqualTo(HttpStatusCode.BadRequest));
+                Assert.That(done.StatusCode,                                  Is.EqualTo(HttpStatusCode.OK));
+                Assert.That(lc.UplinkTaken.Select(taken => taken.Pins),       Is.EqualTo(new[] { proxy.ToHex() }));
+                Assert.That(lc.UplinkState,                                   Is.EqualTo("Confirmed"));
+                Assert.That(all["serverKeyPins"]?.Values<String>(),           Is.EqualTo(new[] { own.ToHex() }));
+                Assert.That(all["localControllers"]?.FirstOrDefault(controller => controller["localController"]?.Value<String>() == "lc001")?["uplink"]?["accepted"]?.Value<Boolean>(),
+                                                                              Is.True);
             });
 
         }

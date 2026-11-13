@@ -141,6 +141,58 @@ namespace cloud.charging.open.CSMS.Tests
 
         #endregion
 
+        #region AControllersOwnLine_IsReadBack_AfterARestart_AndNeedsNoStation()
+
+        /// <summary>
+        /// What a controller reported of its own line to the CSMS, and the pin set it was sent for it, are read
+        /// back as well - of a controller no station is known behind, and beside the stations of one that has
+        /// some, which stay as they are.
+        /// </summary>
+        [Test]
+        public void AControllersOwnLine_IsReadBack_AfterARestart_AndNeedsNoStation()
+        {
+
+            var store = new KeyPinStore(File);
+
+            store.Load();
+
+            store.NoteStation("cs001", "lc001", At);
+            store.NoteUplink ("lc001", uplink => uplink with { Endpoint = "csms", URL = "wss://csms.example.org/lc001", LearnedKeyPin = Current,
+                                                                 Reported = At, State = LocalControllerUplink.Learned, OursWhenLearned = true });
+            store.NoteUplink ("lc001", uplink => uplink with { Version = 6, Pins = [ Current ], Sent = At.AddMinutes(1), Answer = "Accepted", Accepted = true });
+            store.NoteUplink ("lc002", uplink => uplink with { Endpoint = "csms", LearnedKeyPin = Next, Reported = At, State = LocalControllerUplink.Learned });
+
+            var reloaded  = Reloaded();
+            var lc001     = reloaded.Get("lc001");
+            var lc002     = reloaded.Get("lc002");
+
+            Assert.Multiple(() => {
+
+                Assert.That(lc001?.Stations?.Select(station => station.Station),  Is.EqualTo(new[] { "cs001" }), "noting its own line lost its stations");
+                Assert.That(lc001?.Uplink?.Endpoint,                               Is.EqualTo("csms"));
+                Assert.That(lc001?.Uplink?.URL,                                    Is.EqualTo("wss://csms.example.org/lc001"));
+                Assert.That(lc001?.Uplink?.LearnedKeyPin,                          Is.EqualTo(Current), "the pin set sent lost what was learned");
+                Assert.That(lc001?.Uplink?.Reported,                               Is.EqualTo(At));
+                Assert.That(lc001?.Uplink?.State,                                  Is.EqualTo("Learned"));
+                Assert.That(lc001?.Uplink?.OursWhenLearned,                        Is.True);
+                Assert.That(lc001?.Uplink?.Version,                                Is.EqualTo(6));
+                Assert.That(lc001?.Uplink?.Pins,                                   Is.EqualTo(new[] { Current }));
+                Assert.That(lc001?.Uplink?.Sent,                                   Is.EqualTo(At.AddMinutes(1)));
+                Assert.That(lc001?.Uplink?.Accepted,                               Is.True);
+
+                Assert.That(lc002?.Stations,                                       Is.Empty);
+                Assert.That(lc002?.Uplink?.LearnedKeyPin,                          Is.EqualTo(Next));
+                Assert.That(lc002?.Uplink?.OursWhenLearned,                        Is.Null);
+                Assert.That(lc002?.Uplink?.Accepted,                               Is.False);
+
+                Assert.That(reloaded.Get("lc003")?.Uplink,                         Is.Null);
+
+            });
+
+        }
+
+        #endregion
+
         #region TheVersionReported_IsKeptUntilAPinSetIsSent()
 
         /// <summary>

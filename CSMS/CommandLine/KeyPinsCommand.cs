@@ -19,6 +19,7 @@
 
 using System.Globalization;
 
+using org.GraphDefined.Vanaheimr.Hermod;
 using org.GraphDefined.Vanaheimr.CLI;
 
 using cloud.charging.open.protocols.WWCP.Node.Web;
@@ -66,7 +67,7 @@ namespace cloud.charging.open.CSMS.CommandLine
         /// </summary>
         public const String CommandName = "keyPins";
 
-        private static readonly String[] Verbs = [ "list", "show", "rollover", "confirm", "forget", "signer" ];
+        private static readonly String[] Verbs = [ "list", "show", "rollover", "confirm", "uplink", "forget", "signer" ];
 
         #endregion
 
@@ -102,6 +103,7 @@ namespace cloud.charging.open.CSMS.CommandLine
             var needs = verb switch {
                             "rollover"                                            => Permission.Edit(NodeResources.Certificates),
                             "confirm"                                             => Permission.Edit(NodeResources.Certificates),
+                            "uplink"                                              => Permission.Edit(NodeResources.Certificates),
                             "forget"                                              => Permission.Edit(NodeResources.Certificates),
                             "signer" when rest.Length > 1 && rest[1] == "create"  => Permission.Edit(NodeResources.Certificates),
                             _                                                     => Permission.Read(CSMSAccess.Stations)
@@ -115,6 +117,7 @@ namespace cloud.charging.open.CSMS.CommandLine
                        "show"     when rest.Length == 2                      => Show(rest[1]),
                        "rollover" when rest.Length is 2 or 3                 => await Rollover(rest[1], rest.Length == 3 ? rest[2] : null, CancellationToken),
                        "confirm"  when rest.Length == 2                      => await Confirm(rest[1], CancellationToken),
+                       "uplink"   when rest.Length is 2 or 3                 => await Uplink(rest[1], rest.Length == 3 ? rest[2] : null, CancellationToken),
                        "forget"   when rest.Length == 2                      => Forget(rest[1]),
                        "signer"   when rest.Length == 1                      => Signer(),
                        "signer"   when rest.Length == 2 && rest[1] == "create" => CreateSigner(),
@@ -129,8 +132,9 @@ namespace cloud.charging.open.CSMS.CommandLine
 
         public override String Help()
 
-            => $"{CommandName} [list | show <controller> | rollover <controller> [grace] | confirm <station|controller> | forget <station> | signer [create]] - " +
-                "the key pins of the stations behind the local controllers, and the key their pin sets are signed with";
+            => $"{CommandName} [list | show <controller> | rollover <controller> [grace] | confirm <station|controller> | uplink <controller> [<pin>[,<pin>...]] | " +
+                "forget <station> | signer [create]] - the key pins of the stations behind the local controllers and of the local controllers' own lines " +
+                "to this CSMS, and the key their pin sets are signed with";
 
         #endregion
 
@@ -148,6 +152,10 @@ namespace cloud.charging.open.CSMS.CommandLine
             if (lines.Count == 0)
                 lines.Add("No charging station is known behind a local controller. A station is, once its BootNotification came through " +
                           "its controller, with the controller dialling this CSMS in the overlay network.");
+
+            lines.Add(cli.CSMS.ServerKeyPins() is { Count: > 0 } own
+                          ? $"This CSMS presents the key pin {String.Join(", ", own.Select(pin => pin.ToHex()))} at its charging station port."
+                          : "This CSMS presents no key of its own at its charging station port: it is not encrypted here.");
 
             lines.Add(SignerLine());
 
@@ -178,6 +186,22 @@ namespace cloud.charging.open.CSMS.CommandLine
                              ? $"  key pins read {read.ToLocalTime():yyyy-MM-dd HH:mm:ss}: current {Controller.CurrentKeyPin ?? "-"}, next {Controller.NextKeyPin ?? "none announced"}" +
                                (Controller.KeyCreated is DateTimeOffset created ? $", current key made {created.ToLocalTime():yyyy-MM-dd}" : "")
                              : "  key pins not read yet";
+
+            if (Controller.Uplink is LocalControllerUplink uplink)
+                yield return $"  its own line to this CSMS, endpoint '{uplink.Endpoint ?? "?"}': " +
+                             (uplink.LearnedKeyPin is not null
+                                  ? $"{uplink.State ?? "?"} - key pin {uplink.LearnedKeyPin} learned on first use" +
+                                    (uplink.OursWhenLearned switch {
+                                         true   => ", which is this CSMS's",
+                                         false  => ", which is NOT this CSMS's",
+                                         _      => ", and this CSMS presents no key of its own to compare it with"
+                                     })
+                                  : uplink.State ?? "nothing reported") +
+                             (uplink.Sent is DateTimeOffset uplinkSent
+                                  ? $"; {(uplink.Accepted ? "took" : "did not take")} [{String.Join(", ", uplink.Pins ?? [])}] of version " +
+                                    $"{uplink.Version?.ToString(CultureInfo.InvariantCulture) ?? "?"} on {uplinkSent.ToLocalTime():yyyy-MM-dd HH:mm:ss}" +
+                                    (uplink.Accepted ? "" : $": {uplink.Answer}")
+                                  : "; no pin set sent yet");
 
             foreach (var station in Controller.Stations ?? [])
                 yield return $"  {station.Station}: " +
@@ -264,6 +288,48 @@ namespace cloud.charging.open.CSMS.CommandLine
                                 cli.Caller.Tags("ocpp", "keypins", "security"));
 
             var run = await cli.CSMS.ConfirmAsync(Target, CancellationToken: CancellationToken);
+
+            return [ .. run.Said ];
+
+        }
+
+        #endregion
+
+        #region (private) Uplink(LocalController, Pins, CancellationToken)
+
+        private async Task<String[]> Uplink(String             LocalController,
+                                            String?            Pins,
+                                            CancellationToken  CancellationToken)
+        {
+
+            List<KeyPin>? pins = null;
+
+            if (Pins is not null)
+            {
+
+                pins = [];
+
+                foreach (var text in Pins.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
+                {
+
+                    if (!KeyPin.TryParse(text, out var pin))
+                        return [ $"'{text}' is no key pin: the SHA-256 of a public key, as 64 hexadecimal digits." ];
+
+                    pins.Add(pin);
+
+                }
+
+                if (pins.Count == 0)
+                    return [ $"Usage: {Help()}" ];
+
+            }
+
+            cli.Node.Log.Notice($"{cli.Caller.Asker} hands the local controller '{LocalController}' " +
+                                (pins is null ? "this CSMS's key pins" : $"the key pins {String.Join(", ", pins.Select(pin => pin.ToHex()))}") +
+                                " for its own line to this CSMS.",
+                                cli.Caller.Tags("ocpp", "keypins", "security"));
+
+            var run = await cli.CSMS.ConfirmUplinkAsync(LocalController, pins, CancellationToken: CancellationToken);
 
             return [ .. run.Said ];
 

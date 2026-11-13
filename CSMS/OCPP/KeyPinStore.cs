@@ -97,6 +97,91 @@ namespace cloud.charging.open.CSMS.OCPP
 
 
     /// <summary>
+    /// A Local Controller's own line to this CSMS: the key pin it learned of this CSMS's server on first use,
+    /// what came of it, and the pin set this CSMS last handed it for that endpoint.
+    /// </summary>
+    /// <param name="Endpoint">The instance of the controller's TLSClientController that is its endpoint to this CSMS.</param>
+    /// <param name="URL">Where it dials, as its event said it.</param>
+    /// <param name="LearnedKeyPin">The key pin it learned on first use, in hexadecimal.</param>
+    /// <param name="Reported">When it last reported on that key pin.</param>
+    /// <param name="State">What it last reported: Learned, Confirmed, Rejected, Expired or Mismatch.</param>
+    /// <param name="OursWhenLearned">Whether the key pin it learned was one of this CSMS's own when it was reported; null where this CSMS presents no key itself.</param>
+    /// <param name="Version">The version of the pin set last sent.</param>
+    /// <param name="Pins">The key pins of the pin set last sent, in hexadecimal.</param>
+    /// <param name="Sent">When it was sent.</param>
+    /// <param name="Answer">What the controller answered.</param>
+    /// <param name="Accepted">Whether it took the pin set.</param>
+    public sealed record LocalControllerUplink(String?                Endpoint          = null,
+                                               String?                URL               = null,
+                                               String?                LearnedKeyPin     = null,
+                                               DateTimeOffset?        Reported          = null,
+                                               String?                State             = null,
+                                               Boolean?               OursWhenLearned   = null,
+                                               UInt64?                Version           = null,
+                                               IReadOnlyList<String>? Pins              = null,
+                                               DateTimeOffset?        Sent              = null,
+                                               String?                Answer            = null,
+                                               Boolean                Accepted          = false)
+    {
+
+        public const String Learned    = "Learned";
+        public const String Confirmed  = "Confirmed";
+        public const String Rejected   = "Rejected";
+        public const String Expired    = "Expired";
+        public const String Mismatch   = "Mismatch";
+
+        public JObject ToJSON()
+
+            => new (
+                   new JProperty("endpoint",         Endpoint),
+                   new JProperty("url",              URL),
+                   new JProperty("learnedKeyPin",    LearnedKeyPin),
+                   new JProperty("reported",         Reported?.ToUniversalTime().ToString("o")),
+                   new JProperty("state",            State),
+                   new JProperty("oursWhenLearned",  OursWhenLearned),
+                   new JProperty("version",          Version),
+                   new JProperty("pins",             new JArray(Pins ?? [])),
+                   new JProperty("sent",             Sent?.ToUniversalTime().ToString("o")),
+                   new JProperty("answer",           Answer),
+                   new JProperty("accepted",         Accepted)
+               );
+
+        public static LocalControllerUplink? TryParse(JToken? JSON)
+        {
+            try
+            {
+
+                if (JSON is not JObject)
+                    return null;
+
+                static String? Text(JToken? token)
+                    => token?.Type == JTokenType.String ? token.Value<String>() : null;
+
+                return new LocalControllerUplink(
+                           Text(JSON["endpoint"]),
+                           Text(JSON["url"]),
+                           Text(JSON["learnedKeyPin"]),
+                           KeyPinStore.ParseTime(JSON["reported"]),
+                           Text(JSON["state"]),
+                           JSON["oursWhenLearned"]?.Type == JTokenType.Boolean ? JSON["oursWhenLearned"]!.Value<Boolean>() : null,
+                           JSON["version"]?.Type == JTokenType.Integer ? JSON["version"]!.Value<UInt64>() : null,
+                           [.. (JSON["pins"] as JArray ?? []).Where(pin => pin.Type == JTokenType.String).Select(pin => pin.Value<String>()!)],
+                           KeyPinStore.ParseTime(JSON["sent"]),
+                           Text(JSON["answer"]),
+                           JSON["accepted"]?.Type == JTokenType.Boolean && JSON["accepted"]!.Value<Boolean>()
+                       );
+
+            }
+            catch (Exception e) when (e is FormatException or InvalidCastException or ArgumentException or OverflowException)
+            {
+                return null;
+            }
+        }
+
+    }
+
+
+    /// <summary>
     /// A Local Controller this CSMS knows charging stations behind, the key pins it last read of it, and those
     /// stations.
     /// </summary>
@@ -106,12 +191,14 @@ namespace cloud.charging.open.CSMS.OCPP
     /// <param name="KeyCreated">When its current key was made, as last read.</param>
     /// <param name="Read">When the pins were last read; null where they never were.</param>
     /// <param name="Stations">The charging stations behind it.</param>
+    /// <param name="Uplink">Its own line to this CSMS, where it reported a key pin of it; null where it never did.</param>
     public sealed record LocalControllerKeyPins(String                        LocalController,
                                                 String?                       CurrentKeyPin   = null,
                                                 String?                       NextKeyPin      = null,
                                                 DateTimeOffset?               KeyCreated      = null,
                                                 DateTimeOffset?               Read            = null,
-                                                IReadOnlyList<StationPinSet>? Stations        = null)
+                                                IReadOnlyList<StationPinSet>? Stations        = null,
+                                                LocalControllerUplink?        Uplink          = null)
     {
 
         /// <summary>
@@ -130,7 +217,8 @@ namespace cloud.charging.open.CSMS.OCPP
                    new JProperty("nextKeyPin",       NextKeyPin),
                    new JProperty("keyCreated",       KeyCreated?.ToUniversalTime().ToString("o")),
                    new JProperty("read",             Read?.ToUniversalTime().ToString("o")),
-                   new JProperty("stations",         new JArray((Stations ?? []).Select(station => station.ToJSON())))
+                   new JProperty("stations",         new JArray((Stations ?? []).Select(station => station.ToJSON()))),
+                   new JProperty("uplink",           Uplink?.ToJSON())
                );
 
         public static LocalControllerKeyPins? TryParse(JToken JSON)
@@ -149,7 +237,8 @@ namespace cloud.charging.open.CSMS.OCPP
                            JSON["nextKeyPin"]?.   Type == JTokenType.String ? JSON["nextKeyPin"]!.   Value<String>() : null,
                            KeyPinStore.ParseTime(JSON["keyCreated"]),
                            KeyPinStore.ParseTime(JSON["read"]),
-                           [.. (JSON["stations"] as JArray ?? []).Select(StationPinSet.TryParse).OfType<StationPinSet>()]
+                           [.. (JSON["stations"] as JArray ?? []).Select(StationPinSet.TryParse).OfType<StationPinSet>()],
+                           LocalControllerUplink.TryParse(JSON["uplink"])
                        );
 
             }
@@ -425,6 +514,35 @@ namespace cloud.charging.open.CSMS.OCPP
                                                    NextKeyPin     = NextKeyPin,
                                                    KeyCreated     = KeyCreated,
                                                    Read           = At
+                                               };
+
+                Save();
+
+            }
+
+        }
+
+        #endregion
+
+        #region NoteUplink(LocalController, Change)
+
+        /// <summary>
+        /// What is known of a Local Controller's own line to this CSMS, changed - the controller noted where
+        /// it was not known yet.
+        /// </summary>
+        public void NoteUplink(String                                               LocalController,
+                               Func<LocalControllerUplink, LocalControllerUplink>  Change)
+        {
+
+            lock (updateLock)
+            {
+
+                var known = controllers.TryGetValue(LocalController, out var controller)
+                                ? controller
+                                : new LocalControllerKeyPins(LocalController, Stations: []);
+
+                controllers[LocalController] = known with {
+                                                   Uplink = Change(known.Uplink ?? new LocalControllerUplink())
                                                };
 
                 Save();
