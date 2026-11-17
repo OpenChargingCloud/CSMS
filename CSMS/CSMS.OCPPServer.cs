@@ -1400,6 +1400,7 @@ namespace cloud.charging.open.CSMS
                     new JProperty("tls",                     ocppServerTLS),
                     new JProperty("url",                     OCPPServerURL),
                     new JProperty("connections",             ocppWebSocketServer?.WebSocketConnections.Count() ?? 0),
+                    new JProperty("dialled",                 DialledNodes.Count),
                     new JProperty("stationLogins",           StationLogins.EnabledCount),
                     new JProperty("trustedChains",           ClientTrust.EnabledCount),
                     new JProperty("hasCertificate",          ServerCertificates.HasCertificate),

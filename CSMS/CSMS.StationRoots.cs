@@ -45,13 +45,15 @@ namespace cloud.charging.open.CSMS
     /// <param name="FramesOut">How many went to it.</param>
     /// <param name="LastIn">When the last came.</param>
     /// <param name="LastOut">When the last went.</param>
+    /// <param name="Dialled">Whether this CSMS dialled it, at the address <paramref name="From"/> says.</param>
     public sealed record StationConnection(String           Station,
                                            Boolean          OverSSH,
                                            String?          From,
                                            UInt64?          FramesIn,
                                            UInt64?          FramesOut,
                                            DateTimeOffset?  LastIn,
-                                           DateTimeOffset?  LastOut);
+                                           DateTimeOffset?  LastOut,
+                                           Boolean          Dialled   = false);
 
     /// <summary>
     /// A certificate a charging station says it has, as GetInstalledCertificateIds
@@ -228,6 +230,7 @@ namespace cloud.charging.open.CSMS
 
             => [.. (ocppWebSocketServer?.WebSocketConnections.Select(StationOn).OfType<String>() ?? []).
                    Concat(ocppOverSSHServed ? (ocppSshServer?.ConnectedNetworkingNodeIds.Select(id => id.ToString()) ?? []) : []).
+                   Concat(DialledNodes.Select(connection => connection.RemoteNodeId!)).
                    Where(station => station.Length > 0).
                    Distinct().
                    Order(StringComparer.OrdinalIgnoreCase)];
@@ -270,6 +273,21 @@ namespace cloud.charging.open.CSMS
                                             LastIn:     null,
                                             LastOut:    null
                                         ));
+
+                // And the ones this CSMS dialled itself: at their address,
+                // which is where they are, and no more is said of them here -
+                // how each is doing is on the page of the connections.
+                foreach (var dialled in DialledNodes)
+                    connections.Add(new StationConnection(
+                                        Station:    dialled.RemoteNodeId!,
+                                        OverSSH:    false,
+                                        From:       dialled.URL.ToString(),
+                                        FramesIn:   null,
+                                        FramesOut:  null,
+                                        LastIn:     null,
+                                        LastOut:    null,
+                                        Dialled:    true
+                                    ));
 
                 return [.. connections.OrderBy(connection => connection.Station, StringComparer.OrdinalIgnoreCase)];
 

@@ -523,6 +523,60 @@ Behind it, `/api/v1/key-pins`:
 Reading is at the stations' permission; a pin set, a rollover, forgetting where
 a station is and the signing key at the certificates'.
 
+### Stations and local controllers the CSMS dials
+
+A charging station or a local controller that cannot dial the CSMS - behind a
+firewall that lets nothing out, on a network only the back end reaches - is
+dialled by it. OCPP stays as it is; only who opens the WebSocket is the other
+way round: the station tells the CSMS that it started, and the CSMS asks. A
+ChargingStationCLI and a LocalControllerCLI serve OCPP for that, where a
+connection is written down there with **The other end dials** ticked.
+
+What the CSMS dials is written down on the **Connections** page, which is the
+page a charging station and a local controller write their own connections
+down on, with the same store beside the configuration file
+(`ocpp-connections/`), the same credentials on its tab **Credentials**, the
+same client identities, key pins and connection test - and the same routes,
+at the stations' permission: `GET` and `POST /api/v1/configuration/connections`,
+`.../update`, `.../remove`, `.../test`, `/api/v1/configuration/authentications`
+and `GET /api/v1/status/connections`. What is different for a CSMS:
+
+- a connection leads to a **charging station** or a **local controller**, and
+  says **which node is there** (`"remoteNodeId"`): the name the CSMS speaks to
+  it by, as a station that dials is known by the last part of its URL. The URL
+  of a connection ends with the name the CSMS comes under at the other end -
+  `wss://station7.example.org:9443/csms-01` - and that is the login of the
+  credentials it signs in with, too;
+- a local controller is dialled in the overlay network
+  (`X-OCPP-NetworkingMode: OverlayNetwork`), so that the stations behind it are
+  reached through it, a charging station in the plain frame of OCPP. In the
+  overlay network a controller sends an answer to the node that asked, by its
+  name, and knows the CSMS by the name it came under. A controller of today
+  learns the name it is asked with as well; an older one does not, and what
+  the CSMS asks it then runs into its timeout. So the URL of a connection to a
+  local controller should end with the name the CSMS has in OCPP
+  (`"ocpp": { "nodeId": ... }`): one that ends otherwise is dialled all the
+  same, and warned of, in the log and with how the connection stands;
+- it is dialled over `ws://` and `wss://` and in OCPP 2.1 alone, and nothing
+  is written down here that dials the CSMS: that is what the logins are for;
+- the certificate a dialled node shows is judged for the use `stations` of the
+  certificate store - a TLS root kept for it - or by the key pins of the
+  connection.
+
+**A node that is dialled is a login all the same.** The name a connection
+leads to is a login under Logins and groups: where it is switched off, where a
+local controller is marked as one - and so may send in the name of the stations
+behind it, over a line the CSMS dialled as over one that was dialled in - and
+where its group says what it may do. A connection to a login that is switched
+off, or that says a local controller is there where the login says a station
+(or the other way round), is not dialled, and its state on the page says why;
+a login switched off while its connection is up is let go of. `connections` on
+the command line lists what was dialled beside what dialled in. The OCPP
+messages over a line the CSMS dialled are logged as the ones of a station that
+dialled in are, under the name the connection leads to and by the same
+switches: `messages` and the window for their contents, in the `logging` of the
+`ocppServer` section.
+
 
 ## Running it
 

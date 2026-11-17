@@ -68,7 +68,7 @@ namespace cloud.charging.open.CSMS
             AddHandler(root + "/confirm/{node}",                            PostConfirm,             HTTPMethod.POST);
             AddHandler(root + "/stations/{station}",                        DeleteStationBehind,     HTTPMethod.DELETE);
             AddHandler(root + "/signer",                                    GetPinSetSigner,         HTTPMethod.GET);
-            AddHandler(root + "/signer",                                    PostPinSetSigner,        HTTPMethod.POST);
+            AddHandler(root + "/signer",                                    PostStationPinSetSigner,        HTTPMethod.POST);
 
         }
 
@@ -260,7 +260,7 @@ namespace cloud.charging.open.CSMS
 
         #endregion
 
-        #region (private) GetPinSetSigner(Request) / PostPinSetSigner(Request)
+        #region (private) GetPinSetSigner(Request) / PostStationPinSetSigner(Request)
 
         /// <summary>
         /// GET /api/v1/key-pins/signer.
@@ -278,7 +278,7 @@ namespace cloud.charging.open.CSMS
         /// <summary>
         /// POST /api/v1/key-pins/signer: 201 with the public key; 409 where there is a key already.
         /// </summary>
-        private Task<HTTPResponse> PostPinSetSigner(HTTPRequest Request)
+        private Task<HTTPResponse> PostStationPinSetSigner(HTTPRequest Request)
         {
 
             if (!TryAuthorize(Request, Permission.Edit(NodeResources.Certificates), true, out var user, out var refused))

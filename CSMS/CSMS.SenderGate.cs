@@ -87,9 +87,16 @@ namespace cloud.charging.open.CSMS
                                   NetworkPath         Path)
         {
 
-            // What this CSMS dialled itself is not a station's.
-            if (Connection.Role != ConnectionRole.Server)
+            // What this CSMS dialled is a station's or a local controller's
+            // where it is written down as a connection, and is held to what
+            // one that dialled in is held to: by the name the connection
+            // leads to, which is a login as theirs are. Whatever else this
+            // CSMS dialled is not a station's.
+            if (Connection.Role != ConnectionRole.Server &&
+                !(Node is NetworkingNode_Id dialledNode && IsDialled(dialledNode.ToString())))
+            {
                 return null;
+            }
 
             if (Node is not NetworkingNode_Id node || node == NetworkingNode_Id.Zero)
                 return "it came over a connection this CSMS knows no node of.";

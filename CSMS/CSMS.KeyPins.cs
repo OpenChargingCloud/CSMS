@@ -582,9 +582,11 @@ namespace cloud.charging.open.CSMS
         /// </summary>
         public Boolean InOverlayNetwork(String Node)
 
-            => ocppWebSocketServer?.WebSocketConnections.Any(connection => StationOn(connection) == Node &&
-                                                                           connection.TryGetCustomDataAs<NetworkingMode>(WebSocketKeys.NetworkingMode, out var mode) &&
-                                                                           mode == NetworkingMode.OverlayNetwork) ?? false;
+            => (ocppWebSocketServer?.WebSocketConnections.Any(connection => StationOn(connection) == Node &&
+                                                                            connection.TryGetCustomDataAs<NetworkingMode>(WebSocketKeys.NetworkingMode, out var mode) &&
+                                                                            mode == NetworkingMode.OverlayNetwork) ?? false) ||
+               // One this CSMS dialled itself, as a local controller.
+               DialledAs(Node) is { ConnectionType: protocols.OCPP.Node.Connections.ConnectionType.LocalController };
 
         #endregion
 

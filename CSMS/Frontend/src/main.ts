@@ -21,6 +21,18 @@ import { partnersPage }           from './pages/partners';
 import { locationsPage }          from './pages/locations';
 import { roamingDataPages }       from './pages/roamingData';
 
+import { connectionsPage }        from '@ocpp/pages/connections';
+import { setConnectionsResource, setNodeNoun, setNodeTraits } from '@ocpp/settings';
+
+// The charging stations and local controllers this CSMS dials - the ones that
+// cannot dial it - are connections, drawn by the pages a charging station
+// draws its own with. Here whoever may read or change the charging stations
+// may read or change them; the pages speak of a CSMS, which is one OCPP node,
+// is dialled itself, by its charging stations, and dials what is below it.
+setConnectionsResource('stations');
+setNodeNoun('CSMS');
+setNodeTraits({ oneNodePerOCPPVersion: false, isDialled: true, dialsDown: true });
+
 // What a CSMS has pages for beside what every node has: the server its
 // charging stations connect to, and its side of OCPI - who it is to its
 // roaming partners, the partners, the locations it publishes and what travels
@@ -41,6 +53,11 @@ startNode({
             nodeMenu.identities,
             { path: '/configuration/ocpp-server',               label: 'Charging stations',   icon: 'fa-charging-station',  permission: [ 'stations:read' ]     },
             { path: '/configuration/ocpp-server/logins',        label: 'Logins and groups',   icon: 'fa-users-gear',        permission: [ 'stations:read' ]     },
+            // The charging stations and local controllers this CSMS dials
+            // and, on a tab of the same page, what it signs in with there.
+            // The keys and certificates it holds up have no page here: they
+            // are TLS identities of the certificate store, on Identities.
+            { path: '/configuration/connections',               label: 'Connections',         icon: 'fa-network-wired',     permission: [ 'stations:read' ]     },
             { path: '/configuration/ocpp-server/certificates',  label: 'Server certificates', icon: 'fa-certificate',       permission: [ 'certificates:read' ] },
             { path: '/configuration/ocpp-server/trust',         label: 'Accepted chains',     icon: 'fa-user-shield',       permission: [ 'certificates:read' ] },
             { path: '/configuration/ocpp-server/signing',       label: 'Certificate signing', icon: 'fa-file-signature',    permission: [ 'stations:read' ]     },
@@ -105,6 +122,8 @@ startNode({
         '/configuration/ocpp-server/trust':         clientTrustPage,
         '/configuration/ocpp-server/signing':       certificateSigningPage,
         '/configuration/ocpp-server/roots':         stationRootsPage,
+
+        '/configuration/connections':               connectionsPage,
 
         '/configuration/ocpi':                      ocpiPage,
         '/configuration/ocpi/partners':             partnersPage,

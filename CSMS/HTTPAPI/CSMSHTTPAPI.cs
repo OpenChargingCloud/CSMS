@@ -24,6 +24,8 @@ using org.GraphDefined.Vanaheimr.Hermod.HTTP;
 using cloud.charging.open.protocols.WWCP.Node.Logging;
 using cloud.charging.open.protocols.WWCP.Node.Web;
 
+using cloud.charging.open.protocols.OCPP.Node;
+
 #endregion
 
 namespace cloud.charging.open.CSMS
@@ -42,7 +44,7 @@ namespace cloud.charging.open.CSMS
     /// What is left here is registered on top: see CSMSHTTPAPI.OCPPServer.cs
     /// and CSMSHTTPAPI.OCPI.cs.
     /// </remarks>
-    public partial class CSMSHTTPAPI : NodeHTTPAPI
+    public partial class CSMSHTTPAPI : OCPPDiallingHTTPAPI
     {
 
         #region Properties
@@ -76,6 +78,9 @@ namespace cloud.charging.open.CSMS
                    CSMS,
                    ExtAPI,
                    Log,
+                   // Whoever may read, change or operate the charging
+                   // stations may read, change or test what dials them.
+                   CSMSAccess.Stations,
                    APIPath,
                    Version ?? typeof(CSMSHTTPAPI).Assembly.GetName().Version?.ToString(3) ?? "0.0.0")
 

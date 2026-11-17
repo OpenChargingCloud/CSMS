@@ -179,10 +179,10 @@ namespace cloud.charging.open.CSMS.Tests
                 // and nothing else - not the roots of ISO 15118, and not an
                 // identity, since a CSMS names no listener one could be shown
                 // on.
-                Assert.That(store["usages"]!.Values<String>(),                                  Is.EqualTo(new[] { "dns", "nts" }), "what a page may offer");
+                Assert.That(store["usages"]!.Values<String>(),                                  Is.EqualTo(new[] { "dns", "nts", "stations" }), "what a page may offer");
                 Assert.That(store["kinds"]!["tlsRoot"]!["hasUsages"]!.Value<Boolean>(),         Is.True);
-                Assert.That(store["kinds"]!["tlsRoot"]!["usages"]!.Values<String>(),            Is.EqualTo(new[] { "dns", "nts" }), "what a page may offer a root");
-                Assert.That(store["kinds"]!["tlsServer"]!["usages"]!.Values<String>(),          Is.EqualTo(new[] { "dns", "nts" }));
+                Assert.That(store["kinds"]!["tlsRoot"]!["usages"]!.Values<String>(),            Is.EqualTo(new[] { "dns", "nts", "stations" }), "what a page may offer a root");
+                Assert.That(store["kinds"]!["tlsServer"]!["usages"]!.Values<String>(),          Is.EqualTo(new[] { "dns", "nts", "stations" }));
                 Assert.That(store["kinds"]!["v2gRoot"]!["usages"]!.Children().Any(),            Is.False);
                 Assert.That(store["kinds"]!["tlsIdentity"]!["usages"]!.Children().Any(),        Is.False,
                             "a CSMS names no listener an identity could be told of, so a page offers it nothing - not the services a root vouches for");

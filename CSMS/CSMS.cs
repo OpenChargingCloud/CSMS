@@ -34,6 +34,8 @@ using cloud.charging.open.protocols.WWCP.Node.Configuration;
 using cloud.charging.open.protocols.WWCP.Node.Logging;
 using cloud.charging.open.protocols.WWCP.Node.SecureShell;
 
+using cloud.charging.open.protocols.OCPP.Node;
+
 using OCPPv2_1_CSMS = cloud.charging.open.protocols.OCPPv2_1.CSMS;
 
 using cloud.charging.open.CSMS.Configuration;
@@ -70,7 +72,7 @@ namespace cloud.charging.open.CSMS
     /// stations, the OCPI endpoints its roaming partners call, and the OCPP
     /// node it speaks through.
     /// </remarks>
-    public partial class CSMS : WWCPNode
+    public partial class CSMS : OCPPDiallingNode
     {
 
         #region Data
@@ -308,6 +310,7 @@ namespace cloud.charging.open.CSMS
 
                    CertificatesPath:  CertificatesPath,
                    CertificateKinds:  CertificateKinds,
+                   CertificateUsages: [ StationsCertificateUsage ],
 
                    Log:               Log,
                    LogToConsole:      LogToConsole,
@@ -414,6 +417,15 @@ namespace cloud.charging.open.CSMS
 
             #endregion
 
+            #region The charging stations and local controllers this CSMS dials
+
+            // After the logins of the charging stations, because a node that
+            // is dialled is one of them. Nothing is dialled yet: OnStarted
+            // does, once everything else is up.
+            BuildConnectionStores();
+
+            #endregion
+
             #region The OCPI endpoints the roaming partners call
 
             // After the HTTPExt API, because they hang off it, and after the
@@ -491,7 +503,9 @@ namespace cloud.charging.open.CSMS
                         $"{RemotePartyCount} partner(s), {LocationCount} location(s)).",
                         "ocpi");
 
-            return Task.CompletedTask;
+            // The charging stations and local controllers that cannot dial
+            // this CSMS: dialled once it is up, and not waited for.
+            return DialTheNodesBelow();
 
         }
 
@@ -521,6 +535,7 @@ namespace cloud.charging.open.CSMS
             }
             finally
             {
+                await HangUpOnTheNodesBelow();
                 await StopOCPPServer();
             }
 
