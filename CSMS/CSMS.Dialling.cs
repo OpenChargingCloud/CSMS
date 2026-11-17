@@ -29,9 +29,9 @@ using cloud.charging.open.protocols.WWCP.WebSockets;
 using cloud.charging.open.protocols.WWCP.Node.Certificates;
 
 using cloud.charging.open.protocols.OCPP.Node;
-using cloud.charging.open.protocols.OCPP.Node.Connections;
+using cloud.charging.open.protocols.WWCP.Node.Connections;
 
-using ConnectionType = cloud.charging.open.protocols.OCPP.Node.Connections.ConnectionType;
+using ConnectionType = cloud.charging.open.protocols.WWCP.Node.Connections.ConnectionType;
 
 using OCPPv1_6 = cloud.charging.open.protocols.OCPPv1_6;
 using OCPPv2_1 = cloud.charging.open.protocols.OCPPv2_1;

@@ -586,7 +586,7 @@ namespace cloud.charging.open.CSMS
                                                                             connection.TryGetCustomDataAs<NetworkingMode>(WebSocketKeys.NetworkingMode, out var mode) &&
                                                                             mode == NetworkingMode.OverlayNetwork) ?? false) ||
                // One this CSMS dialled itself, as a local controller.
-               DialledAs(Node) is { ConnectionType: protocols.OCPP.Node.Connections.ConnectionType.LocalController };
+               DialledAs(Node) is { ConnectionType: protocols.WWCP.Node.Connections.ConnectionType.LocalController };
 
         #endregion
 
