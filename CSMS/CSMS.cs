@@ -72,7 +72,7 @@ namespace cloud.charging.open.CSMS
     /// stations, the OCPI endpoints its roaming partners call, and the OCPP
     /// node it speaks through.
     /// </remarks>
-    public partial class CSMS : OCPPDiallingNode
+    public partial class CSMS : WWCPNode
     {
 
         #region Data
@@ -323,6 +323,10 @@ namespace cloud.charging.open.CSMS
                    Web:               Web)
 
         {
+
+            // OCPP is what its connections speak, before anything of them is
+            // asked: its OCPP nodes are asked for whenever they are needed.
+            Dialling = new OCPPDialling(this, () => Node16, () => Node21);
 
             // "this." throughout, and not for tidiness: the parameters of this
             // constructor shadow the properties of the same name, and a

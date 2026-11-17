@@ -52,7 +52,7 @@ namespace cloud.charging.open.CSMS
     /// OCPP stays as it is; only who opens the WebSocket is the other way
     /// round. What is dialled is written down as a connection, kept, dialled,
     /// followed and dialled again by what a charging station and a local
-    /// controller dial their CSMS with (<see cref="OCPPDiallingNode"/>): the
+    /// controller dial their CSMS with (<see cref="WWCPNode"/>, over OCPP: <see cref="OCPPDialling"/>): the
     /// same store beside the configuration file, the same credentials and
     /// client identities, the same key pins and the same page.
     /// </para>
@@ -113,18 +113,35 @@ namespace cloud.charging.open.CSMS
 
         #endregion
 
+        #region OCPPDialling / Nodes
+
+        /// <summary>
+        /// What OCPP says of the connections of this node.
+        /// </summary>
+        public OCPPDialling OCPPDialling
+            => (OCPPDialling) Dialling;
+
+        /// <summary>
+        /// The OCPP nodes this one has: the one for OCPP 2.1, and before it
+        /// the one for OCPP 1.6 where it speaks that.
+        /// </summary>
+        protected IEnumerable<cloud.charging.open.protocols.OCPP.NetworkingNode.AOCPPNetworkingNode> Nodes
+            => OCPPDialling.Nodes;
+
+        #endregion
+
         #region Node16 / Node21
 
         /// <summary>
         /// A CSMS dials in OCPP 2.1 alone.
         /// </summary>
-        protected override OCPPv1_6.NetworkingNode.AOCPPNetworkingNode? Node16
+        protected OCPPv1_6.NetworkingNode.AOCPPNetworkingNode? Node16
             => null;
 
         /// <summary>
         /// The node that speaks OCPP 2.1 for this CSMS.
         /// </summary>
-        protected override OCPPv2_1.NetworkingNode.AOCPPNetworkingNode Node21
+        protected OCPPv2_1.NetworkingNode.AOCPPNetworkingNode Node21
             => csms01;
 
         #endregion
@@ -171,7 +188,7 @@ namespace cloud.charging.open.CSMS
                           };
 
             keyPinning       = NewKeyPinning();
-            tlsClientSource  = NewTLSClientSource();
+            OCPPDialling.MakeTLSClientSource();
 
             Connections.KnownCertificateIds     = () => Certificates.ByKind(CertificateKind.TLSIdentity).Select(entry => entry.Id);
             Connections.OnNotice               += (level, message) => Log.Log(level, message, "ocpp", "connections");
