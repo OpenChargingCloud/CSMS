@@ -575,7 +575,8 @@ local controller or a gateway is marked as one - and so may send in the name of 
 behind it, over a line the CSMS dialled as over one that was dialled in - and
 where its group says what it may do. A connection to a login that is switched
 off, or that says a local controller is there where the login says a station
-or a gateway (or any other two of them), is not dialled, and its state on the page says why;
+or a gateway (or any other two of them), is not connected: nothing is tried,
+and its state on the page says "not connected" and why;
 a login switched off while its connection is up is let go of. `connections` on
 the command line lists what was dialled beside what dialled in. The OCPP
 messages over a line the CSMS dialled are logged as the ones of a station that

@@ -73,7 +73,7 @@ namespace cloud.charging.open.CSMS
     /// of the stations behind it - and where its group says what it may do.
     /// To this CSMS a gateway is what a local controller is: spoken to in the
     /// overlay network, with the stations behind it reached through it. A
-    /// connection to a login that is switched off is not dialled.
+    /// connection to a login that is switched off is not connected.
     /// </para>
     /// </remarks>
     public partial class CSMS
@@ -315,7 +315,7 @@ namespace cloud.charging.open.CSMS
                                                                    CancellationToken                                               CancellationToken)
         {
 
-            if (WhyNotDialled(Connection) is String why)
+            if (WhyNotConnected(Connection) is String why)
                 throw new InvalidOperationException(why);
 
             csms01.ReconnectPolicy ??= new WebSocketClientReconnectPolicy(
@@ -384,23 +384,36 @@ namespace cloud.charging.open.CSMS
 
         /// <summary>
         /// A connection is dialled on what the login of the node it leads to
-        /// says: changed, it is let go of and dialled again - or not dialled
+        /// says: changed, it is let go of and dialled again - or not connected
         /// any more.
         /// </summary>
         protected override String? WhatItIsDialledOn(ConnectionEntry Connection)
 
-            => WhyNotDialled(Connection) ?? "";
+            => WhyNotConnected(Connection) ?? "";
 
         #endregion
 
-        #region WhyNotDialled(Connection)
+        #region (protected override) WhyItIsNotConnected(Connection)
 
         /// <summary>
-        /// Why the given connection is not dialled although it is written
+        /// A connection is not connected where the login of the node it
+        /// leads to says against it: nothing of it is tried, and its state
+        /// says "not connected" and why.
+        /// </summary>
+        protected override String? WhyItIsNotConnected(ConnectionEntry Connection)
+
+            => WhyNotConnected(Connection);
+
+        #endregion
+
+        #region WhyNotConnected(Connection)
+
+        /// <summary>
+        /// Why the given connection is not connected although it is written
         /// down, or null where it is: what the login of the node it leads to
         /// says against it.
         /// </summary>
-        public String? WhyNotDialled(ConnectionEntry Connection)
+        public String? WhyNotConnected(ConnectionEntry Connection)
         {
 
             if (Connection.RemoteNodeId is not String node)

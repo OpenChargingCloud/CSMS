@@ -476,7 +476,7 @@ namespace cloud.charging.open.CSMS.Tests
 
             Assert.Multiple(() => {
 
-                Assert.That(CSMS.WhyNotDialled(CSMS.Connections.Connections.Single(one => one.Id == id)),  Is.Null);
+                Assert.That(CSMS.WhyNotConnected(CSMS.Connections.Connections.Single(one => one.Id == id)),  Is.Null);
                 Assert.That(CSMS.ConnectionStates[id!].Status,                                             Is.EqualTo(ConnectionStatus.Connected));
                 Assert.That(CSMS.ConnectionStates[id!].Said,                                               Does.StartWith("Connected"));
 
@@ -563,6 +563,8 @@ namespace cloud.charging.open.CSMS.Tests
 
             Assert.Multiple(() => {
                 Assert.That(dials,                           Is.Empty);
+                Assert.That(CSMS.ConnectionStates[id].Status, Is.EqualTo(ConnectionStatus.NotConnected));
+                Assert.That(CSMS.ConnectionStates[id].Said,  Does.StartWith("Not connected: "));
                 Assert.That(CSMS.ConnectionStates[id].Said,  Does.Contain("is not marked as one"));
             });
 
@@ -584,6 +586,7 @@ namespace cloud.charging.open.CSMS.Tests
 
             Assert.Multiple(() => {
                 Assert.That(dials,                           Is.Empty);
+                Assert.That(CSMS.ConnectionStates[id].Status, Is.EqualTo(ConnectionStatus.NotConnected));
                 Assert.That(CSMS.ConnectionStates[id].Said,  Does.Contain("is marked as a local controller"));
                 Assert.That(CSMS.ConnectionStates[id].Said,  Does.Contain("'gateways lc07 on'"));
             });
