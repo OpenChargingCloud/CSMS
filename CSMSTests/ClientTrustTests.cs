@@ -17,6 +17,8 @@
 
 #region Usings
 
+using System.Security.Cryptography.X509Certificates;
+
 using NUnit.Framework;
 
 using cloud.charging.open.CSMS.OCPP;
@@ -323,6 +325,116 @@ namespace cloud.charging.open.CSMS.Tests
                 Assert.That(result.AnchorId, Is.EqualTo(id));
                 Assert.That(store.Entries.Single().Intermediates.Count, Is.EqualTo(1));
             });
+
+        }
+
+        #endregion
+
+        #region AChainThroughAnIntermediateIsBuiltFromWhatTheStationSendsAlong()
+
+        /// <summary>
+        /// The other way round: only the root is accepted here, and the
+        /// station sends the certificate between itself and that root along,
+        /// as it is supposed to. That is enough to build the chain with.
+        /// </summary>
+        [Test]
+        public void AChainThroughAnIntermediateIsBuiltFromWhatTheStationSendsAlong()
+        {
+
+            using var ca      = TestCA.Create($"Some Charging Network {Guid.NewGuid().GetHashCode():x8}", WithIntermediate: true);
+
+            Assert.That(store.TryAdd(TestCA.ToPEM(ca.Certificate), "network", out var id, out _, out var error),
+                        Is.True, error);
+
+            using var station = ca.SignFor("cs001", clock.Now.AddDays(-1), clock.Now.AddYears(1));
+            using var sent    = SentAlong(station, ca.Intermediate!);
+
+            var result = store.Validate(station, sent, false);
+
+            Assert.Multiple(() => {
+                Assert.That(result.Accepted, Is.True, result.Reason);
+                Assert.That(result.AnchorId, Is.EqualTo(id));
+                Assert.That(store.Entries.Single().Intermediates, Is.Empty);
+            });
+
+        }
+
+        #endregion
+
+        #region TheRootAloneIsNotEnoughWhereTheStationSendsNothingAlong()
+
+        /// <summary>
+        /// The same station and the same root, with nothing sent along and
+        /// nothing kept here between them: there is no chain to build, and
+        /// the station is turned away.
+        /// </summary>
+        [Test]
+        public void TheRootAloneIsNotEnoughWhereTheStationSendsNothingAlong()
+        {
+
+            using var ca      = TestCA.Create($"Some Charging Network {Guid.NewGuid().GetHashCode():x8}", WithIntermediate: true);
+
+            Assert.That(store.TryAdd(TestCA.ToPEM(ca.Certificate), "network", out _, out _, out var error),
+                        Is.True, error);
+
+            using var station = ca.SignFor("cs001", clock.Now.AddDays(-1), clock.Now.AddYears(1));
+
+            Assert.That(store.Validate(station, null, false).Accepted, Is.False);
+
+        }
+
+        #endregion
+
+        #region WhatAStationSendsAlongIsNeverTrustedForItself()
+
+        /// <summary>
+        /// What a station sends along is material to build with, never
+        /// something that decides trust: a station of another network that
+        /// sends its whole chain, root and all, is still turned away.
+        /// </summary>
+        [Test]
+        public void WhatAStationSendsAlongIsNeverTrustedForItself()
+        {
+
+            using var ours    = TestCA.Create($"Our Charging Network {Guid.NewGuid().GetHashCode():x8}");
+            using var theirs  = TestCA.Create($"Somebody Else Entirely {Guid.NewGuid().GetHashCode():x8}", WithIntermediate: true);
+
+            Accept(ours, "ours");
+
+            using var station = theirs.SignFor("cs001", clock.Now.AddDays(-1), clock.Now.AddYears(1));
+            using var sent    = SentAlong(station, theirs.Intermediate!, theirs.Certificate);
+
+            Assert.That(store.Validate(station, sent, false).Accepted, Is.False);
+
+        }
+
+        #endregion
+
+        #region (private) SentAlong(Station, Certificates)
+
+        /// <summary>
+        /// The chain a server is handed for a station that sent these
+        /// certificates along with its own: built from them alone, trusting
+        /// none of them, so that what it holds is what was sent.
+        /// </summary>
+        private static X509Chain SentAlong(X509Certificate2 Station, params X509Certificate2[] Certificates)
+        {
+
+            var chain = new X509Chain();
+
+            chain.ChainPolicy.TrustMode       = X509ChainTrustMode.CustomRootTrust;
+            chain.ChainPolicy.RevocationMode  = X509RevocationMode.NoCheck;
+
+            foreach (var certificate in Certificates)
+                chain.ChainPolicy.ExtraStore.Add(certificate);
+
+            chain.Build(Station);
+
+            Assert.That(chain.ChainElements.Select(element => element.Certificate.Thumbprint),
+                        Is.SupersetOf(Certificates.Select(certificate => certificate.Thumbprint)),
+                        "the chain does not hold what the station sent along");
+
+            return chain;
 
         }
 

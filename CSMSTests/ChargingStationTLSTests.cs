@@ -306,6 +306,55 @@ namespace cloud.charging.open.CSMS.Tests
 
         #endregion
 
+        #region AStationThatSendsItsIntermediateAlongGetsInOnTheRootAlone()
+
+        /// <summary>
+        /// Only the root is accepted here, and the station sends the
+        /// certificate between itself and that root along, over the
+        /// handshake itself: it gets in.
+        /// </summary>
+        /// <remarks>
+        /// Proves the most under Linux. On Windows, .NET puts what a client
+        /// sends along into the user's store of intermediate authorities, so
+        /// the chain could be built from there as well.
+        /// </remarks>
+        [Test]
+        public async Task AStationThatSendsItsIntermediateAlongGetsInOnTheRootAlone()
+        {
+
+            Assert.That(CSMS.TryUpdateOCPPServerConfiguration(JObject.Parse("""{ "securityProfiles": [ 2, 3 ] }"""), out var error),
+                        Is.True, error);
+
+            Assert.That(CSMS.ClientTrust.TryAdd(TestCA.ToPEM(ca.Certificate), null, out _, out _, out var trustError),
+                        Is.True, trustError);
+
+            using var key         = System.Security.Cryptography.ECDsa.Create(System.Security.Cryptography.ECCurve.NamedCurves.nistP256);
+            var csr               = new CertificateRequest("CN=cs004", key, System.Security.Cryptography.HashAlgorithmName.SHA256).CreateSigningRequestPem();
+            using var signed      = ca.Sign(csr, DateTimeOffset.UtcNow.AddDays(-1), DateTimeOffset.UtcNow.AddYears(1), ClientAuthentication: true);
+            using var withKey     = signed.CopyWithPrivateKey(key);
+            using var certificate = X509CertificateLoader.LoadPkcs12(withKey.Export(X509ContentType.Pkcs12, "station"), "station", X509KeyStorageFlags.Exportable);
+
+            using var handler     = new SocketsHttpHandler {
+                                        SslOptions = new SslClientAuthenticationOptions {
+                                            ClientCertificateContext            = SslStreamCertificateContext.Create(certificate, [ ca.Intermediate! ], offline: true),
+                                            RemoteCertificateValidationCallback = (_, _, _, _) => true
+                                        }
+                                    };
+
+            using var invoker     = new HttpMessageInvoker(handler);
+            using var client      = new ClientWebSocket();
+            using var timeout     = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+
+            client.Options.AddSubProtocol("ocpp2.1");
+
+            await client.ConnectAsync(new Uri($"wss://127.0.0.1:{port}"), invoker, timeout.Token);
+
+            Assert.That(CSMS.IsConnected("cs004"), Is.True);
+
+        }
+
+        #endregion
+
         #region AStationGetsTheCertificateTheStoreChose()
 
         /// <summary>
