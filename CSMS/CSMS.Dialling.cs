@@ -42,7 +42,7 @@ namespace cloud.charging.open.CSMS
 {
 
     /// <summary>
-    /// The charging stations and local controllers this CSMS dials: the ones
+    /// The charging stations, local controllers and gateways this CSMS dials: the ones
     /// that cannot dial it - behind a firewall that lets nothing out, on a
     /// network only the back end reaches - and have an OCPP server of their
     /// own for it.
@@ -58,7 +58,7 @@ namespace cloud.charging.open.CSMS
     /// </para>
     /// <para>
     /// What is different is said here. What a CSMS dials is below it: a
-    /// charging station or a local controller, each of which it speaks to by
+    /// charging station, a local controller or a gateway, each of which it speaks to by
     /// its name - so a connection names the node at its other end, and is
     /// routed by that name and not as "the CSMS". It dials over ws:// and
     /// wss:// alone, in OCPP 2.1 alone, and writes down no connection the
@@ -69,8 +69,10 @@ namespace cloud.charging.open.CSMS
     /// <b>A node that is dialled is a login of this CSMS all the same.</b>
     /// The name a connection leads to is the name of a login under Logins and
     /// groups: that is where a station is switched off, where a local
-    /// controller is marked as one - and so may send in the name of the
-    /// stations behind it - and where its group says what it may do. A
+    /// controller or a gateway is marked as one - and so may send in the name
+    /// of the stations behind it - and where its group says what it may do.
+    /// To this CSMS a gateway is what a local controller is: spoken to in the
+    /// overlay network, with the stations behind it reached through it. A
     /// connection to a login that is switched off is not dialled.
     /// </para>
     /// </remarks>
@@ -285,13 +287,13 @@ namespace cloud.charging.open.CSMS
         #region (protected override) NetworkingModeOf(Connection)
 
         /// <summary>
-        /// A local controller is spoken to in the overlay network, so that
-        /// the charging stations behind it are reached through it; a charging
-        /// station in the plain frame of OCPP.
+        /// A local controller and a gateway are spoken to in the overlay
+        /// network, so that the charging stations behind them are reached
+        /// through them; a charging station in the plain frame of OCPP.
         /// </summary>
         protected override NetworkingMode? NetworkingModeOf(ConnectionEntry Connection)
 
-            => Connection.ConnectionType == ConnectionType.LocalController
+            => HasStationsBehind(Connection)
                    ? NetworkingMode.OverlayNetwork
                    : NetworkingMode.Standard;
 
@@ -410,14 +412,18 @@ namespace cloud.charging.open.CSMS
             if (!login.Enabled)
                 return $"the login '{node}' is switched off";
 
-            var asAController = Connection.ConnectionType == ConnectionType.LocalController;
+            var says  = WhatIsAt(Connection);
+            var isA   = login.Kind ?? "charging station";
 
-            if (asAController != login.LocalController)
-                return asAController
-                           ? $"the connection says a local controller is at its other end, and the login '{node}' is not marked as one: mark it, " +
-                             $"'localControllers {node} on', or say that a charging station is there"
-                           : $"the connection says a charging station is at its other end, and the login '{node}' is marked as a local controller: " +
-                              "say that a local controller is there, so that it is spoken to in the overlay network";
+            if (says != isA)
+                return Connection.ConnectionType switch {
+                           ConnectionType.LocalController => $"the connection says a local controller is at its other end, and the login '{node}' is {AsMarked(login.Kind)}: " +
+                                                             $"mark it, 'localControllers {node} on', or say that a {isA} is there",
+                           ConnectionType.Gateway         => $"the connection says a gateway is at its other end, and the login '{node}' is {AsMarked(login.Kind)}: " +
+                                                             $"mark it, 'gateways {node} on', or say that a {isA} is there",
+                           _                              => $"the connection says a charging station is at its other end, and the login '{node}' is marked as a {isA}: " +
+                                                             $"say that a {isA} is there, so that it is spoken to in the overlay network"
+                       };
 
             return null;
 
@@ -428,7 +434,7 @@ namespace cloud.charging.open.CSMS
         #region WhyItsAnswersMayBeLost(Connection)
 
         /// <summary>
-        /// What is to be known of a connection to a local controller whose
+        /// What is to be known of a connection to a local controller or a gateway whose
         /// URL ends with another name than the one this CSMS has in OCPP, or
         /// null: it is dialled all the same, and warned of.
         /// </summary>
@@ -445,15 +451,15 @@ namespace cloud.charging.open.CSMS
         /// <param name="Connection">A connection of this CSMS.</param>
         public String? WhyItsAnswersMayBeLost(ConnectionEntry Connection)
 
-            => Connection.ConnectionType == ConnectionType.LocalController &&
+            => HasStationsBehind(Connection) &&
                ConnectionEntry.InboundNameOf(Connection.URL) is String comesUnder &&
                comesUnder != csms01.Id.ToString()
 
-                   ? $"Its URL ends with '{comesUnder}', the name this CSMS comes under at the local controller, and this CSMS is " +
-                     $"'{csms01.Id}' in OCPP. A local controller that does not learn the name it is asked with sends its answers, " +
+                   ? $"Its URL ends with '{comesUnder}', the name this CSMS comes under at the {WhatIsAt(Connection)}, and this CSMS is " +
+                     $"'{csms01.Id}' in OCPP. A {WhatIsAt(Connection)} that does not learn the name it is asked with sends its answers, " +
                       "and the ones of the stations behind it, to a node it does not know: what this CSMS asks then runs into its " +
                       "timeout. Where that happens, make the two one - the name at the end of the URL, with the login it signs in " +
-                     $"with, or \"ocpp\": {{ \"nodeId\": \"{comesUnder}\" }} in the configuration file - or update the controller."
+                     $"with, or \"ocpp\": {{ \"nodeId\": \"{comesUnder}\" }} in the configuration file - or update the {WhatIsAt(Connection)}."
 
                    : null;
 
@@ -534,13 +540,30 @@ namespace cloud.charging.open.CSMS
 
         #endregion
 
-        #region (private static) WhatIsAt(Connection)
+        #region (private static) WhatIsAt(Connection) / HasStationsBehind(Connection) / AsMarked(Kind)
 
         private static String WhatIsAt(ConnectionEntry Connection)
 
-            => Connection.ConnectionType == ConnectionType.LocalController
-                   ? "local controller"
-                   : "charging station";
+            => Connection.ConnectionType switch {
+                   ConnectionType.LocalController => "local controller",
+                   ConnectionType.Gateway         => "gateway",
+                   _                              => "charging station"
+               };
+
+        /// <summary>
+        /// Whether a local controller or a gateway is at the other end of the
+        /// given connection: a node with charging stations behind it.
+        /// </summary>
+        private static Boolean HasStationsBehind(ConnectionEntry Connection)
+
+            => Connection.ConnectionType is ConnectionType.LocalController
+                                         or ConnectionType.Gateway;
+
+        private static String AsMarked(String? Kind)
+
+            => Kind is null
+                   ? "not marked as one"
+                   : $"marked as a {Kind}";
 
         #endregion
 

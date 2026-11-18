@@ -126,13 +126,15 @@ namespace cloud.charging.open.CSMS.CommandLine
 
             return controllers.Length > 0
                        ? controllers
-                       : [ "No login is marked as a local controller's: every one sends in its own name alone. 'localControllers <login> on' marks one." ];
+                       : [ "No login is marked as a local controller's. 'localControllers <login> on' marks one." ];
 
         }
 
         private String[] Mark(String   Login,
                               Boolean  LocalController)
         {
+
+            var wasAGateway = LocalController && cli.CSMS.StationLogins.IsGateway(Login);
 
             if (!cli.CSMS.StationLogins.TrySetLocalController(Login, LocalController, out var error))
                 return [ error ];
@@ -143,7 +145,8 @@ namespace cloud.charging.open.CSMS.CommandLine
                                 cli.Caller.Tags("ocpp", "station", "security"));
 
             return [ LocalController
-                         ? $"'{Login}' is a local controller now: in the overlay network it may send in the name of the charging stations behind it."
+                         ? $"'{Login}' is a local controller now: in the overlay network it may send in the name of the charging stations behind it." +
+                           (wasAGateway ? " It is no gateway any more." : "")
                          : $"'{Login}' is no local controller any more: it sends in its own name alone." ];
 
         }

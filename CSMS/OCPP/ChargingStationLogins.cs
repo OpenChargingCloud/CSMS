@@ -1239,7 +1239,10 @@ namespace cloud.charging.open.CSMS.OCPP
                 if (login.LocalController == LocalController)
                     return true;
 
-                logins[Id] = login with { LocalController = LocalController };
+                // A local controller's login is no gateway's: marked as the
+                // one, it is no longer the other.
+                logins[Id] = login with { LocalController = LocalController,
+                                          Gateway         = login.Gateway && !LocalController };
 
                 if (!TrySave(out Error))
                 {
@@ -1251,7 +1254,8 @@ namespace cloud.charging.open.CSMS.OCPP
                 OnNotice?.Invoke(
                     LogLevel.Notice,
                     LocalController
-                        ? $"'{Id}' is a local controller now: in the overlay network it may send in the name of the charging stations behind it."
+                        ? $"'{Id}' is a local controller now: in the overlay network it may send in the name of the charging stations behind it." +
+                          (login.Gateway ? " It is no gateway any more." : "")
                         : $"'{Id}' is no local controller any more: it sends in its own name alone."
                 );
 
@@ -1271,6 +1275,102 @@ namespace cloud.charging.open.CSMS.OCPP
             lock (updateLock)
             {
                 return logins.TryGetValue(Id, out var login) && login.LocalController;
+            }
+        }
+
+        #endregion
+
+        #region TrySetGateway(Id, Gateway, out Error [, out NotSaved]) / IsGateway(Id) / SpeaksForOthers(Id)
+
+        /// <summary>
+        /// Mark a login as a gateway's, which may send in the name of the
+        /// charging stations behind it - or no longer.
+        /// </summary>
+        public Boolean TrySetGateway(String                            Id,
+                                     Boolean                           Gateway,
+                                     [NotNullWhen(false)] out String?  Error)
+
+            => TrySetGateway(Id, Gateway, out Error, out _);
+
+        /// <summary>
+        /// Mark a login as a gateway's, or no longer - and say whether a
+        /// refusal was the file's rather than the change's.
+        /// </summary>
+        /// <remarks>
+        /// To this CSMS a gateway is what a local controller is: a node in
+        /// the overlay network with charging stations behind it, which sends
+        /// in their names. It is marked as what it is all the same, so that
+        /// the list, the log and a connection that dials it say so. A login
+        /// marked as a gateway's is no local controller's any more.
+        /// </remarks>
+        /// <param name="NotSaved">True where the file could not be written: see <see cref="TryRemove(String, out String?, out Boolean)"/>.</param>
+        public Boolean TrySetGateway(String                            Id,
+                                     Boolean                           Gateway,
+                                     [NotNullWhen(false)] out String?  Error,
+                                     out Boolean                       NotSaved)
+        {
+
+            Error     = null;
+            NotSaved  = false;
+
+            lock (updateLock)
+            {
+
+                if (!logins.TryGetValue(Id, out var login))
+                {
+                    Error = $"This CSMS has never heard of a charging station called '{Id}'.";
+                    return false;
+                }
+
+                if (login.Gateway == Gateway)
+                    return true;
+
+                logins[Id] = login with { Gateway          = Gateway,
+                                          LocalController  = login.LocalController && !Gateway };
+
+                if (!TrySave(out Error))
+                {
+                    NotSaved    = true;
+                    logins[Id]  = login;
+                    return false;
+                }
+
+                OnNotice?.Invoke(
+                    LogLevel.Notice,
+                    Gateway
+                        ? $"'{Id}' is a gateway now: in the overlay network it may send in the name of the charging stations behind it." +
+                          (login.LocalController ? " It is no local controller any more." : "")
+                        : $"'{Id}' is no gateway any more: it sends in its own name alone."
+                );
+
+            }
+
+            OnChanged?.Invoke();
+
+            return true;
+
+        }
+
+        /// <summary>
+        /// Whether the given login is a gateway's.
+        /// </summary>
+        public Boolean IsGateway(String Id)
+        {
+            lock (updateLock)
+            {
+                return logins.TryGetValue(Id, out var login) && login.Gateway;
+            }
+        }
+
+        /// <summary>
+        /// Whether the given login may send in the name of the charging
+        /// stations behind it: a local controller's, or a gateway's.
+        /// </summary>
+        public Boolean SpeaksForOthers(String Id)
+        {
+            lock (updateLock)
+            {
+                return logins.TryGetValue(Id, out var login) && login.SpeaksForOthers;
             }
         }
 

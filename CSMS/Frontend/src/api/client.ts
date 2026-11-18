@@ -310,6 +310,8 @@ export interface StationLogin {
     note?:        string;
     /** A local controller's login: it may send in the name of the stations behind it. */
     localController?: boolean;
+    /** A gateway's login: like a local controller's, it may send in the name of the stations behind it. */
+    gateway?: boolean;
 }
 
 /** A group of logins, and what its members are allowed to do. */
@@ -724,6 +726,14 @@ export const api = {
              */
             markLocalController: (id: string, localController: boolean) =>
                           request<StationLogins>('PUT', `/configuration/ocpp-server/stations/${encodeURIComponent(id)}`, { localController }),
+
+            /**
+             * Mark a login as a gateway's, which may send in the name of the
+             * stations behind it - or no longer. Marked as the one, a login is
+             * no longer the other.
+             */
+            markGateway: (id: string, gateway: boolean) =>
+                          request<StationLogins>('PUT', `/configuration/ocpp-server/stations/${encodeURIComponent(id)}`, { gateway }),
 
             remove:   (id: string) =>
                           request<StationLogins>('DELETE', `/configuration/ocpp-server/stations/${encodeURIComponent(id)}`),

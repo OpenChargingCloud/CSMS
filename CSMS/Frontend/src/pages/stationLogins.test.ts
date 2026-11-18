@@ -73,7 +73,13 @@ function csms({ method, path, body }: Asked): unknown {
     if (one && method === 'PUT') {
         if (refuseChanges)
             return refused(409, 'the group is full');
-        held = { ...held, stations: held.stations.map(station => station.id === one[1] ? { ...station, ...(body as object) } : station) };
+        // As the CSMS does: a login is a local controller's or a gateway's.
+        const marks = body as { localController?: boolean; gateway?: boolean };
+        held = { ...held, stations: held.stations.map(station => station.id !== one[1]
+                                                                     ? station
+                                                                     : { ...station, ...marks,
+                                                                         ...(marks.gateway         === true ? { localController: false } : {}),
+                                                                         ...(marks.localController === true ? { gateway:         false } : {}) }) };
         return held;
     }
 
@@ -92,6 +98,7 @@ async function opened(): Promise<HTMLElement> {
 
 const switchOf  = (root: HTMLElement, id: string) => root.querySelector<HTMLInputElement>(`.station-enabled[data-id="${id}"]`)!;
 const markOf    = (root: HTMLElement, id: string) => root.querySelector<HTMLInputElement>(`.station-localcontroller[data-id="${id}"]`)!;
+const gatewayOf = (root: HTMLElement, id: string) => root.querySelector<HTMLInputElement>(`.station-gateway[data-id="${id}"]`)!;
 const chooserOf = (root: HTMLElement, id: string) => root.querySelector<HTMLSelectElement>(`.station-group[data-id="${id}"]`)!;
 const putsSent  = () => asked.filter(one => one.method === 'PUT').length;
 
@@ -159,6 +166,26 @@ describe('the logins and groups', () => {
         await settled();
 
         assert.equal(markOf(root, 'cs002').checked, false, 'the mark says what was clicked, not what the CSMS has');
+
+    });
+
+    it('mark a login as a gateway\'s, and draw the local controller\'s mark it loses', async () => {
+
+        const root = await opened();
+
+        assert.equal(gatewayOf(root, 'cs001').checked, false, 'a login nobody marked is drawn as a gateway\'s');
+
+        change(markOf(root, 'cs001'), true);
+        await until(() => markOf(root, 'cs001').checked, 'the local controller\'s mark was not drawn');
+
+        change(gatewayOf(root, 'cs001'), true);
+        await until(() => held.stations[0]!.gateway === true && gatewayOf(root, 'cs001').checked, 'the gateway\'s mark was not drawn');
+
+        assert.deepEqual(asked.filter(one => one.method === 'PUT').at(-1)?.body, { gateway: true });
+        await until(() => !markOf(root, 'cs001').checked, 'the local controller\'s mark the login lost is still drawn');
+
+        change(gatewayOf(root, 'cs001'), false);
+        await until(() => held.stations[0]!.gateway === false && !gatewayOf(root, 'cs001').checked, 'taking the mark away was not drawn');
 
     });
 

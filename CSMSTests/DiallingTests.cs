@@ -229,15 +229,18 @@ namespace cloud.charging.open.CSMS.Tests
 
         #endregion
 
-        #region (private) ALogin(Node, LocalController) / ItsCredentials() / AConnection(...) / Until(Condition)
+        #region (private) ALogin(Node, LocalController, Gateway) / ItsCredentials() / AConnection(...) / Until(Condition)
 
-        private void ALogin(String Node, Boolean LocalController = false)
+        private void ALogin(String Node, Boolean LocalController = false, Boolean Gateway = false)
         {
 
             Assert.That(CSMS.StationLogins.TrySetPassword(Node, null, null, null, out _, out var error), Is.True, error);
 
             if (LocalController)
                 Assert.That(CSMS.StationLogins.TrySetLocalController(Node, true, out error), Is.True, error);
+
+            if (Gateway)
+                Assert.That(CSMS.StationLogins.TrySetGateway(Node, true, out error), Is.True, error);
 
         }
 
@@ -292,7 +295,7 @@ namespace cloud.charging.open.CSMS.Tests
 
             Assert.Multiple(() => {
                 Assert.That(json["connectionTypes"]!.Select(type => type.Value<String>()),
-                            Is.EqualTo(new[] { "ChargingStation", "LocalController" }));
+                            Is.EqualTo(new[] { "ChargingStation", "LocalController", "Gateway" }));
                 Assert.That(json["ocppVersions"]!.Select(version => version.Value<String>()),
                             Is.EqualTo(new[] { "OCPP2.1" }));
                 Assert.That(json["rules"]!.Value<Boolean>("inbound"),                Is.False);
@@ -428,6 +431,26 @@ namespace cloud.charging.open.CSMS.Tests
         }
 
         [Test]
+        public async Task AGatewayIsDialledInTheOverlayNetwork()
+        {
+
+            ALogin("gw01", Gateway: true);
+            AConnection("gw01", Type: "Gateway");
+
+            Assert.That(await Until(() => CSMS.IsConnected("gw01")), Is.True, "the gateway never counted as connected");
+
+            Assert.That(dials.TryPeek(out var dial), Is.True);
+
+            Assert.Multiple(() => {
+                Assert.That(dial!.Headers["X-OCPP-NetworkingMode"],  Is.EqualTo("OverlayNetwork"));
+                Assert.That(CSMS.InOverlayNetwork("gw01"),           Is.True);
+                Assert.That(CSMS.Log.Recent(500).Select(entry => entry.Message),
+                            Has.Some.StartsWith("The gateway 'gw01' is reached at"));
+            });
+
+        }
+
+        [Test]
         public async Task ALocalControllerDialledUnderAnotherNameThanThisCSMSHasInOCPP_IsDialledAndWarnedOf()
         {
 
@@ -541,6 +564,28 @@ namespace cloud.charging.open.CSMS.Tests
             Assert.Multiple(() => {
                 Assert.That(dials,                           Is.Empty);
                 Assert.That(CSMS.ConnectionStates[id].Said,  Does.Contain("is not marked as one"));
+            });
+
+        }
+
+        [Test]
+        public async Task AGatewayIsNoLocalControllerToTheConnectionThatDialsIt()
+        {
+
+            // A local controller, by its login - and a gateway, by the
+            // connection.
+            ALogin("lc07", LocalController: true);
+
+            var id = AConnection("lc07", Type: "Gateway");
+
+            Assert.That(await Until(() => CSMS.ConnectionStates.ContainsKey(id)), Is.True);
+
+            await Task.Delay(500);
+
+            Assert.Multiple(() => {
+                Assert.That(dials,                           Is.Empty);
+                Assert.That(CSMS.ConnectionStates[id].Said,  Does.Contain("is marked as a local controller"));
+                Assert.That(CSMS.ConnectionStates[id].Said,  Does.Contain("'gateways lc07 on'"));
             });
 
         }

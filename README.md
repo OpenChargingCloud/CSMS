@@ -424,7 +424,7 @@ Behind it, `/api/v1/configuration/station-roots`:
 
 Reading is at the stations' permission, changing at the certificates'.
 
-### Local controllers, and who may send in whose name
+### Local controllers, gateways, and who may send in whose name
 
 In the overlay network a frame names its sender itself - `[2, destination,
 path, id, action, payload]` - and whom it names is whom the CSMS takes it for:
@@ -435,12 +435,17 @@ over may send it in that name:
 
 - the last hop of its path is the node that connection signed in as: a node
   that forwards a frame puts itself at the end of its path;
-- a connection speaks for itself, and a local controller's login for the
-  stations behind it. Whether a login is a local controller's is the
+- a connection speaks for itself, and a local controller's or a gateway's
+  login for the stations behind it. Whether a login is one of theirs is the
   operator's to say, as any station can dial in the overlay network and name
-  itself the way to another: `localControllers <login> on|off`, "Local
-  controller" on the Station logins page, or `{"localController": true}` in a
+  itself the way to another: `localControllers <login> on|off` or
+  `gateways <login> on|off`, "Local controller" or "Gateway" on the Station
+  logins page, or `{"localController": true}` or `{"gateway": true}` in a
   `PUT /api/v1/configuration/ocpp-server/stations/{id}`, at `stations:edit`.
+  To the CSMS a gateway is what a local controller is; it is marked as what
+  it is so that the list, the log and a connection that dials it say so. A
+  login is the one or the other: marked as a gateway's it is no local
+  controller's any more, and the other way round.
 
 A frame that is not taken is dropped, unanswered - an answer would go to the
 station it names - and the log says who sent what in whose name, and how to mark
@@ -523,9 +528,9 @@ Behind it, `/api/v1/key-pins`:
 Reading is at the stations' permission; a pin set, a rollover, forgetting where
 a station is and the signing key at the certificates'.
 
-### Stations and local controllers the CSMS dials
+### Stations, local controllers and gateways the CSMS dials
 
-A charging station or a local controller that cannot dial the CSMS - behind a
+A charging station, a local controller or a gateway that cannot dial the CSMS - behind a
 firewall that lets nothing out, on a network only the back end reaches - is
 dialled by it. OCPP stays as it is; only who opens the WebSocket is the other
 way round: the station tells the CSMS that it started, and the CSMS asks. A
@@ -541,20 +546,21 @@ at the stations' permission: `GET` and `POST /api/v1/configuration/connections`,
 `.../update`, `.../remove`, `.../test`, `/api/v1/configuration/authentications`
 and `GET /api/v1/status/connections`. What is different for a CSMS:
 
-- a connection leads to a **charging station** or a **local controller**, and
+- a connection leads to a **charging station**, a **local controller** or a
+  **gateway**, and
   says **which node is there** (`"remoteNodeId"`): the name the CSMS speaks to
   it by, as a station that dials is known by the last part of its URL. The URL
   of a connection ends with the name the CSMS comes under at the other end -
   `wss://station7.example.org:9443/csms-01` - and that is the login of the
   credentials it signs in with, too;
-- a local controller is dialled in the overlay network
+- a local controller and a gateway are dialled in the overlay network
   (`X-OCPP-NetworkingMode: OverlayNetwork`), so that the stations behind it are
   reached through it, a charging station in the plain frame of OCPP. In the
   overlay network a controller sends an answer to the node that asked, by its
   name, and knows the CSMS by the name it came under. A controller of today
   learns the name it is asked with as well; an older one does not, and what
   the CSMS asks it then runs into its timeout. So the URL of a connection to a
-  local controller should end with the name the CSMS has in OCPP
+  local controller or a gateway should end with the name the CSMS has in OCPP
   (`"ocpp": { "nodeId": ... }`): one that ends otherwise is dialled all the
   same, and warned of, in the log and with how the connection stands;
 - it is dialled over `ws://` and `wss://` and in OCPP 2.1 alone, and nothing
@@ -565,11 +571,11 @@ and `GET /api/v1/status/connections`. What is different for a CSMS:
 
 **A node that is dialled is a login all the same.** The name a connection
 leads to is a login under Logins and groups: where it is switched off, where a
-local controller is marked as one - and so may send in the name of the stations
+local controller or a gateway is marked as one - and so may send in the name of the stations
 behind it, over a line the CSMS dialled as over one that was dialled in - and
 where its group says what it may do. A connection to a login that is switched
 off, or that says a local controller is there where the login says a station
-(or the other way round), is not dialled, and its state on the page says why;
+or a gateway (or any other two of them), is not dialled, and its state on the page says why;
 a login switched off while its connection is up is let go of. `connections` on
 the command line lists what was dialled beside what dialled in. The OCPP
 messages over a line the CSMS dialled are logged as the ones of a station that
@@ -617,7 +623,7 @@ to the END line, to be saved as a file only you can read. See
 Whoever signs in over SSH gets the command line of the CSMS, whichever program
 runs it: the commands every node has, `syncNTS` among them, and beside them
 what only a CSMS can be told - `stationKeys`, `stationQueryDNS`,
-`stationSyncNTS`, `keyPins`, `localControllers`, `connections`, and `use`, which chooses a connected charging
+`stationSyncNTS`, `keyPins`, `localControllers`, `gateways`, `connections`, and `use`, which chooses a connected charging
 station for the OCPP library's operator commands: `reset`, `remoteStart`,
 `changeAvailability`, `getBaseReport` and the rest. Those need the role that
 may run the stations, `cpo` or an administrator's (`stations:run`), and are

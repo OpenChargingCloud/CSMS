@@ -42,8 +42,9 @@ namespace cloud.charging.open.CSMS
     /// connection signed in as says what is not so.
     /// </para>
     /// <para>
-    /// <b>A connection speaks for itself, and a local controller's for the stations behind it.</b> Whether a
-    /// login is a local controller's is the operator's to say (<see cref="OCPP.ChargingStationLogin.LocalController"/>):
+    /// <b>A connection speaks for itself, and a local controller's or a gateway's for the stations behind it.</b>
+    /// Whether a login is one of theirs is the operator's to say (<see cref="OCPP.ChargingStationLogin.LocalController"/>,
+    /// <see cref="OCPP.ChargingStationLogin.Gateway"/>):
     /// any station can dial in the overlay network and name itself the way to another station, so a frame
     /// does not say it.
     /// </para>
@@ -110,9 +111,9 @@ namespace cloud.charging.open.CSMS
             if (Path.Source == node)
                 return null;
 
-            if (!StationLogins.IsLocalController(node.ToString()))
-                return $"'{node}' is no local controller, and sends in its own name alone. Where it is one, mark it as one: " +
-                       $"'localControllers {node} on' on the command line, or on the page of the charging stations.";
+            if (!StationLogins.SpeaksForOthers(node.ToString()))
+                return $"'{node}' is no local controller and no gateway, and sends in its own name alone. Where it is one, mark it as one: " +
+                       $"'localControllers {node} on' or 'gateways {node} on' on the command line, or on the page of the charging stations.";
 
             return null;
 

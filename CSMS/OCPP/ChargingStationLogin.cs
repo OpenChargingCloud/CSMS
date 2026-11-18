@@ -55,6 +55,7 @@ namespace cloud.charging.open.CSMS.OCPP
     /// <param name="Note">What it is, for whoever reads the list later.</param>
     /// <param name="SSHKeys">The SSH public keys it signs in with for OCPP over SSH, as authorized_keys lines; null or none when it has none.</param>
     /// <param name="LocalController">Whether it is a local controller's login: one that may send, in the overlay network, in the name of the charging stations behind it. Any other speaks for itself alone.</param>
+    /// <param name="Gateway">Whether it is a gateway's login: one that, like a local controller's, may send in the overlay network in the name of the charging stations behind it. A login is a local controller's or a gateway's, not both.</param>
     public sealed record ChargingStationLogin(String                     Id,
                                               String                     GroupId,
                                               SecurePassword?            Password,
@@ -63,7 +64,8 @@ namespace cloud.charging.open.CSMS.OCPP
                                               DateTimeOffset             AddedAt,
                                               String?                    Note,
                                               IReadOnlyList<UserSSHKey>? SSHKeys          = null,
-                                              Boolean                    LocalController  = false)
+                                              Boolean                    LocalController  = false,
+                                              Boolean                    Gateway          = false)
     {
 
         #region Data
@@ -89,6 +91,22 @@ namespace cloud.charging.open.CSMS.OCPP
         /// </summary>
         public Boolean HasSSHKey
             => SSHKeys is { Count: > 0 };
+
+        /// <summary>
+        /// Whether it may send in the name of the charging stations behind
+        /// it: a local controller's login, or a gateway's.
+        /// </summary>
+        public Boolean SpeaksForOthers
+            => LocalController || Gateway;
+
+        /// <summary>
+        /// What it is, where it is more than a charging station's: "local
+        /// controller", "gateway" - or null.
+        /// </summary>
+        public String? Kind
+            => LocalController ? "local controller"
+             : Gateway         ? "gateway"
+             :                   null;
 
         /// <summary>
         /// Whether a password has been set for this login.
@@ -297,7 +315,12 @@ namespace cloud.charging.open.CSMS.OCPP
                         addedAt,
                         JSON.Value<String>("note")?.Trim() is { Length: > 0 } note ? note : null,
                         sshKeys,
-                        JSON["localController"]?.Type == JTokenType.Boolean && JSON.Value<Boolean>("localController")
+                        JSON["localController"]?.Type == JTokenType.Boolean && JSON.Value<Boolean>("localController"),
+                        // One or the other: a file that says both was not
+                        // written by this CSMS, and is read as a local
+                        // controller's, which it was first.
+                        JSON["gateway"]?.Type == JTokenType.Boolean && JSON.Value<Boolean>("gateway") &&
+                        !(JSON["localController"]?.Type == JTokenType.Boolean && JSON.Value<Boolean>("localController"))
                     );
 
             return true;
@@ -323,7 +346,8 @@ namespace cloud.charging.open.CSMS.OCPP
                            new JProperty("hasPassword",  HasPassword),
                            new JProperty("hasTOTP",      HasTOTP),
                            new JProperty("hasSSHKey",    HasSSHKey),
-                           new JProperty("localController", LocalController)
+                           new JProperty("localController", LocalController),
+                           new JProperty("gateway",         Gateway)
                        );
 
             if (Note is not null)
@@ -349,7 +373,7 @@ namespace cloud.charging.open.CSMS.OCPP
 
         public override String ToString()
 
-            => $"{Id}{(LocalController ? " (local controller)" : "")} in '{GroupId}' ({(Enabled ? "on" : "off")}): " +
+            => $"{Id}{(Kind is String kind ? $" ({kind})" : "")} in '{GroupId}' ({(Enabled ? "on" : "off")}): " +
                $"{(HasPassword || HasTOTP || HasSSHKey ? String.Join(" and ", Credentials.Select(method => method.AsText())) : "no credentials")}";
 
         #endregion

@@ -710,11 +710,12 @@ namespace cloud.charging.open.CSMS
         }
 
         /// <summary>
-        /// PUT .../stations/{id} with {"enabled"}, {"group"} and/or
-        /// {"localController"}: let a charging station in, stop letting it in,
-        /// move it to another group, or mark it as a local controller's login,
-        /// which may send in the name of the stations behind it - without
-        /// losing what it signs in with.
+        /// PUT .../stations/{id} with {"enabled"}, {"group"},
+        /// {"localController"} and/or {"gateway"}: let a charging station in,
+        /// stop letting it in, move it to another group, or mark it as a local
+        /// controller's or a gateway's login, which may send in the name of
+        /// the stations behind it - without losing what it signs in with. A
+        /// login is the one or the other: true for both is refused.
         /// </summary>
         private Task<HTTPResponse> PutStation(HTTPRequest Request)
         {
@@ -731,16 +732,27 @@ namespace cloud.charging.open.CSMS
             var enabled          = json.Value<Boolean?>("enabled");
             var group            = json.Value<String>("group");
             var marking          = json["localController"];
+            var gatewayMarking   = json["gateway"];
 
             if (marking is not null && marking.Type is not (JTokenType.Boolean or JTokenType.Null))
                 return Task.FromResult(ErrorJSON(Request, HTTPStatusCode.BadRequest, "'localController' is true or false."));
+
+            if (gatewayMarking is not null && gatewayMarking.Type is not (JTokenType.Boolean or JTokenType.Null))
+                return Task.FromResult(ErrorJSON(Request, HTTPStatusCode.BadRequest, "'gateway' is true or false."));
 
             var localController  = marking?.Type == JTokenType.Boolean
                                        ? marking.Value<Boolean>()
                                        : (Boolean?) null;
 
-            if (enabled is null && group is null && localController is null)
-                return Task.FromResult(ErrorJSON(Request, HTTPStatusCode.BadRequest, "An 'enabled' of true or false, a 'group', or a 'localController' of true or false, is required."));
+            var gateway          = gatewayMarking?.Type == JTokenType.Boolean
+                                       ? gatewayMarking.Value<Boolean>()
+                                       : (Boolean?) null;
+
+            if (enabled is null && group is null && localController is null && gateway is null)
+                return Task.FromResult(ErrorJSON(Request, HTTPStatusCode.BadRequest, "An 'enabled' of true or false, a 'group', or a 'localController' or a 'gateway' of true or false, is required."));
+
+            if (localController == true && gateway == true)
+                return Task.FromResult(ErrorJSON(Request, HTTPStatusCode.BadRequest, "A login is a local controller's or a gateway's, not both."));
 
             if (group is not null &&
                 !CSMS.StationLogins.TrySetGroup(id, group, out var groupError, out var groupNotSaved))
@@ -760,10 +772,24 @@ namespace cloud.charging.open.CSMS
                 return Task.FromResult(NotChanged(Request, HTTPStatusCode.NotFound, markError, markNotSaved));
             }
 
+            // After the local controller's mark: marking the one takes the
+            // other away, and both true was refused above.
+            if (gateway is Boolean markedAsGateway &&
+                !CSMS.StationLogins.TrySetGateway(id, markedAsGateway, out var gatewayError, out var gatewayNotSaved))
+            {
+                return Task.FromResult(NotChanged(Request, HTTPStatusCode.NotFound, gatewayError, gatewayNotSaved));
+            }
+
             if (localController is Boolean isController)
                 Log.Notice(isController
                                ? $"'{user.Id}' marked '{id}' as a local controller."
                                : $"'{user.Id}' took the mark of a local controller from '{id}'.",
+                           "ocpp", "station", "security", "web");
+
+            if (gateway is Boolean isGateway)
+                Log.Notice(isGateway
+                               ? $"'{user.Id}' marked '{id}' as a gateway."
+                               : $"'{user.Id}' took the mark of a gateway from '{id}'.",
                            "ocpp", "station", "security", "web");
 
             if (group is not null)

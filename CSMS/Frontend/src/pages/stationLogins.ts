@@ -324,6 +324,7 @@ export const stationLoginsPage: Page = {
                                               <th>Added</th>
                                               <th>May sign in</th>
                                               <th title="A local controller's login may send in the name of the charging stations behind it; any other speaks for itself alone.">Local controller</th>
+                                              <th title="A gateway's login may, like a local controller's, send in the name of the charging stations behind it. A login is the one or the other.">Gateway</th>
                                               <th></th>
                                           </tr>
                                       </thead>
@@ -498,6 +499,16 @@ export const stationLoginsPage: Page = {
                                    ?disabled=${!mayChange}
                                    @change=${(event: Event) => void markAsController(station.id, (event.target as HTMLInputElement).checked)} />
                             <span>${station.localController === true ? 'yes' : 'no'}</span>
+                        </label>
+                    </td>
+
+                    <td>
+                        <label class="switch small" title="May, like a local controller, send in the name of the charging stations behind it">
+                            <input type="checkbox" class="station-gateway" data-id="${station.id}"
+                                   .checked=${live(station.gateway === true)}
+                                   ?disabled=${!mayChange}
+                                   @change=${(event: Event) => void markAsGateway(station.id, (event.target as HTMLInputElement).checked)} />
+                            <span>${station.gateway === true ? 'yes' : 'no'}</span>
                         </label>
                     </td>
 
@@ -804,6 +815,9 @@ export const stationLoginsPage: Page = {
 
         const markAsController = (id: string, wanted: boolean) =>
             change(() => api.ocppServer.stations.markLocalController(id, wanted));
+
+        const markAsGateway = (id: string, wanted: boolean) =>
+            change(() => api.ocppServer.stations.markGateway(id, wanted));
 
 
         /** Every change that answers with the whole list and has nothing to hand out. */

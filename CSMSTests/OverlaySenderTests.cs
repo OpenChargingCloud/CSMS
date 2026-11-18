@@ -463,6 +463,98 @@ namespace cloud.charging.open.CSMS.Tests
             Assert.Multiple(() => {
                 Assert.That(RouteOf("cs001"),  Is.Null, Log);
                 Assert.That(Log,               Does.Contain("'localControllers lc001 on'"));
+                Assert.That(Log,               Does.Contain("'gateways lc001 on'"));
+            });
+
+        }
+
+        #endregion
+
+        #region AGateway_SpeaksForTheStationsBehindIt()
+
+        /// <summary>
+        /// A gateway, its login marked as one, is to the CSMS what a local controller is: it sends a
+        /// BootNotification of a station behind it, and the CSMS takes it and routes the station through it.
+        /// </summary>
+        [Test]
+        public async Task AGateway_SpeaksForTheStationsBehindIt()
+        {
+
+            var gateway  = await Dialling("gw001");
+
+            Assert.That(CSMS.StationLogins.TrySetGateway("gw001", true, out var error), Is.True, error);
+
+            var boot     = await gateway.AskAs(new JArray("cs001", "gw001"), "BootNotification", ABootNotification(), Patience);
+
+            Assert.Multiple(() => {
+                Assert.That(boot?.Last?["status"]?.Value<String>(), Is.EqualTo("Accepted"), $"{boot}{Environment.NewLine}{Log}");
+                Assert.That(RouteOf("cs001"),                       Is.EqualTo("gw001"));
+                Assert.That(Said("and it is dropped"),              Is.False, Log);
+            });
+
+        }
+
+        #endregion
+
+        #region TheGatewaysMark_IsSetAtTheConsole_AndByTheAPI_AndTakesTheControllersAway()
+
+        /// <summary>
+        /// A login is marked as a gateway's and unmarked at the console and by the API, and the mark is written
+        /// down with the login. A login is a local controller's or a gateway's: marked as the one, it loses the
+        /// other, and the API refuses both at once.
+        /// </summary>
+        [Test]
+        public async Task TheGatewaysMark_IsSetAtTheConsole_AndByTheAPI_AndTakesTheControllersAway()
+        {
+
+            Assert.That(CSMS.StationLogins.TrySetPassword("gw001", ThePassword, null, null, out _, out var error), Is.True, error);
+
+            using var console   = new CSMSCLI(CSMS);
+
+            var asAController   = await Run(console, "localControllers gw001 on");
+            var marked          = await Run(console, "gateways gw001 on");
+            var stillController = CSMS.StationLogins.IsLocalController("gw001");
+            var listed          = await Run(console, "gateways");
+            var controllers     = await Run(console, "localControllers");
+            var written         = ChargingStationLogin.TryParse(CSMS.StationLogins.Logins.Single(login => login.Id == "gw001").ToJSON(WithSecrets: true), out var reread, out var parseError);
+            var unmarking       = await Run(console, "gateways gw001 off");
+            var afterConsole    = CSMS.StationLogins.IsGateway("gw001");
+
+            var admin           = await SignedIn();
+
+            var notABoolean     = await admin.PutAsync("api/v1/configuration/ocpp-server/stations/gw001", JSONBody(new JProperty("gateway", "yes")));
+            var both            = await admin.PutAsync("api/v1/configuration/ocpp-server/stations/gw001", JSONBody(new JProperty("gateway", true), new JProperty("localController", true)));
+            var afterBoth       = CSMS.StationLogins.SpeaksForOthers("gw001");
+            var adminPut        = await admin.PutAsync("api/v1/configuration/ocpp-server/stations/gw001", JSONBody(new JProperty("gateway", true)));
+            var listing         = await GetJSON(admin, "api/v1/configuration/ocpp-server/stations");
+            var controllerAgain = await admin.PutAsync("api/v1/configuration/ocpp-server/stations/gw001", JSONBody(new JProperty("localController", true)));
+
+            var gw001           = (listing["stations"] as JArray)?.OfType<JObject>().Single(station => station.Value<String>("id") == "gw001");
+
+            Assert.Multiple(() => {
+
+                Assert.That(asAController,                  Does.Contain("is a local controller now"));
+                Assert.That(marked,                         Does.Contain("is a gateway now"));
+                Assert.That(marked,                         Does.Contain("no local controller any more"));
+                Assert.That(stillController,                Is.False, "the login is a local controller's and a gateway's");
+                Assert.That(listed,                         Does.Contain("gw001"));
+                Assert.That(controllers,                    Does.Not.Contain("gw001"));
+                Assert.That(written,                        Is.True, parseError);
+                Assert.That(reread?.Gateway,                Is.True,  "the mark is not written down with the login");
+                Assert.That(reread?.LocalController,        Is.False, "the local controller's mark is written down beside it");
+                Assert.That(unmarking,                      Does.Contain("no gateway any more"));
+                Assert.That(afterConsole,                   Is.False);
+
+                Assert.That(notABoolean.StatusCode,         Is.EqualTo(HttpStatusCode.BadRequest));
+                Assert.That(both.StatusCode,                Is.EqualTo(HttpStatusCode.BadRequest));
+                Assert.That(afterBoth,                      Is.False, "a request refused for asking both marked the login all the same");
+                Assert.That(adminPut.StatusCode,            Is.EqualTo(HttpStatusCode.OK));
+                Assert.That(gw001?.Value<Boolean>("gateway"),         Is.True,  listing.ToString());
+                Assert.That(gw001?.Value<Boolean>("localController"), Is.False, listing.ToString());
+                Assert.That(controllerAgain.StatusCode,      Is.EqualTo(HttpStatusCode.OK));
+                Assert.That(CSMS.StationLogins.IsGateway        ("gw001"), Is.False);
+                Assert.That(CSMS.StationLogins.IsLocalController("gw001"), Is.True);
+
             });
 
         }
