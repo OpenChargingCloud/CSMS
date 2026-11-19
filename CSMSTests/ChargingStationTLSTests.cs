@@ -29,6 +29,8 @@ using NUnit.Framework;
 using cloud.charging.open.protocols.WWCP.Node.TestKit;
 
 using cloud.charging.open.CSMS.OCPP;
+using cloud.charging.open.protocols.OCPP.Node.Serving;
+using cloud.charging.open.protocols.WWCP.Node.Logins;
 
 #endregion
 
@@ -86,15 +88,13 @@ namespace cloud.charging.open.CSMS.Tests
 
             #region A key and a certificate, put there before anything starts
 
-            using (var store = new ServerCertificateStore(Path.Combine(directory, ServerCertificateStore.DefaultDirectoryName)))
             {
 
-                Assert.That(store.TryCreateKey("127.0.0.1", [ "127.0.0.1" ], null, out _, out var csr, out var keyError),
-                            Is.True, keyError);
+                var store = TestCSMSs.CertificatesIn(directory);
 
-                using var certificate = ca.Sign(csr!, DateTimeOffset.UtcNow.AddDays(-1), DateTimeOffset.UtcNow.AddYears(1));
+                using var certificate = ca.Sign(TestCSMSs.RequestAServerKey(store), DateTimeOffset.UtcNow.AddDays(-1), DateTimeOffset.UtcNow.AddYears(1));
 
-                Assert.That(store.TryAddCertificate(ca.ChainPEM(certificate), [ "127.0.0.1" ], out _, out _, out var addError),
+                Assert.That(store.TryAnswerRequest(ca.ChainPEM(certificate), out _, out _, out _, out var addError, out _),
                             Is.True, addError);
 
             }
@@ -115,18 +115,18 @@ namespace cloud.charging.open.CSMS.Tests
 
                                           new JProperty("nts", new JObject(new JProperty("groups", new JObject(new JProperty("legal", new JObject(new JProperty("enabled", false))))))),
 
-                                          new JProperty("ocppServer", new JObject(
+                                          new JProperty("webSocketServer", new JObject(
                                               new JProperty("enabled",           true),
                                               new JProperty("address",           "127.0.0.1"),
                                               new JProperty("port",              port),
-                                              new JProperty("securityProfiles",  new JArray(2)),
+                                              new JProperty("clientAuthentication",  new JArray("httpAuthOverTLS")),
                                               new JProperty("reachableAs",       new JArray("127.0.0.1"))
                                           ))
 
                                       )
                                   );
 
-                       csms.StationLogins.TrySetPassword("cs001", ThePassword, null, null, out _, out _);
+                       csms.WebSocketLogins.TrySetPassword("cs001", ThePassword, null, null, out _);
 
                        return csms;
 
@@ -248,7 +248,7 @@ namespace cloud.charging.open.CSMS.Tests
             Assert.Multiple(() => {
                 Assert.That(CSMS.OCPPServerTLS,                  Is.True,
                             "A CSMS that found a certificate is still serving its charging stations unencrypted.");
-                Assert.That(CSMS.ServerCertificates.HasCertificate, Is.True);
+                Assert.That(CSMS.OCPPServerHasCertificate,       Is.True);
                 Assert.That(CSMS.OCPPServerURL,                   Does.StartWith("wss://"));
             });
 
@@ -267,7 +267,7 @@ namespace cloud.charging.open.CSMS.Tests
         public async Task AStationSigningInWithItsCertificateHasItNoted()
         {
 
-            Assert.That(CSMS.TryUpdateOCPPServerConfiguration(JObject.Parse("""{ "securityProfiles": [ 2, 3 ] }"""), out var error),
+            Assert.That(CSMS.TryUpdateOCPPServerConfiguration(JObject.Parse("""{ "clientAuthentication": [ "httpAuthOverTLS", "tlsClientCertificate" ] }"""), out var error),
                         Is.True, error);
 
             Assert.That(CSMS.ClientTrust.TryAdd(TestCA.ToPEM(ca.Intermediate!, ca.Certificate), null, out _, out _, out var trustError),
@@ -322,7 +322,7 @@ namespace cloud.charging.open.CSMS.Tests
         public async Task AStationThatSendsItsIntermediateAlongGetsInOnTheRootAlone()
         {
 
-            Assert.That(CSMS.TryUpdateOCPPServerConfiguration(JObject.Parse("""{ "securityProfiles": [ 2, 3 ] }"""), out var error),
+            Assert.That(CSMS.TryUpdateOCPPServerConfiguration(JObject.Parse("""{ "clientAuthentication": [ "httpAuthOverTLS", "tlsClientCertificate" ] }"""), out var error),
                         Is.True, error);
 
             Assert.That(CSMS.ClientTrust.TryAdd(TestCA.ToPEM(ca.Certificate), null, out _, out _, out var trustError),
@@ -358,9 +358,9 @@ namespace cloud.charging.open.CSMS.Tests
         #region AStationGetsTheCertificateTheStoreChose()
 
         /// <summary>
-        /// The whole point of the store, proved over a socket: what
-        /// <see cref="ServerCertificateStore.Select"/> picked is what a charging
-        /// station is shown.
+        /// The whole point of the store, proved over a socket: what the node's
+        /// store chose for the listener "ocpp" is what a charging station is
+        /// shown.
         /// </summary>
         [Test]
         public async Task AStationGetsTheCertificateTheStoreChose()
@@ -368,15 +368,14 @@ namespace cloud.charging.open.CSMS.Tests
 
             var (connected, why, presented, chainLength) = await Connect();
 
-            var chosen = CSMS.ServerCertificates.Entries.
-                             Single(entry => entry.Id == CSMS.ServerCertificates.ServedId);
+            var chosen = CSMS.StationCertificate.Current;
 
             Assert.Multiple(() => {
 
                 Assert.That(connected,  Is.True, why);
                 Assert.That(presented,  Is.Not.Null, "No certificate arrived at the charging station.");
 
-                Assert.That(presented!.Thumbprint, Is.EqualTo(chosen.Certificate!.Thumbprint),
+                Assert.That(presented!.Thumbprint, Is.EqualTo(chosen!.Certificate.Thumbprint),
                             "The charging station was shown a different certificate than the one this CSMS chose.");
 
                 // Leaf and the issuing authority: the intermediate travelled,
@@ -407,12 +406,9 @@ namespace cloud.charging.open.CSMS.Tests
 
             #region A second certificate, valid from a moment ago
 
-            Assert.That(CSMS.ServerCertificates.TryCreateKey("127.0.0.1", [ "127.0.0.1" ], null, out _, out var csr, out var keyError),
-                        Is.True, keyError);
+            using var replacement = ca.Sign(TestCSMSs.RequestAServerKey(CSMS.Certificates), DateTimeOffset.UtcNow.AddMinutes(-1), DateTimeOffset.UtcNow.AddYears(2));
 
-            using var replacement = ca.Sign(csr!, DateTimeOffset.UtcNow.AddMinutes(-1), DateTimeOffset.UtcNow.AddYears(2));
-
-            Assert.That(CSMS.ServerCertificates.TryAddCertificate(ca.ChainPEM(replacement), [ "127.0.0.1" ], out var newId, out _, out var addError),
+            Assert.That(CSMS.Certificates.TryAnswerRequest(ca.ChainPEM(replacement), out _, out _, out _, out var addError, out _),
                         Is.True, addError);
 
             #endregion
@@ -428,7 +424,7 @@ namespace cloud.charging.open.CSMS.Tests
                             "The replacement did not take over; the old certificate is still being presented.");
 
                 Assert.That(second.Thumbprint,  Is.EqualTo(replacement.Thumbprint));
-                Assert.That(CSMS.ServerCertificates.ServedId, Is.EqualTo(newId));
+                Assert.That(CSMS.StationCertificate.Current?.Certificate.Thumbprint, Is.EqualTo(replacement.Thumbprint));
 
             });
 

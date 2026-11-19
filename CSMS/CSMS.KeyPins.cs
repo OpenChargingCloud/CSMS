@@ -207,7 +207,7 @@ namespace cloud.charging.open.CSMS
         /// What a Local Controller's techInfo of ReconfigurationOfSecurityParameters begins with after it switched
         /// its station port's key.
         /// </summary>
-        public const  String  ServerKeySwitched      = "TLS server key switched";
+        public const  String  ServerKeySwitchedInfo  = "TLS server key switched";
 
         /// <summary>
         /// The endpoint a station's techInfo of KeyPinLearned names: "... of endpoint '&lt;id&gt;' ...".
@@ -270,8 +270,11 @@ namespace cloud.charging.open.CSMS
                 foreach (var station in controller.Stations ?? [])
                     RouteThrough(station.Station, controller.LocalController);
 
+            // Where a station is - and not a local controller or a gateway,
+            // which register as well.
             csms01.OCPP.OUT.OnBootNotificationResponseSent += (timestamp, sender, connection, request, response, runtime, sentMessageResult, cancellationToken) => {
-                NoteWhereAStationIs(request.NetworkPath);
+                if (IsAStation(request.NetworkPath.Source.ToString()))
+                    NoteWhereAStationIs(request.NetworkPath);
                 return Task.CompletedTask;
             };
 
@@ -521,7 +524,7 @@ namespace cloud.charging.open.CSMS
                                 "ocpp", "keypins", "security");
                     break;
 
-                case "ReconfigurationOfSecurityParameters" when controller is null && techInfo.StartsWith(ServerKeySwitched, StringComparison.Ordinal):
+                case "ReconfigurationOfSecurityParameters" when controller is null && techInfo.StartsWith(ServerKeySwitchedInfo, StringComparison.Ordinal):
 
                     Log.Notice($"The local controller '{source}' switched the key of its station port: {techInfo}", "ocpp", "keypins", "security");
 

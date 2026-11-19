@@ -24,6 +24,7 @@ using Newtonsoft.Json.Linq;
 using NUnit.Framework;
 
 using cloud.charging.open.CSMS.Configuration;
+using cloud.charging.open.protocols.OCPP.Node.Serving;
 
 #endregion
 

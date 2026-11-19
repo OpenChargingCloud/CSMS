@@ -1,4 +1,4 @@
-﻿import { api, type OCPPServerConfiguration, type OCPPServerUpdate, type StationLogins } from '../api/client';
+﻿import { api, type ClientAuthentication, type OCPPServerConfiguration, type OCPPServerUpdate, type WebSocketLogins } from '../api/client';
 import { auth } from '../auth';
 import { toURL } from '@node/basePath';
 import type { Page } from '@node/router';
@@ -43,7 +43,7 @@ export const ocppServerPage: Page = {
 
         let cancelled = false;
         let server:   OCPPServerConfiguration | null = null;
-        let stations: StationLogins           | null = null;
+        let stations: WebSocketLogins           | null = null;
 
         function draw(): void {
 
@@ -177,30 +177,30 @@ export const ocppServerPage: Page = {
         }
 
 
-        // Which OCPP security profiles a station may connect with.
+        // How a client may authenticate - OCPP's security profiles.
         function profilesCard(configuration: OCPPServerConfiguration): TemplateResult {
 
-            const descriptions: Record<number, string> = {
-                1: 'A password over an unencrypted connection. Only usable on a network nobody else is on.',
-                2: 'A password over TLS. Needs a server certificate; without one this port does not encrypt at all.',
-                3: 'A certificate on both sides, and no password. Needs the station to hold a certificate from an authority named under Accepted chains.'
+            const descriptions: Record<string, [ string, string ]> = {
+                httpAuthWithoutTLS:    [ 'HTTP authentication without TLS', 'security profile 1: a password over an unencrypted connection. Only usable on a network nobody else is on.' ],
+                httpAuthOverTLS:       [ 'HTTP authentication over TLS',    'security profile 2: a password over TLS. Needs a server certificate; without one this port does not encrypt at all.' ],
+                tlsClientCertificate:  [ 'TLS client certificate',          'security profile 3: a certificate on both sides, and no password. Needs the station to hold a certificate from an authority named under Accepted chains.' ]
             };
 
             return html`
                 <section class="card">
 
-                    <h2><i class="fa-solid fa-shield-halved"></i> Security profiles</h2>
+                    <h2><i class="fa-solid fa-shield-halved"></i> Client authentication</h2>
 
                     <form id="profiles-form" class="form-stack" @submit=${saveProfiles}>
 
                         <fieldset class="checks">
-                            <legend>A charging station may connect with</legend>
-                            ${configuration.limits.securityProfiles.map(profile => html`
+                            <legend>A charging station may authenticate by</legend>
+                            ${configuration.limits.clientAuthentication.map(authentication => html`
                                 <label class="check">
-                                    <input type="checkbox" name="profile" value="${profile}"
-                                           ?checked=${configuration.securityProfiles.includes(profile)}
+                                    <input type="checkbox" name="authentication" value="${authentication}"
+                                           ?checked=${configuration.clientAuthentication.includes(authentication)}
                                            ?disabled=${!mayChange} />
-                                    <span><strong>Profile ${profile}</strong> &mdash; ${descriptions[profile] ?? ''}</span>
+                                    <span><strong>${descriptions[authentication]?.[0] ?? authentication}</strong> &mdash; ${descriptions[authentication]?.[1] ?? ''}</span>
                                 </label>
                             `)}
                         </fieldset>
@@ -223,20 +223,21 @@ export const ocppServerPage: Page = {
                             <span id="profiles-error" class="form-error"  role="alert"></span>
                         </div>
 
-                        ${configuration.securityProfiles.some(profile => profile > 1) && !configuration.state.hasCertificate
+                        ${configuration.clientAuthentication.some(authentication => authentication !== 'httpAuthWithoutTLS') && !configuration.state.hasCertificate
                               ? html`
                                   <div class="notice warn">
-                                      Profile 2 or 3 is allowed, but there is no server certificate - so this port is
-                                      <strong>not encrypted</strong> and only profile 1 can be used on it.
-                                      <a href="${toURL('/configuration/ocpp-server/certificates')}">Make a signing request</a>.
+                                      HTTP authentication over TLS or a TLS client certificate is allowed, but there is no
+                                      server certificate - so this port is <strong>not encrypted</strong> and only HTTP
+                                      authentication without TLS can be used on it.
+                                      <a href="${toURL('/configuration/server-identities')}">Make a server key on Server identities</a>.
                                   </div>
                               `
                               : nothing}
 
-                        ${configuration.securityProfiles.includes(3) && configuration.state.trustedChains === 0
+                        ${configuration.clientAuthentication.includes('tlsClientCertificate') && configuration.state.trustedChains === 0
                               ? html`
                                   <div class="notice warn">
-                                      Profile 3 is allowed, but no certificate authority has been named to accept
+                                      A TLS client certificate is allowed, but no certificate authority has been named to accept
                                       charging stations from, so none can connect with a certificate. An empty list
                                       is "nobody", not "everybody" &mdash;
                                       <a href="${toURL('/configuration/ocpp-server/trust')}">name one</a>.
@@ -430,7 +431,7 @@ export const ocppServerPage: Page = {
         // Who may sign in now lives on its own page: it grew groups, one-time
         // tokens and two kinds of credential per login, none of which belongs
         // beside the socket settings.
-        function loginsCard(logins: StationLogins): TemplateResult {
+        function loginsCard(logins: WebSocketLogins): TemplateResult {
 
             return html`
                 <section class="card">
@@ -438,7 +439,7 @@ export const ocppServerPage: Page = {
                     <h2><i class="fa-solid fa-users-gear"></i> Who may sign in</h2>
 
                     <p>
-                        <strong>${logins.enabled}</strong> of ${logins.stations.length} charging station(s) could
+                        <strong>${logins.enabled}</strong> of ${logins.logins.length} charging station(s) could
                         sign in right now, in ${logins.groups.length} group(s).
                     </p>
 
@@ -482,7 +483,7 @@ export const ocppServerPage: Page = {
                         <dd>${configuration.state.connections}</dd>
 
                         <dt>Stations that may sign in</dt>
-                        <dd>${configuration.state.stationLogins}</dd>
+                        <dd>${configuration.state.webSocketLogins}</dd>
 
                         <dt>Accepted chains</dt>
                         <dd>${configuration.state.trustedChains}</dd>
@@ -521,7 +522,7 @@ export const ocppServerPage: Page = {
             const form = event.currentTarget as HTMLFormElement;
 
             void save({
-                securityProfiles:            checked(form, 'profile').map(Number),
+                clientAuthentication:        checked(form, 'authentication') as ClientAuthentication[],
                 checkCertificateRevocation:  isChecked(form, 'checkCertificateRevocation')
             }, 'profiles', form);
 
@@ -635,7 +636,7 @@ export const ocppServerPage: Page = {
 
                 const [configuration, logins] = await Promise.all([
                     api.ocppServer.get(),
-                    api.ocppServer.stations.get()
+                    api.ocppServer.logins.get()
                 ]);
 
                 if (cancelled)

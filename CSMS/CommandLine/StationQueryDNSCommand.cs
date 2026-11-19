@@ -26,6 +26,7 @@ using cloud.charging.open.protocols.WWCP.Node.Web;
 using cloud.charging.open.protocols.OCPPv2_1;
 using cloud.charging.open.protocols.OCPPv2_1.CS;
 using cloud.charging.open.protocols.OCPPv2_1.CSMS;
+using cloud.charging.open.protocols.WWCP.Node.Logins;
 
 using NodeQueryDNSCommand  = cloud.charging.open.protocols.WWCP.Node.CommandLine.QueryDNSCommand;
 using OCPPResultCode       = cloud.charging.open.protocols.OCPP.ResultCode;
@@ -104,7 +105,7 @@ namespace cloud.charging.open.CSMS.CommandLine
             // type; the record types queryDNS offers - but not the station's
             // name servers, which only the station knows.
             return Arguments.Length switch {
-                       2                             => Offered(cli.CSMS.StationLogins.Logins.
+                       2                             => Offered(cli.CSMS.WebSocketLogins.Logins.
                                                                     Select (login   => login.Id).
                                                                     Where  (cli.CSMS.IsConnected).
                                                                     OrderBy(station => station, StringComparer.Ordinal),

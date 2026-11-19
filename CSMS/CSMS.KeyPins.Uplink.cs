@@ -22,6 +22,7 @@ using System.Text.RegularExpressions;
 using org.GraphDefined.Vanaheimr.Hermod;
 
 using cloud.charging.open.protocols.WWCP.Node.Logging;
+using cloud.charging.open.protocols.WWCP.Node.Logins;
 
 using cloud.charging.open.CSMS.OCPP;
 
@@ -98,8 +99,10 @@ namespace cloud.charging.open.CSMS
 
             try
             {
-                return ocppServerTLS && ServerCertificates.Select() is ServerCertificateChain chain
-                           ? [ KeyPin.FromCertificate(chain.Certificate) ]
+                // Of the server identity the node's store chooses for the
+                // charging station port now.
+                return OCPPServerKeyPin is KeyPin keyPin
+                           ? [ keyPin ]
                            : [];
             }
             catch (Exception e)
@@ -124,7 +127,7 @@ namespace cloud.charging.open.CSMS
                                             String  TechInfo)
         {
 
-            if (!StationLogins.IsLocalController(LocalController))
+            if (!WebSocketLogins.IsLocalController(LocalController))
                 return false;
 
             var now = TimeProvider.GetUtcNow();
@@ -283,7 +286,7 @@ namespace cloud.charging.open.CSMS
 
             var controller = LocalController.Trim();
 
-            if (!StationLogins.IsLocalController(controller))
+            if (!WebSocketLogins.IsLocalController(controller))
                 return Refused($"'{controller}' is no login marked as a local controller's: 'localControllers {controller} on' marks it.");
 
             if (!PinSetSigner.Exists)

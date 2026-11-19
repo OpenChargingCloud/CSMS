@@ -21,7 +21,7 @@ export * from '@node/api/client';
  * What a role may be allowed to touch on this CSMS: what every node has, and
  * what a CSMS adds to it.
  */
-export type Resource = NodeResource | 'stations' | 'locations' | 'roaming';
+export type Resource = NodeResource | 'stations' | 'locations' | 'roaming' | 'commissioning';
 
 /** What somebody signed in to this CSMS may do: an operation on a resource, written "dns:edit". */
 export type Permission = `${Resource}:${Operation}`;
@@ -60,13 +60,20 @@ export interface OCPPServerLogging {
     pings:           boolean;
 }
 
+/**
+ * How a client may authenticate at a WebSocket server: by HTTP authentication
+ * without TLS or over it, or by its TLS client certificate - OCPP's security
+ * profiles 1, 2 and 3.
+ */
+export type ClientAuthentication = 'httpAuthWithoutTLS' | 'httpAuthOverTLS' | 'tlsClientCertificate';
+
 /** The server the charging stations below this CSMS connect to. */
 export interface OCPPServerConfiguration {
     enabled:                     boolean;
     address:                     string | null;
     port:                        number;
-    /** 1, 2 and 3 - the OCPP security profiles a station may connect with. */
-    securityProfiles:            number[];
+    /** How a client may authenticate: what OCPP calls its security profiles 1, 2 and 3. */
+    clientAuthentication:        ClientAuthentication[];
     subprotocols:                string[];
     /** The names and addresses the stations dial; what a certificate must cover. */
     reachableAs:                 string[];
@@ -82,7 +89,7 @@ export interface OCPPServerConfiguration {
         tls:                boolean;
         url:                string;
         connections:        number;
-        stationLogins:      number;
+        webSocketLogins:      number;
         trustedChains:      number;
         hasCertificate:     boolean;
         /**
@@ -94,7 +101,7 @@ export interface OCPPServerConfiguration {
     };
     limits: {
         subprotocols:                   string[];
-        securityProfiles:               number[];
+        clientAuthentication:           ClientAuthentication[];
         tlsVersions:                    string[];
         maxConnections:                 number;
         maxReachableAs:                 number;
@@ -131,7 +138,7 @@ export interface OCPPServerUpdate {
     enabled?:                     boolean;
     address?:                     string;
     port?:                        number;
-    securityProfiles?:            number[];
+    clientAuthentication?:        ClientAuthentication[];
     subprotocols?:                string[];
     reachableAs?:                 string[];
     minTLSVersion?:               string;
@@ -149,91 +156,6 @@ export interface OCPPServerUpdate {
         payloadsUntil?:   string | null;
         pings?:           boolean;
     };
-}
-
-/** A kind of key this CSMS will make for itself. */
-export interface KeyAlgorithm {
-    id:           string;
-    name:         string;
-    /** What somebody choosing it should know. */
-    remark:       string;
-    /**
-     * Whether this platform is known to be able to present a certificate with
-     * such a key, or absent while nobody has tried. Found out by doing a TLS
-     * handshake, not from a list - it depends on the operating system, the
-     * runtime and the year.
-     */
-    presentable?: boolean;
-}
-
-/** One key of this CSMS, and the certificate it was given. */
-export interface ServerCertificate {
-    /** Where the public key hashes to; what the signing request is filed under. */
-    id:              string;
-    algorithm:       string;
-    createdAt:       string;
-    subject:         string;
-    hasCertificate:  boolean;
-    /**
-     * Whether this machine can hold this certificate up to a charging station
-     * during a TLS handshake. A different question from whether the certificate
-     * is any good: an Ed448 or an ML-DSA key makes a perfectly valid one that
-     * this platform's TLS stack will not serve.
-     */
-    canBePresented:  boolean;
-    /** Whether this is the one being presented to the charging stations. */
-    inUse:           boolean;
-    warnings:        string[];
-    certificate?: {
-        subject:          string;
-        issuer:           string;
-        serialNumber:     string;
-        thumbprint:       string;
-        notBefore:        string;
-        notAfter:         string;
-        subjectAltNames:  string[];
-        intermediates:    number;
-        /** "pending" before its window, "valid" inside it, "expired" after. */
-        state:            'pending' | 'valid' | 'expired';
-        daysRemaining:    number;
-    };
-}
-
-/** The keys and certificates this CSMS presents. */
-export interface ServerCertificates {
-    directory:             string;
-    /** By the CSMS's own clock, which is what decides the windows below. */
-    now:                   string;
-    servedId:              string | null;
-    entries:               ServerCertificate[];
-    algorithms:            KeyAlgorithm[];
-    /** Always false, and said out loud: a private key is made here and never arrives. */
-    canImportPrivateKeys:  boolean;
-}
-
-/** One certificate found in a text or a file, and the key of this CSMS it is for. */
-export interface ServerCertificateFound {
-    id:             string;
-    thumbprint:     string;
-    label:          string;
-    subject:        string;
-    issuer:         string;
-    notBefore:      string;
-    notAfter:       string;
-    chainLength:    number;
-    /** Whether it came with its private key - which is refused: none arrives here. */
-    hasPrivateKey:  boolean;
-    /** The key of this CSMS it belongs to, by its public key; null for none. */
-    keyId:          string | null;
-    /** Why it would not be taken in, as far as can be said before trying; null where nothing speaks against it. */
-    refusal:        string | null;
-}
-
-/** What an upload of several certificates did, one by one. */
-export interface ServerCertificatesUploaded {
-    taken:    { id: string; label: string; warnings: string[] }[];
-    refused:  { label: string; error: string }[];
-    error?:   string;
 }
 
 /** One chain a charging station's certificate may lead to. */
@@ -297,7 +219,7 @@ export interface TOTPSettings {
 }
 
 /** One charging station that may sign in. */
-export interface StationLogin {
+export interface WebSocketLogin {
     id:           string;
     group:        string;
     enabled:      boolean;
@@ -322,7 +244,8 @@ export interface LoginGroup {
     builtIn:           boolean;
     addedAt:           string;
     authMethods:       AuthMethod[];
-    securityProfiles:  number[];
+    /** How its members may authenticate - OCPP's security profiles 1, 2 and 3. */
+    clientAuthentication:  ClientAuthentication[];
     /** What its stations have over their SSH connection besides OCPP: the names of SSH subsystems. */
     sshChannels?:      string[];
     members:           number;
@@ -330,16 +253,16 @@ export interface LoginGroup {
 }
 
 /** Which charging stations may sign in, and with what. */
-export interface StationLogins {
+export interface WebSocketLogins {
     file:               string;
     enabled:            number;
-    maxStations:        number;
+    maxLogins:        number;
     maxGroups:          number;
     minPasswordLength:  number;
     minSecretLength:    number;
     defaultGroup:       string;
     groups:             LoginGroup[];
-    stations:           StationLogin[];
+    logins:             WebSocketLogin[];
 }
 
 /** What a group may be changed to. */
@@ -348,7 +271,8 @@ export interface LoginGroupUpdate {
     name:              string;
     enabled:           boolean;
     authMethods:       AuthMethod[];
-    securityProfiles:  number[];
+    /** How its members may authenticate - OCPP's security profiles 1, 2 and 3. */
+    clientAuthentication:  ClientAuthentication[];
     /** Replaced like everything else about a group: left out, its stations have OCPP alone. */
     sshChannels?:      string[];
     note?:             string;
@@ -645,47 +569,6 @@ export const api = {
         /** Only the fields given are changed; the answer is the whole thing as it now stands. */
         save:  (update: OCPPServerUpdate)  => request<OCPPServerConfiguration>('PUT', '/configuration/ocpp-server', update),
 
-        certificates: {
-
-            get:     ()  => request<ServerCertificates>('GET', '/configuration/ocpp-server/certificates'),
-
-            /**
-             * Generate a key and the signing request that goes with it; the key
-             * never leaves.
-             *
-             * Given three minutes rather than the half of one any other write
-             * gets, because an RSA key is a search for two primes that takes as
-             * long as it takes: an RSA 4096 key can take seconds on a desktop,
-             * and a CSMS may well run on a machine many times slower than that.
-             */
-            create:  (subject: string, algorithm: string) =>
-                         request<{ id: string; csr: string }>('POST', '/configuration/ocpp-server/certificates',
-                                                              { subject, algorithm }, 3 * 60_000),
-
-            /** Where the signing request can be downloaded; a plain file, not JSON. */
-            csrURL:  (id: string) => apiURL(`/configuration/ocpp-server/certificates/${encodeURIComponent(id)}/csr`),
-
-            /** Take in the certificate that answers a request, with its intermediates. */
-            upload:  (id: string, pem: string) =>
-                         request<{ id: string; warnings: string[] }>('PUT',
-                             `/configuration/ocpp-server/certificates/${encodeURIComponent(id)}`, { pem }),
-
-            remove:  (id: string) =>
-                         request<ServerCertificates>('DELETE',
-                             `/configuration/ocpp-server/certificates/${encodeURIComponent(id)}`),
-
-            /** What a text or a file holds, and which key of this CSMS each certificate is for - nothing taken in. */
-            inspect: (what: { pem?: string; content?: string; password?: string }) =>
-                         request<{ certificates: ServerCertificateFound[]; pem: string }>('POST',
-                             '/configuration/ocpp-server/certificates/inspect', what),
-
-            /** Every certificate of a text or a file taken in under the key it is for. */
-            uploadAll: (what: { pem?: string; content?: string; password?: string }) =>
-                         request<ServerCertificatesUploaded>('POST',
-                             '/configuration/ocpp-server/certificates/upload', what)
-
-        },
-
         trust: {
 
             get:      ()  => request<ClientTrust>('GET', '/configuration/ocpp-server/trust'),
@@ -701,9 +584,9 @@ export const api = {
 
         },
 
-        stations: {
+        logins: {
 
-            get:      ()  => request<StationLogins>('GET', '/configuration/ocpp-server/stations'),
+            get:      ()  => request<WebSocketLogins>('GET', '/configuration/ocpp-server/logins'),
 
             /**
              * Add a station or give one a new password. An empty password means
@@ -711,21 +594,21 @@ export const api = {
              * else: it is kept only as a hash.
              */
             save:     (id: string, password: string, group: string, note: string) =>
-                          request<{ id: string; password?: string; stations: StationLogins }>(
-                              'POST', '/configuration/ocpp-server/stations', { id, password, group, note }),
+                          request<{ id: string; password?: string; logins: WebSocketLogins }>(
+                              'POST', '/configuration/ocpp-server/logins', { id, password, group, note }),
 
             enable:   (id: string, enabled: boolean) =>
-                          request<StationLogins>('PUT', `/configuration/ocpp-server/stations/${encodeURIComponent(id)}`, { enabled }),
+                          request<WebSocketLogins>('PUT', `/configuration/ocpp-server/logins/${encodeURIComponent(id)}`, { enabled }),
 
             move:     (id: string, group: string) =>
-                          request<StationLogins>('PUT', `/configuration/ocpp-server/stations/${encodeURIComponent(id)}`, { group }),
+                          request<WebSocketLogins>('PUT', `/configuration/ocpp-server/logins/${encodeURIComponent(id)}`, { group }),
 
             /**
              * Mark a login as a local controller's, which may send in the
              * name of the stations behind it - or no longer.
              */
             markLocalController: (id: string, localController: boolean) =>
-                          request<StationLogins>('PUT', `/configuration/ocpp-server/stations/${encodeURIComponent(id)}`, { localController }),
+                          request<WebSocketLogins>('PUT', `/configuration/ocpp-server/logins/${encodeURIComponent(id)}`, { localController }),
 
             /**
              * Mark a login as a gateway's, which may send in the name of the
@@ -733,10 +616,10 @@ export const api = {
              * no longer the other.
              */
             markGateway: (id: string, gateway: boolean) =>
-                          request<StationLogins>('PUT', `/configuration/ocpp-server/stations/${encodeURIComponent(id)}`, { gateway }),
+                          request<WebSocketLogins>('PUT', `/configuration/ocpp-server/logins/${encodeURIComponent(id)}`, { gateway }),
 
             remove:   (id: string) =>
-                          request<StationLogins>('DELETE', `/configuration/ocpp-server/stations/${encodeURIComponent(id)}`),
+                          request<WebSocketLogins>('DELETE', `/configuration/ocpp-server/logins/${encodeURIComponent(id)}`),
 
             /**
              * Give a station what it needs to be let in with a one-time token.
@@ -744,23 +627,23 @@ export const api = {
              * here - the only place it is ever handed out.
              */
             saveTOTP: (id: string, update: TOTPUpdate) =>
-                          request<{ id: string; sharedSecret?: string; stations: StationLogins }>(
-                              'PUT', `/configuration/ocpp-server/stations/${encodeURIComponent(id)}/totp`, update),
+                          request<{ id: string; sharedSecret?: string; logins: WebSocketLogins }>(
+                              'PUT', `/configuration/ocpp-server/logins/${encodeURIComponent(id)}/totp`, update),
 
             /**
              * Whether a station's token has to be bound to the TLS session of
              * its connection. Its secret stays as it is.
              */
             bindTOTP:       (id: string, bound: boolean) =>
-                          request<StationLogins>(
-                              'PUT', `/configuration/ocpp-server/stations/${encodeURIComponent(id)}/totp/binding`,
+                          request<WebSocketLogins>(
+                              'PUT', `/configuration/ocpp-server/logins/${encodeURIComponent(id)}/totp/binding`,
                               { tlsChannelBinding: bound }),
 
             removeTOTP:     (id: string) =>
-                          request<StationLogins>('DELETE', `/configuration/ocpp-server/stations/${encodeURIComponent(id)}/totp`),
+                          request<WebSocketLogins>('DELETE', `/configuration/ocpp-server/logins/${encodeURIComponent(id)}/totp`),
 
             removePassword: (id: string) =>
-                          request<StationLogins>('DELETE', `/configuration/ocpp-server/stations/${encodeURIComponent(id)}/password`),
+                          request<WebSocketLogins>('DELETE', `/configuration/ocpp-server/logins/${encodeURIComponent(id)}/password`),
 
             /**
              * Give a station an SSH key for OCPP over SSH - one line of an
@@ -768,13 +651,13 @@ export const api = {
              * yet. A public key: nothing secret goes either way.
              */
             addSSHKey: (id: string, line: string, label: string, group: string, note: string) =>
-                          request<{ id: string; fingerprint: string; stations: StationLogins }>(
-                              'POST', `/configuration/ocpp-server/stations/${encodeURIComponent(id)}/sshKeys`, { line, label, group, note }),
+                          request<{ id: string; fingerprint: string; logins: WebSocketLogins }>(
+                              'POST', `/configuration/ocpp-server/logins/${encodeURIComponent(id)}/sshKeys`, { line, label, group, note }),
 
             /** Take a key away; a session it opened ends. */
             removeSSHKey: (id: string, fingerprint: string) =>
-                          request<StationLogins>('DELETE',
-                              `/configuration/ocpp-server/stations/${encodeURIComponent(id)}/sshKeys/${fingerprintInURL(fingerprint)}`)
+                          request<WebSocketLogins>('DELETE',
+                              `/configuration/ocpp-server/logins/${encodeURIComponent(id)}/sshKeys/${fingerprintInURL(fingerprint)}`)
 
         },
 
@@ -783,11 +666,11 @@ export const api = {
             /** Everything about the group is replaced, not merged. */
             save:     (update: LoginGroupUpdate) =>
                           update.id === undefined
-                              ? request<StationLogins>('POST', '/configuration/ocpp-server/groups', update)
-                              : request<StationLogins>('PUT',  `/configuration/ocpp-server/groups/${encodeURIComponent(update.id)}`, update),
+                              ? request<WebSocketLogins>('POST', '/configuration/ocpp-server/groups', update)
+                              : request<WebSocketLogins>('PUT',  `/configuration/ocpp-server/groups/${encodeURIComponent(update.id)}`, update),
 
             remove:   (id: string) =>
-                          request<StationLogins>('DELETE', `/configuration/ocpp-server/groups/${encodeURIComponent(id)}`)
+                          request<WebSocketLogins>('DELETE', `/configuration/ocpp-server/groups/${encodeURIComponent(id)}`)
 
         }
 

@@ -84,9 +84,17 @@ namespace cloud.charging.open.CSMS
         public const String  Roaming    = "roaming";
 
         /// <summary>
-        /// All three.
+        /// Commissioning over SSH, a tool speaking OCPP to this CSMS on its own
+        /// SSH server: read, whether it is served and where; edited, switched
+        /// on or off; run, the tool let in. The administrators', unless the
+        /// file gives it to a role.
         /// </summary>
-        public static readonly IReadOnlyList<String>  Resources = [ Stations, Locations, Roaming ];
+        public const String  Commissioning  = cloud.charging.open.protocols.OCPP.Node.OCPPServingNode.CommissioningResource;
+
+        /// <summary>
+        /// All four.
+        /// </summary>
+        public static readonly IReadOnlyList<String>  Resources = [ Stations, Locations, Roaming, Commissioning ];
 
         #endregion
 

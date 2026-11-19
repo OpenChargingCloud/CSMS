@@ -21,8 +21,11 @@ using Newtonsoft.Json.Linq;
 
 using org.GraphDefined.Vanaheimr.Hermod;
 
+using cloud.charging.open.protocols.WWCP.Node.Certificates;
 using cloud.charging.open.protocols.WWCP.Node.Configuration;
+using cloud.charging.open.protocols.WWCP.Node.Logging;
 using cloud.charging.open.protocols.WWCP.Node.TestKit;
+using cloud.charging.open.protocols.OCPP.Node;
 
 #endregion
 
@@ -40,6 +43,58 @@ namespace cloud.charging.open.CSMS.Tests
     /// </remarks>
     internal static class TestCSMSs
     {
+
+        #region CertificatesIn(Directory) / RequestAServerKey(Store, Name)
+
+        /// <summary>
+        /// The node's certificate store of a CSMS that is to be built in the
+        /// given directory: where its station port finds the server identity
+        /// it shows, under the listener "ocpp" - put there before it starts.
+        /// </summary>
+        public static CertificateStore CertificatesIn(String Directory)
+        {
+
+            var store = new CertificateStore(
+                            Path.Combine(Directory, CertificatesConfiguration.DefaultDirectory),
+                            new EventLog(),
+                            NodeName:      "CSMS",
+                            Listeners:     [ OCPPServingNode.StationListener ],
+                            RequestKinds:  [ CertificateKind.TLSServerIdentity ]
+                        );
+
+            store.Reload();
+
+            return store;
+
+        }
+
+        /// <summary>
+        /// A key for the station port, and the signing request of a server
+        /// certificate for it under the given name.
+        /// </summary>
+        /// <returns>The signing request, as PEM.</returns>
+        public static String RequestAServerKey(CertificateStore  Store,
+                                               String            Name   = "127.0.0.1")
+        {
+
+            if (!Store.TryCreateRequest(CertificateKind.TLSServerIdentity,
+                                        $"CN={Name}",
+                                        null,
+                                        new CertificateRequestAsks(ReachableAs: [ Name ]),
+                                        [ OCPPServingNode.StationListener ],
+                                        null,
+                                        out var request,
+                                        out var error,
+                                        out _))
+            {
+                throw new InvalidOperationException($"A server key could not be made: {error}");
+            }
+
+            return request.CSR;
+
+        }
+
+        #endregion
 
         #region New(Directory, Configuration = null, Clock = null)
 

@@ -22,6 +22,7 @@ using System.Diagnostics.CodeAnalysis;
 using Newtonsoft.Json.Linq;
 
 using cloud.charging.open.protocols.WWCP.Node.Configuration;
+using cloud.charging.open.protocols.OCPP.Node.Serving;
 
 #endregion
 
@@ -53,7 +54,7 @@ namespace cloud.charging.open.CSMS.Configuration
     /// <param name="OCPI">Who this CSMS is when it speaks OCPI to its roaming partners.</param>
     /// <param name="CertificateSigning">Where the CSR of a charging station's SignCertificate request goes.</param>
     public sealed record CSMSConfiguration(OCPPConfiguration?                OCPP                 = null,
-                                           OCPPServerConfiguration?          OCPPServer           = null,
+                                           WebSocketServerConfiguration?          OCPPServer           = null,
                                            OCPIConfiguration?                OCPI                 = null,
                                            CertificateSigningConfiguration?  CertificateSigning   = null)
     {
@@ -115,18 +116,18 @@ namespace cloud.charging.open.CSMS.Configuration
 
             #region OCPP server
 
-            OCPPServerConfiguration? ocppServer = null;
+            WebSocketServerConfiguration? ocppServer = null;
 
-            if (JSON[OCPPServerConfiguration.SectionName] is JToken ocppServerToken && ocppServerToken.Type != JTokenType.Null)
+            if (JSON[WebSocketServerConfiguration.SectionName] is JToken ocppServerToken && ocppServerToken.Type != JTokenType.Null)
             {
 
                 if (ocppServerToken is not JObject ocppServerJSON)
                 {
-                    Error = $"'{OCPPServerConfiguration.SectionName}' must be a JSON object.";
+                    Error = $"'{WebSocketServerConfiguration.SectionName}' must be a JSON object.";
                     return false;
                 }
 
-                if (!OCPPServerConfiguration.TryParse(ocppServerJSON, out ocppServer, out Error))
+                if (!WebSocketServerConfiguration.TryParse(ocppServerJSON, out ocppServer, out Error, CSMS.CSMSKind.Noun))
                     return false;
 
             }
@@ -194,7 +195,7 @@ namespace cloud.charging.open.CSMS.Configuration
                 json.Add(OCPPConfiguration.SectionName,  OCPP.ToJSON());
 
             if (OCPPServer is not null)
-                json.Add(OCPPServerConfiguration.SectionName, OCPPServer.ToJSON());
+                json.Add(WebSocketServerConfiguration.SectionName, OCPPServer.ToJSON());
 
             if (OCPI is not null)
                 json.Add(OCPIConfiguration.SectionName,  OCPI.ToJSON());

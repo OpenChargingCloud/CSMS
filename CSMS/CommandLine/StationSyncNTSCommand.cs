@@ -28,6 +28,7 @@ using cloud.charging.open.protocols.OCPPv2_1;
 using cloud.charging.open.protocols.OCPPv2_1.CS;
 using cloud.charging.open.protocols.OCPPv2_1.CSMS;
 using cloud.charging.open.protocols.OCPPv2_1.NetworkingNode;
+using cloud.charging.open.protocols.WWCP.Node.Logins;
 
 using NodeSyncNTSCommand  = cloud.charging.open.protocols.WWCP.Node.CommandLine.SyncNTSCommand;
 using OCPPResultCode      = cloud.charging.open.protocols.OCPP.ResultCode;
@@ -117,7 +118,7 @@ namespace cloud.charging.open.CSMS.CommandLine
                 var before = String.Join(" ", Arguments[..^1]);
                 var typed  = Arguments[^1];
 
-                return cli.CSMS.StationLogins.Logins.
+                return cli.CSMS.WebSocketLogins.Logins.
                            Select (login   => login.Id).
                            Where  (cli.CSMS.IsConnected).
                            OrderBy(station => station, StringComparer.Ordinal).

@@ -206,9 +206,12 @@ namespace cloud.charging.open.CSMS
 
             csms01.OCPP.OUT.OnBootNotificationResponseSent += (timestamp, sender, connection, request, response, runtime, sentMessageResult, cancellationToken) => {
 
-                if (response.Status == RegistrationStatus.Accepted)
+                // The roots of the stations, for the stations: a local controller
+                // or a gateway that registers is no station.
+                if (response.Status == RegistrationStatus.Accepted &&
+                    request.NetworkPath.Source.ToString() is String station &&
+                    IsAStation(station))
                 {
-                    var station = request.NetworkPath.Source.ToString();
                     _ = Task.Run(() => InstallRootsEverywhere(station));
                 }
 
@@ -563,7 +566,7 @@ namespace cloud.charging.open.CSMS
 
             // The root above this CSMS's TLS certificate: the issuer of the
             // last certificate of the chain it serves.
-            var served    = ServerCertificates.Select();
+            var served    = StationCertificate.Current;
             var top       = served?.Intermediates.Cast<X509Certificate2>().LastOrDefault() ?? served?.Certificate;
 
             foreach (var (certificate, v2g) in found)

@@ -25,6 +25,7 @@ using cloud.charging.open.protocols.WWCP.Node.Logging;
 using cloud.charging.open.protocols.WWCP.Node.Web;
 
 using cloud.charging.open.protocols.OCPP.Node;
+using cloud.charging.open.protocols.OCPP.Node.Serving;
 
 #endregion
 
@@ -44,7 +45,7 @@ namespace cloud.charging.open.CSMS
     /// What is left here is registered on top: see CSMSHTTPAPI.OCPPServer.cs
     /// and CSMSHTTPAPI.OCPI.cs.
     /// </remarks>
-    public partial class CSMSHTTPAPI : OCPPDiallingHTTPAPI
+    public partial class CSMSHTTPAPI : OCPPServingHTTPAPI
     {
 
         #region Properties
@@ -81,6 +82,7 @@ namespace cloud.charging.open.CSMS
                    // Whoever may read, change or operate the charging
                    // stations may read, change or test what dials them.
                    CSMSAccess.Stations,
+                   CSMSAccess.Stations,
                    APIPath,
                    Version ?? typeof(CSMSHTTPAPI).Assembly.GetName().Version?.ToString(3) ?? "0.0.0")
 
@@ -88,12 +90,12 @@ namespace cloud.charging.open.CSMS
 
             this.CSMS = CSMS;
 
-            // The charging station server, its certificates, the chains it
-            // accepts and the stations that may sign in; see
-            // CSMSHTTPAPI.OCPPServer.cs. And the OCPI side: the roaming
+            // The charging station server, the chains it accepts and the
+            // stations that may sign in are the serving node's routes (see
+            // OCPPServingHTTPAPI.OCPPServer.cs); its certificates are the
+            // node's server identities. And the OCPI side: the roaming
             // partners, the locations this operator publishes and what travels
             // between them; see CSMSHTTPAPI.OCPI.cs.
-            RegisterOCPPServerRoutes();
             RegisterOCPIRoutes();
             RegisterCertificateSigningRoutes();
             RegisterStationRootRoutes();

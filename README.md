@@ -100,10 +100,11 @@ handed a role rather than a socket.
 | SSH server | whether the command line is served over SSH, on which port, and whether passwords open it - in effect at once; its host key, who is connected, the keys of the accounts and what it offers | `ssh:edit` |
 | Certificate store | the roots and the server certificates this CSMS believes, and what each is for - certificates alone, no private key | `certificates:edit` |
 | Identities | who this CSMS is as a client, each with its private key: its TLS identities | `certificates:edit` |
-| Charging station server | the port, TLS, the security profiles it accepts | `stations:edit` |
+| Charging station server | the port, TLS, how a station may authenticate (OCPP's security profiles) | `stations:edit` |
 | Server certificates | the keys and chains this CSMS presents | `certificates:edit` |
 | Client trust | the chains a station's certificate may come from | `certificates:edit` |
-| Station logins | who may sign in, and with what; which login is a local controller's | `stations:edit` |
+| WebSocket logins | who may sign in, and with what; which login is a local controller's | `stations:edit` |
+| Commissioning | whether a tool may speak OCPP to this CSMS over its SSH server, on the subsystem `ocpp@open.charging.cloud` - as an account that may run `commissioning`, the system administrator unless a role says otherwise; on or off at once, written to the `commissioning` section | `commissioning:edit` |
 | Certificate signing | where the CSRs of the charging stations go - the EST server of a PKI - the certificates the stations have, and what became of the latest; a station asked for a new certificate by hand; what the stations asked of the OCSP responder | `certificates:edit` |
 | Station roots | the root certificates the stations are installed - by hand, on every station connected, or on every station that starts without one - what a station has, and a certificate deleted from it | `certificates:edit` |
 | OCPI | nothing - who this operator is and where its partners find it | `roaming:read` |
@@ -124,7 +125,7 @@ that was applied but not written down disappears at the next start without
 anybody noticing.
 
 The node below reads the sections every one of these programs has - `dns`,
-`nts` and `certificates` - and the CSMS reads its own - `ocpp`, `ocppServer`,
+`nts` and `certificates` - and the CSMS reads its own - `ocpp`, `webSocketServer`,
 `ocpi` and `certificateSigning` - from the same document; each passes over
 what is the other's.
 Beside the file the node keeps its certificate store, in `certificates/`, and
@@ -253,7 +254,7 @@ directory by hand is adopted at the next start, or at once by
 `POST /api/v1/certificates/reload`.
 
 What holds a secret is for the account the CSMS runs under alone:
-`ocpp-server-keys/`, `ocpp-stations.json` with the stations' passwords and
+`ocpp-server-keys/`, `websocket-logins.json` with the stations' passwords and
 `ocpi/` with the partners' tokens, beside the node's own `accounts/`, `logs/`,
 `certificates/` and `ssh/`. On Unix that is 0700 for a directory and 0600 for a
 file; on Windows an access control list of its own, nothing inherited from the
@@ -441,7 +442,7 @@ over may send it in that name:
   itself the way to another: `localControllers <login> on|off` or
   `gateways <login> on|off`, "Local controller" or "Gateway" on the Station
   logins page, or `{"localController": true}` or `{"gateway": true}` in a
-  `PUT /api/v1/configuration/ocpp-server/stations/{id}`, at `stations:edit`.
+  `PUT /api/v1/configuration/ocpp-server/logins/{id}`, at `stations:edit`.
   To the CSMS a gateway is what a local controller is; it is marked as what
   it is so that the list, the log and a connection that dials it say so. A
   login is the one or the other: marked as a gateway's it is no local
@@ -552,7 +553,8 @@ and `GET /api/v1/status/connections`. What is different for a CSMS:
   it by, as a station that dials is known by the last part of its URL. The URL
   of a connection ends with the name the CSMS comes under at the other end -
   `wss://station7.example.org:9443/csms-01` - and that is the login of the
-  credentials it signs in with, too;
+  credentials it signs in with, too: the WebSocket login of that name at the
+  other end, which says what it is let in with;
 - a local controller and a gateway are dialled in the overlay network
   (`X-OCPP-NetworkingMode: OverlayNetwork`), so that the stations behind it are
   reached through it, a charging station in the plain frame of OCPP. In the
@@ -582,7 +584,7 @@ the command line lists what was dialled beside what dialled in. The OCPP
 messages over a line the CSMS dialled are logged as the ones of a station that
 dialled in are, under the name the connection leads to and by the same
 switches: `messages` and the window for their contents, in the `logging` of the
-`ocppServer` section.
+`webSocketServer` section.
 
 
 ## Running it

@@ -31,6 +31,8 @@ using NUnit.Framework;
 using cloud.charging.open.protocols.WWCP.Node.TestKit;
 
 using cloud.charging.open.CSMS.OCPP;
+using cloud.charging.open.protocols.OCPP.Node.Serving;
+using cloud.charging.open.protocols.WWCP.Node.Logins;
 
 #endregion
 
@@ -60,11 +62,11 @@ namespace cloud.charging.open.CSMS.Tests
 
             => new (
                    new JProperty("nts",  new JObject(new JProperty("groups", new JObject(new JProperty("legal", new JObject(new JProperty("enabled", false))))))),
-                   new JProperty("ocppServer", new JObject(
+                   new JProperty("webSocketServer", new JObject(
                        new JProperty("enabled",           true),
                        new JProperty("address",           "127.0.0.1"),
                        new JProperty("port",              TestPorts.Free()),
-                       new JProperty("securityProfiles",  new JArray(1)),
+                       new JProperty("clientAuthentication",  new JArray("httpAuthWithoutTLS")),
                        new JProperty("subprotocols",      new JArray("ocpp2.1", "ocpp2.0.1"))
                    ))
                );
@@ -304,7 +306,7 @@ namespace cloud.charging.open.CSMS.Tests
             public static async Task<FakeStation> Connect(CSMS CSMS, String Id, String Password)
             {
 
-                Assert.That(CSMS.StationLogins.TrySetPassword(Id, Password, null, null, out _, out var error), Is.True, error);
+                Assert.That(CSMS.WebSocketLogins.TrySetPassword(Id, Password, null, null, out var error), Is.True, error);
 
                 var client = new ClientWebSocket();
                 client.Options.AddSubProtocol("ocpp2.1");

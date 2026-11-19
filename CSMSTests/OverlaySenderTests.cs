@@ -36,6 +36,8 @@ using cloud.charging.open.protocols.WWCP.Node.TestKit;
 
 using cloud.charging.open.CSMS.CommandLine;
 using cloud.charging.open.CSMS.OCPP;
+using cloud.charging.open.protocols.OCPP.Node.Serving;
+using cloud.charging.open.protocols.WWCP.Node.Logins;
 
 using Node = cloud.charging.open.CSMS.Tests.KeyPinsOverOCPPTests.Controller;
 
@@ -76,11 +78,11 @@ namespace cloud.charging.open.CSMS.Tests
         protected override JObject Configuration
             => new (
                    new JProperty("nts",  new JObject(new JProperty("groups", new JObject(new JProperty("legal", new JObject(new JProperty("enabled", false))))))),
-                   new JProperty("ocppServer", new JObject(
+                   new JProperty("webSocketServer", new JObject(
                        new JProperty("enabled",           true),
                        new JProperty("address",           "127.0.0.1"),
                        new JProperty("port",              TestPorts.Free()),
-                       new JProperty("securityProfiles",  new JArray(1)),
+                       new JProperty("clientAuthentication",  new JArray("httpAuthWithoutTLS")),
                        new JProperty("subprotocols",      new JArray("ocpp2.1"))
                    ))
                );
@@ -119,7 +121,7 @@ namespace cloud.charging.open.CSMS.Tests
                                           Boolean  Overlay   = true)
         {
 
-            Assert.That(CSMS.StationLogins.TrySetPassword(Id, ThePassword, null, null, out _, out var error), Is.True, error);
+            Assert.That(CSMS.WebSocketLogins.TrySetPassword(Id, ThePassword, null, null, out var error), Is.True, error);
 
             var node = await Node.Connect(CSMS.OCPPServerSettings.TCPPort!.Value.ToUInt16(), ThePassword, Id, Overlay);
 
@@ -156,10 +158,10 @@ namespace cloud.charging.open.CSMS.Tests
         /// </summary>
         private Int32 KeysOf(String Station)
 
-            => CSMS.StationLogins.Logins.FirstOrDefault(login => login.Id == Station)?.Keys.Count ?? 0;
+            => CSMS.WebSocketLogins.Logins.FirstOrDefault(login => login.Id == Station)?.Keys.Count ?? 0;
 
         private Boolean HasALogin(String Station)
-            => CSMS.StationLogins.Logins.Any(login => login.Id == Station);
+            => CSMS.WebSocketLogins.Logins.Any(login => login.Id == Station);
 
         /// <summary>
         /// The node the CSMS routes the given station through, where it has a route.
@@ -201,7 +203,7 @@ namespace cloud.charging.open.CSMS.Tests
         public async Task AStation_CannotHaveAnSSHKeyEnrolled_InAnotherStationsName()
         {
 
-            Assert.That(CSMS.StationLogins.TrySetPassword("cs001", ThePassword, null, null, out _, out var error), Is.True, error);
+            Assert.That(CSMS.WebSocketLogins.TrySetPassword("cs001", ThePassword, null, null, out var error), Is.True, error);
 
             var impostor  = await Dialling("cs009");
             var key       = AnSSHKey();
@@ -328,7 +330,7 @@ namespace cloud.charging.open.CSMS.Tests
 
             var controller = await Dialling(Id);
 
-            Assert.That(CSMS.StationLogins.TrySetLocalController(Id, true, out var error), Is.True, error);
+            Assert.That(CSMS.WebSocketLogins.TrySetLocalController(Id, true, out var error), Is.True, error);
 
             return controller;
 
@@ -482,7 +484,7 @@ namespace cloud.charging.open.CSMS.Tests
 
             var gateway  = await Dialling("gw001");
 
-            Assert.That(CSMS.StationLogins.TrySetGateway("gw001", true, out var error), Is.True, error);
+            Assert.That(CSMS.WebSocketLogins.TrySetGateway("gw001", true, out var error), Is.True, error);
 
             var boot     = await gateway.AskAs(new JArray("cs001", "gw001"), "BootNotification", ABootNotification(), Patience);
 
@@ -507,29 +509,29 @@ namespace cloud.charging.open.CSMS.Tests
         public async Task TheGatewaysMark_IsSetAtTheConsole_AndByTheAPI_AndTakesTheControllersAway()
         {
 
-            Assert.That(CSMS.StationLogins.TrySetPassword("gw001", ThePassword, null, null, out _, out var error), Is.True, error);
+            Assert.That(CSMS.WebSocketLogins.TrySetPassword("gw001", ThePassword, null, null, out var error), Is.True, error);
 
             using var console   = new CSMSCLI(CSMS);
 
             var asAController   = await Run(console, "localControllers gw001 on");
             var marked          = await Run(console, "gateways gw001 on");
-            var stillController = CSMS.StationLogins.IsLocalController("gw001");
+            var stillController = CSMS.WebSocketLogins.IsLocalController("gw001");
             var listed          = await Run(console, "gateways");
             var controllers     = await Run(console, "localControllers");
-            var written         = ChargingStationLogin.TryParse(CSMS.StationLogins.Logins.Single(login => login.Id == "gw001").ToJSON(WithSecrets: true), out var reread, out var parseError);
+            var written         = WebSocketLogin.TryParse(CSMS.WebSocketLogins.Logins.Single(login => login.Id == "gw001").ToJSON(WithSecrets: true), out var reread, out var parseError);
             var unmarking       = await Run(console, "gateways gw001 off");
-            var afterConsole    = CSMS.StationLogins.IsGateway("gw001");
+            var afterConsole    = CSMS.WebSocketLogins.IsGateway("gw001");
 
             var admin           = await SignedIn();
 
-            var notABoolean     = await admin.PutAsync("api/v1/configuration/ocpp-server/stations/gw001", JSONBody(new JProperty("gateway", "yes")));
-            var both            = await admin.PutAsync("api/v1/configuration/ocpp-server/stations/gw001", JSONBody(new JProperty("gateway", true), new JProperty("localController", true)));
-            var afterBoth       = CSMS.StationLogins.SpeaksForOthers("gw001");
-            var adminPut        = await admin.PutAsync("api/v1/configuration/ocpp-server/stations/gw001", JSONBody(new JProperty("gateway", true)));
-            var listing         = await GetJSON(admin, "api/v1/configuration/ocpp-server/stations");
-            var controllerAgain = await admin.PutAsync("api/v1/configuration/ocpp-server/stations/gw001", JSONBody(new JProperty("localController", true)));
+            var notABoolean     = await admin.PutAsync("api/v1/configuration/ocpp-server/logins/gw001", JSONBody(new JProperty("gateway", "yes")));
+            var both            = await admin.PutAsync("api/v1/configuration/ocpp-server/logins/gw001", JSONBody(new JProperty("gateway", true), new JProperty("localController", true)));
+            var afterBoth       = CSMS.WebSocketLogins.SpeaksForOthers("gw001");
+            var adminPut        = await admin.PutAsync("api/v1/configuration/ocpp-server/logins/gw001", JSONBody(new JProperty("gateway", true)));
+            var listing         = await GetJSON(admin, "api/v1/configuration/ocpp-server/logins");
+            var controllerAgain = await admin.PutAsync("api/v1/configuration/ocpp-server/logins/gw001", JSONBody(new JProperty("localController", true)));
 
-            var gw001           = (listing["stations"] as JArray)?.OfType<JObject>().Single(station => station.Value<String>("id") == "gw001");
+            var gw001           = (listing["logins"] as JArray)?.OfType<JObject>().Single(station => station.Value<String>("id") == "gw001");
 
             Assert.Multiple(() => {
 
@@ -552,8 +554,8 @@ namespace cloud.charging.open.CSMS.Tests
                 Assert.That(gw001?.Value<Boolean>("gateway"),         Is.True,  listing.ToString());
                 Assert.That(gw001?.Value<Boolean>("localController"), Is.False, listing.ToString());
                 Assert.That(controllerAgain.StatusCode,      Is.EqualTo(HttpStatusCode.OK));
-                Assert.That(CSMS.StationLogins.IsGateway        ("gw001"), Is.False);
-                Assert.That(CSMS.StationLogins.IsLocalController("gw001"), Is.True);
+                Assert.That(CSMS.WebSocketLogins.IsGateway        ("gw001"), Is.False);
+                Assert.That(CSMS.WebSocketLogins.IsLocalController("gw001"), Is.True);
 
             });
 
@@ -571,7 +573,7 @@ namespace cloud.charging.open.CSMS.Tests
         public async Task TheMark_IsSetAtTheConsole_AndByTheAPI_AtTheStationsEditing()
         {
 
-            Assert.That(CSMS.StationLogins.TrySetPassword("lc001", ThePassword, null, null, out _, out var error), Is.True, error);
+            Assert.That(CSMS.WebSocketLogins.TrySetPassword("lc001", ThePassword, null, null, out var error), Is.True, error);
 
             var (vera, veraPassword) = await AnAccount("vera", "viewer");
 
@@ -579,21 +581,21 @@ namespace cloud.charging.open.CSMS.Tests
             using var viewer    = OverSSHAs(vera);
 
             var viewerMarks     = await Run(viewer,  "localControllers lc001 on");
-            var unmarked        = CSMS.StationLogins.IsLocalController("lc001");
+            var unmarked        = CSMS.WebSocketLogins.IsLocalController("lc001");
             var marked          = await Run(console, "localControllers lc001 on");
             var listed          = await Run(console, "localControllers");
             var nobody          = await Run(console, "localControllers cs404 on");
-            var written         = ChargingStationLogin.TryParse(CSMS.StationLogins.Logins.Single(login => login.Id == "lc001").ToJSON(WithSecrets: true), out var reread, out var parseError);
+            var written         = WebSocketLogin.TryParse(CSMS.WebSocketLogins.Logins.Single(login => login.Id == "lc001").ToJSON(WithSecrets: true), out var reread, out var parseError);
             var unmarking       = await Run(console, "localControllers lc001 off");
-            var afterConsole    = CSMS.StationLogins.IsLocalController("lc001");
+            var afterConsole    = CSMS.WebSocketLogins.IsLocalController("lc001");
 
             var admin           = await SignedIn();
             var viewerHTTP      = await SignedInAs("vera", veraPassword);
 
-            var viewerPut       = await viewerHTTP.PutAsync("api/v1/configuration/ocpp-server/stations/lc001", JSONBody(new JProperty("localController", true)));
-            var notABoolean     = await admin.     PutAsync("api/v1/configuration/ocpp-server/stations/lc001", JSONBody(new JProperty("localController", "yes")));
-            var adminPut        = await admin.     PutAsync("api/v1/configuration/ocpp-server/stations/lc001", JSONBody(new JProperty("localController", true)));
-            var listing         = await GetJSON(admin, "api/v1/configuration/ocpp-server/stations");
+            var viewerPut       = await viewerHTTP.PutAsync("api/v1/configuration/ocpp-server/logins/lc001", JSONBody(new JProperty("localController", true)));
+            var notABoolean     = await admin.     PutAsync("api/v1/configuration/ocpp-server/logins/lc001", JSONBody(new JProperty("localController", "yes")));
+            var adminPut        = await admin.     PutAsync("api/v1/configuration/ocpp-server/logins/lc001", JSONBody(new JProperty("localController", true)));
+            var listing         = await GetJSON(admin, "api/v1/configuration/ocpp-server/logins");
 
             Assert.Multiple(() => {
 
@@ -610,8 +612,8 @@ namespace cloud.charging.open.CSMS.Tests
                 Assert.That(viewerPut.StatusCode,           Is.EqualTo(HttpStatusCode.Forbidden));
                 Assert.That(notABoolean.StatusCode,         Is.EqualTo(HttpStatusCode.BadRequest));
                 Assert.That(adminPut.StatusCode,            Is.EqualTo(HttpStatusCode.OK));
-                Assert.That(CSMS.StationLogins.IsLocalController("lc001"), Is.True);
-                Assert.That((listing["stations"] as JArray)?.OfType<JObject>().
+                Assert.That(CSMS.WebSocketLogins.IsLocalController("lc001"), Is.True);
+                Assert.That((listing["logins"] as JArray)?.OfType<JObject>().
                                 Single(station => station.Value<String>("id") == "lc001").
                                 Value<Boolean>("localController"),
                                                             Is.True, listing.ToString());

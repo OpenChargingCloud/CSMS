@@ -27,6 +27,8 @@ using cloud.charging.open.protocols.WWCP.Node.CommandLine;
 using OCPPAdapter = cloud.charging.open.protocols.OCPPv2_1.NetworkingNode.OCPPAdapter;
 using ICSMSCLI    = cloud.charging.open.protocols.OCPPv2_1.CSMS.CommandLine.ICSMSCLI;
 
+using cloud.charging.open.protocols.OCPP.Node.Serving.CommandLine;
+
 #endregion
 
 namespace cloud.charging.open.CSMS.CommandLine
@@ -113,6 +115,12 @@ namespace cloud.charging.open.CSMS.CommandLine
             this.CSMS = CSMS;
 
             RegisterCLIType(typeof(CSMSCLI));
+
+            // The commands of every node that serves charging stations, asking
+            // for the CSMS's "stations".
+            RegisterCommands(new StationKeysCommand(this, CSMSAccess.Stations),
+                             new StationPinsCommand(this, CSMSAccess.Stations));
+
             RegisterStationOperations();
 
         }
@@ -137,6 +145,12 @@ namespace cloud.charging.open.CSMS.CommandLine
             this.CSMS = CSMS;
 
             RegisterCLIType(typeof(CSMSCLI));
+
+            // The commands of every node that serves charging stations, asking
+            // for the CSMS's "stations".
+            RegisterCommands(new StationKeysCommand(this, CSMSAccess.Stations),
+                             new StationPinsCommand(this, CSMSAccess.Stations));
+
             RegisterStationOperations();
 
         }

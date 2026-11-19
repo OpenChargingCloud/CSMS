@@ -22,6 +22,8 @@ using NUnit.Framework;
 using cloud.charging.open.protocols.WWCP.Node.TestKit;
 
 using cloud.charging.open.CSMS.OCPP;
+using cloud.charging.open.protocols.OCPP.Node.Serving;
+using cloud.charging.open.protocols.WWCP.Node.Logins;
 
 #endregion
 
@@ -69,57 +71,6 @@ namespace cloud.charging.open.CSMS.Tests
         #endregion
 
 
-        #region TheServerKeysAreTheOwnersAlone()
-
-        /// <summary>
-        /// The directory of the OCPP server's keys and every key in it.
-        /// </summary>
-        [Test]
-        public void TheServerKeysAreTheOwnersAlone()
-        {
-
-            var keys = Path.Combine(directory, ServerCertificateStore.DefaultDirectoryName);
-
-            using (var store = new ServerCertificateStore(keys, clock))
-                Assert.That(store.TryCreateKey("csms001.example.org", [ "csms001.example.org" ], null, out _, out _, out var error),
-                            Is.True, error);
-
-            Assert.Multiple(() => {
-
-                Assert.That(OwnerOnlyChecks.OthersMayGetIn(keys), Is.Empty, "Others may get into the directory of the keys.");
-
-                foreach (var key in Directory.GetFiles(keys, "*.key.pem"))
-                    Assert.That(OwnerOnlyChecks.OthersMayGetIn(key), Is.Empty, $"Others may read '{key}'.");
-
-            });
-
-        }
-
-        #endregion
-
-        #region ServerKeysLeftOpenAreClosedAtTheNextStart()
-
-        /// <summary>
-        /// A directory of keys an earlier version left as the folder above
-        /// had it is closed when the store is read again.
-        /// </summary>
-        [Test]
-        public void ServerKeysLeftOpenAreClosedAtTheNextStart()
-        {
-
-            var keys = Path.Combine(directory, ServerCertificateStore.DefaultDirectoryName);
-
-            OwnerOnlyChecks.OpenToEverybody(keys);
-
-            Assert.That(OwnerOnlyChecks.OthersMayGetIn(keys), Is.Not.Empty, "The test's directory of keys is not open to begin with.");
-
-            using (new ServerCertificateStore(keys, clock))
-                Assert.That(OwnerOnlyChecks.OthersMayGetIn(keys), Is.Empty, "Others may still get into the directory of the keys.");
-
-        }
-
-        #endregion
-
         #region TheStationLoginsAreTheOwnersAlone()
 
         /// <summary>
@@ -130,11 +81,11 @@ namespace cloud.charging.open.CSMS.Tests
         public void TheStationLoginsAreTheOwnersAlone()
         {
 
-            var file   = Path.Combine(directory, ChargingStationLogins.DefaultFileName);
-            var logins = new ChargingStationLogins(file, clock);
+            var file   = Path.Combine(directory, WebSocketLogins.DefaultFileName);
+            var logins = new WebSocketLogins(file, clock);
 
             Assert.That(logins.TryLoad(out var loadError), Is.True, loadError);
-            Assert.That(logins.TrySetPassword("cs001", null, null, null, out _, out var error), Is.True, error);
+            Assert.That(logins.TrySetPassword("cs001", "a-password-long-enough-for-ocpp", null, null, out var error), Is.True, error);
 
             Assert.That(File.Exists(file), Is.True, "The logins were not written.");
             Assert.That(OwnerOnlyChecks.OthersMayGetIn(file), Is.Empty, "Others may read the charging stations' logins.");
@@ -153,16 +104,16 @@ namespace cloud.charging.open.CSMS.Tests
         public void StationLoginsLeftOpenAreClosedAtTheNextStart()
         {
 
-            var file = Path.Combine(directory, ChargingStationLogins.DefaultFileName);
+            var file = Path.Combine(directory, WebSocketLogins.DefaultFileName);
 
-            File.WriteAllText(file, """{ "stations": [] }""");
+            File.WriteAllText(file, """{ "logins": [] }""");
 
             if (!OperatingSystem.IsWindows())
                 File.SetUnixFileMode(file, (UnixFileMode) 0b110_100_100);
 
             Assert.That(OwnerOnlyChecks.OthersMayGetIn(file), Is.Not.Empty, "The test's file of logins is not open to begin with.");
 
-            Assert.That(new ChargingStationLogins(file, clock).TryLoad(out var error), Is.True, error);
+            Assert.That(new WebSocketLogins(file, clock).TryLoad(out var error), Is.True, error);
 
             Assert.That(OwnerOnlyChecks.OthersMayGetIn(file), Is.Empty, "Others may still read the charging stations' logins.");
 

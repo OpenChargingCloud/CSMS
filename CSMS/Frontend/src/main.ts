@@ -6,13 +6,12 @@ import '@fortawesome/fontawesome-free/css/fontawesome.css';
 import '@fortawesome/fontawesome-free/css/solid.css';
 
 import { toURL } from '@node/basePath';
-import { nodeMenu, startNode } from '@node/start';
+import { movedTo, nodeMenu, startNode } from '@node/start';
 import { html } from '@node/view';
 
 import { configurationPage }      from './pages/configuration';
 import { ocppServerPage }         from './pages/ocppServer';
 import { stationLoginsPage }      from './pages/stationLogins';
-import { serverCertificatesPage } from './pages/serverCertificates';
 import { clientTrustPage }        from './pages/clientTrust';
 import { certificateSigningPage } from './pages/certificateSigning';
 import { stationRootsPage } from './pages/stationRoots';
@@ -22,6 +21,7 @@ import { locationsPage }          from './pages/locations';
 import { roamingDataPages }       from './pages/roamingData';
 
 import { connectionsPage }        from '@ocpp/pages/connections';
+import { commissioningPage }      from '@ocpp/pages/commissioning';
 import { setConnectionsResource, setNodeNoun, setNodeTraits } from '@ocpp/settings';
 
 // The charging stations and local controllers this CSMS dials - the ones that
@@ -51,15 +51,16 @@ startNode({
             nodeMenu.ssh,
             { ...nodeMenu.certificates,                         label: 'Certificate store',   icon: 'fa-vault'                                                  },
             nodeMenu.identities,
+            nodeMenu.serverIdentities,
             { path: '/configuration/ocpp-server',               label: 'Charging stations',   icon: 'fa-charging-station',  permission: [ 'stations:read' ]     },
-            { path: '/configuration/ocpp-server/logins',        label: 'Logins and groups',   icon: 'fa-users-gear',        permission: [ 'stations:read' ]     },
+            { path: '/configuration/ocpp-server/logins',        label: 'WebSocket logins',    icon: 'fa-users-gear',        permission: [ 'stations:read' ]     },
             // The charging stations and local controllers this CSMS dials
             // and, on a tab of the same page, what it signs in with there.
             // The keys and certificates it holds up have no page here: they
             // are TLS identities of the certificate store, on Identities.
             { path: '/configuration/connections',               label: 'Connections',         icon: 'fa-network-wired',     permission: [ 'stations:read' ]     },
-            { path: '/configuration/ocpp-server/certificates',  label: 'Server certificates', icon: 'fa-certificate',       permission: [ 'certificates:read' ] },
             { path: '/configuration/ocpp-server/trust',         label: 'Accepted chains',     icon: 'fa-user-shield',       permission: [ 'certificates:read' ] },
+            { path: '/configuration/commissioning',             label: 'Commissioning',       icon: 'fa-screwdriver-wrench', permission: [ 'commissioning:read' ] },
             { path: '/configuration/ocpp-server/signing',       label: 'Certificate signing', icon: 'fa-file-signature',    permission: [ 'stations:read' ]     },
             { path: '/configuration/ocpp-server/roots',         label: 'Station roots',       icon: 'fa-anchor',            permission: [ 'stations:read' ]     },
             { path: '/configuration/ocpi',                      label: 'OCPI',                icon: 'fa-plug',              permission: [ 'roaming:read' ]      },
@@ -81,10 +82,11 @@ startNode({
         nodeMenu.logs
     ],
 
-    // "Certificate store", because there is a page called "Server certificates"
-    // as well - the charging station server's, which the words under who this
-    // CSMS is as a client, on the Identities page, link to. And what it
-    // believes beside the TLS roots every node keeps: the roots of ISO 15118.
+    // "Certificate store", as it has been called here since the charging
+    // station server had a page of certificates of its own - its server keys
+    // are TLS server identities of the store now, on Server identities. And
+    // what it believes beside the TLS roots every node keeps: the roots of
+    // ISO 15118.
     // Not a client root, which a CSMS does not keep: the words under what it
     // believes link to the authorities its charging stations are vouched for
     // by instead.
@@ -101,10 +103,15 @@ startNode({
             `,
             presents:  html`
                 Who this CSMS is as a client in TLS, with its private key. Not the key the charging station
-                server shows the stations, which has a page of its own:
-                <a href="${toURL('/configuration/ocpp-server/certificates')}">Server certificates</a>.
+                server shows the stations, which is a server identity:
+                <a href="${toURL('/configuration/server-identities')}">Server identities</a>.
             `
-        }
+        },
+
+        // The station port's server keys, on Server identities: offered there
+        // before it has one.
+        serverKeyListeners: [ 'ocpp' ]
+
     },
 
     // "/" is every node's: the first page of the menu the person signed in may
@@ -118,8 +125,11 @@ startNode({
 
         '/configuration/ocpp-server':               ocppServerPage,
         '/configuration/ocpp-server/logins':        stationLoginsPage,
-        '/configuration/ocpp-server/certificates':  serverCertificatesPage,
+        // Where what the station port presents was while it had a store and
+        // a page of its own.
+        '/configuration/ocpp-server/certificates':  movedTo('/configuration/server-identities', 'Server identities'),
         '/configuration/ocpp-server/trust':         clientTrustPage,
+        '/configuration/commissioning':             commissioningPage,
         '/configuration/ocpp-server/signing':       certificateSigningPage,
         '/configuration/ocpp-server/roots':         stationRootsPage,
 

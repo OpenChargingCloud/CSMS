@@ -30,6 +30,8 @@ using cloud.charging.open.protocols.WWCP.Node.SecureShell;
 using cloud.charging.open.protocols.WWCP.Node.TestKit;
 
 using cloud.charging.open.CSMS.OCPP;
+using cloud.charging.open.protocols.OCPP.Node.Serving;
+using cloud.charging.open.protocols.WWCP.Node.Logins;
 
 using CSMSConfig = cloud.charging.open.CSMS.Configuration;
 
@@ -74,11 +76,11 @@ namespace cloud.charging.open.CSMS.Tests
 
                 var configuration = TestCSMSs.Offline;
 
-                configuration["ocppServer"] = new JObject(
+                configuration["webSocketServer"] = new JObject(
                                                   new JProperty("enabled",           true),
                                                   new JProperty("address",           "127.0.0.1"),
                                                   new JProperty("port",              TestPorts.Free()),
-                                                  new JProperty("securityProfiles",  new JArray(1)),
+                                                  new JProperty("clientAuthentication",  new JArray("httpAuthWithoutTLS")),
                                                   new JProperty("subprotocols",      new JArray("ocpp2.1", "ocpp2.0.1")),
                                                   new JProperty("ssh",               new JObject(
                                                       new JProperty("enabled",       true)
@@ -206,13 +208,13 @@ namespace cloud.charging.open.CSMS.Tests
 
             var until = DateTime.UtcNow + TimeSpan.FromSeconds(10);
             while (DateTime.UtcNow < until &&
-                   CSMS.StationLogins.Logins.Single(login => login.Id == "cs001").Keys.Select(key => key.Fingerprint).SequenceEqual([ FingerprintOf(cs002Key) ]) == false)
+                   CSMS.WebSocketLogins.Logins.Single(login => login.Id == "cs001").Keys.Select(key => key.Fingerprint).SequenceEqual([ FingerprintOf(cs002Key) ]) == false)
                 await Task.Delay(50);
 
             Assert.Multiple(() => {
                 Assert.That(answers.TryGetValue("sign1", out var answer) ? answer[2]!.Value<String>("status") : null, Is.EqualTo("Accepted"));
                 Assert.That(confirmed.Value<String>("publicKey"),  Is.EqualTo(LineOf(cs002Key)));
-                Assert.That(CSMS.StationLogins.Logins.Single(login => login.Id == "cs001").Keys.Select(key => key.Fingerprint),
+                Assert.That(CSMS.WebSocketLogins.Logins.Single(login => login.Id == "cs001").Keys.Select(key => key.Fingerprint),
                             Is.EqualTo(new[] { FingerprintOf(cs002Key) }), "The next key was not enrolled, or the old one stayed.");
             });
 
@@ -382,10 +384,10 @@ namespace cloud.charging.open.CSMS.Tests
                                                 SSHAs(Id, Key)).AsTask().WaitAsync(TimeSpan.FromSeconds(10));
 
             Boolean Group(String Id, IEnumerable<String>? Channels, out String? Error)
-                => CSMS.StationLogins.TryAddOrUpdateGroup(Id, Id, true, [ AuthMethod.SSHKey ], [ 1 ], null, Channels, out Error, out _);
+                => CSMS.WebSocketLogins.TryAddOrUpdateGroup(Id, Id, true, [ AuthMethod.SSHKey ], [ WebSocketClientAuthentication.HTTPAuthWithoutTLS ], null, Channels, out Error, out _);
 
-            Assert.That(Group("with-time",  [ StationSSHSignIns.NTSKE ],                         out var error), Is.True, error);
-            Assert.That(Group("with-both",  [ StationSSHSignIns.NTSKE, StationSSHSignIns.DNS ],  out error),     Is.True, error);
+            Assert.That(Group("with-time",  [ LoginSSHSignIns.NTSKE ],                         out var error), Is.True, error);
+            Assert.That(Group("with-both",  [ LoginSSHSignIns.NTSKE, LoginSSHSignIns.DNS ],  out error),     Is.True, error);
             Assert.That(Group("ocpp-only",  [],                                                  out error),     Is.True, error);
 
             // Nothing but its time and its names is a group's to give.
@@ -400,28 +402,28 @@ namespace cloud.charging.open.CSMS.Tests
             // Given, but served by nobody yet.
             await using (var early = await SignedIn("cs002", cs002Key))
             {
-                Assert.That(await Refused(early, StationSSHSignIns.NTSKE),  Is.True,  "A station got NTS-KE that nobody serves.");
-                Assert.That(await Refused(early, StationSSHSignIns.DNS),    Is.True,  "A station got DNS that nobody serves.");
+                Assert.That(await Refused(early, LoginSSHSignIns.NTSKE),  Is.True,  "A station got NTS-KE that nobody serves.");
+                Assert.That(await Refused(early, LoginSSHSignIns.DNS),    Is.True,  "A station got DNS that nobody serves.");
                 Assert.That(await Refused(early, Subsystem),                Is.False, "A station did not get OCPP.");
             }
 
-            CSMS.AddSSHSubsystem(new SSHSubsystem(StationSSHSignIns.NTSKE,  "NTS-KE",  serving));
-            CSMS.AddSSHSubsystem(new SSHSubsystem(StationSSHSignIns.DNS,    "DNS",     serving));
+            CSMS.AddSSHSubsystem(new SSHSubsystem(LoginSSHSignIns.NTSKE,  "NTS-KE",  serving));
+            CSMS.AddSSHSubsystem(new SSHSubsystem(LoginSSHSignIns.DNS,    "DNS",     serving));
             CSMS.AddSSHSubsystem(new SSHSubsystem(Other,                    "Other",   serving));
 
             await using (var withTime = await SignedIn("cs001", cs001Key))
             {
                 Assert.That(await Refused(withTime, Subsystem),                Is.False, "A station did not get OCPP.");
-                Assert.That(await Refused(withTime, StationSSHSignIns.NTSKE),  Is.False, "A station did not get NTS-KE, which its group gives it and the node serves.");
-                Assert.That(await Refused(withTime, StationSSHSignIns.DNS),    Is.True,  "A station got DNS, which its group does not give it.");
+                Assert.That(await Refused(withTime, LoginSSHSignIns.NTSKE),  Is.False, "A station did not get NTS-KE, which its group gives it and the node serves.");
+                Assert.That(await Refused(withTime, LoginSSHSignIns.DNS),    Is.True,  "A station got DNS, which its group does not give it.");
                 Assert.That(await Refused(withTime, Other),                    Is.True,  "A station got a subsystem that is no station's.");
             }
 
             await using (var withBoth = await SignedIn("cs002", cs002Key))
             {
                 Assert.That(await Refused(withBoth, Subsystem),                Is.False, "A station did not get OCPP.");
-                Assert.That(await Refused(withBoth, StationSSHSignIns.NTSKE),  Is.False, "A station did not get NTS-KE, which its group gives it and the node serves.");
-                Assert.That(await Refused(withBoth, StationSSHSignIns.DNS),    Is.False, "A station did not get DNS, which its group gives it and the node serves.");
+                Assert.That(await Refused(withBoth, LoginSSHSignIns.NTSKE),  Is.False, "A station did not get NTS-KE, which its group gives it and the node serves.");
+                Assert.That(await Refused(withBoth, LoginSSHSignIns.DNS),    Is.False, "A station did not get DNS, which its group gives it and the node serves.");
                 Assert.That(await Refused(withBoth, Other),                    Is.True,  "A station got a subsystem that is no station's.");
                 Assert.That(await Refused(withBoth, "sftp"),                   Is.True,  "A station got SFTP.");
                 Assert.That(await Asks(withBoth, "shell", []),                 Is.False, "A station got the command line.");
@@ -431,18 +433,18 @@ namespace cloud.charging.open.CSMS.Tests
             await using (var ocppOnly = await SignedIn("cs003", strangerKey))
             {
                 Assert.That(await Refused(ocppOnly, Subsystem),                Is.False, "A station did not get OCPP.");
-                Assert.That(await Refused(ocppOnly, StationSSHSignIns.NTSKE),  Is.True,  "A station got NTS-KE with its key for OCPP alone.");
-                Assert.That(await Refused(ocppOnly, StationSSHSignIns.DNS),    Is.True,  "A station got DNS with its key for OCPP alone.");
+                Assert.That(await Refused(ocppOnly, LoginSSHSignIns.NTSKE),  Is.True,  "A station got NTS-KE with its key for OCPP alone.");
+                Assert.That(await Refused(ocppOnly, LoginSSHSignIns.DNS),    Is.True,  "A station got DNS with its key for OCPP alone.");
             }
 
             // Taken away again: the next connection has it no more. And a
             // change that says nothing of it leaves it as it is.
-            Assert.That(CSMS.StationLogins.TryAddOrUpdateGroup("with-both", "with-both", true, [ AuthMethod.SSHKey ], [ 1 ], null, out error), Is.True, error);
-            Assert.That(CSMS.StationLogins.GetGroup("with-both")?.Channels, Is.EquivalentTo(new[] { StationSSHSignIns.NTSKE, StationSSHSignIns.DNS }));
+            Assert.That(CSMS.WebSocketLogins.TryAddOrUpdateGroup("with-both", "with-both", true, [ AuthMethod.SSHKey ], [ WebSocketClientAuthentication.HTTPAuthWithoutTLS ], null, out error), Is.True, error);
+            Assert.That(CSMS.WebSocketLogins.GetGroup("with-both")?.Channels, Is.EquivalentTo(new[] { LoginSSHSignIns.NTSKE, LoginSSHSignIns.DNS }));
 
             // A channel that lasts when the grant is taken away ends with it.
             await using var lasting = await SignedIn("cs002", cs002Key);
-            var channel = await lasting.OpenSubsystemAsync(StationSSHSignIns.NTSKE).AsTask().WaitAsync(TimeSpan.FromSeconds(10));
+            var channel = await lasting.OpenSubsystemAsync(LoginSSHSignIns.NTSKE).AsTask().WaitAsync(TimeSpan.FromSeconds(10));
 
             Assert.That(Group("with-both", [], out error), Is.True, error);
 
@@ -467,8 +469,8 @@ namespace cloud.charging.open.CSMS.Tests
             await using (var noMore = await SignedIn("cs002", cs002Key))
             {
                 Assert.That(await Refused(noMore, Subsystem),                Is.False, "A station did not get OCPP.");
-                Assert.That(await Refused(noMore, StationSSHSignIns.NTSKE),  Is.True,  "A station kept NTS-KE its group gives no more.");
-                Assert.That(await Refused(noMore, StationSSHSignIns.DNS),    Is.True,  "A station kept DNS its group gives no more.");
+                Assert.That(await Refused(noMore, LoginSSHSignIns.NTSKE),  Is.True,  "A station kept NTS-KE its group gives no more.");
+                Assert.That(await Refused(noMore, LoginSSHSignIns.DNS),    Is.True,  "A station kept DNS its group gives no more.");
             }
 
         }
@@ -481,7 +483,7 @@ namespace cloud.charging.open.CSMS.Tests
         public async Task TheGroup_Decides_WhetherAnSSHKeyLetsAStationIn()
         {
 
-            Assert.That(CSMS.StationLogins.TryAddOrUpdateGroup("field-test", "Field test", true, [ AuthMethod.Basic ], [ 1, 2 ], null, out var error),
+            Assert.That(CSMS.WebSocketLogins.TryAddOrUpdateGroup("field-test", "Field test", true, [ AuthMethod.Basic ], [ WebSocketClientAuthentication.HTTPAuthWithoutTLS, WebSocketClientAuthentication.HTTPAuthOverTLS ], null, out var error),
                         Is.True, error);
 
             GiveAKey("cs001", cs001Key, "field-test");
@@ -490,7 +492,7 @@ namespace cloud.charging.open.CSMS.Tests
 
             Assert.That(before, Is.Null, "A group that accepts no SSH keys let a station in with one.");
 
-            Assert.That(CSMS.StationLogins.TryAddOrUpdateGroup("field-test", "Field test", true, [ AuthMethod.Basic, AuthMethod.SSHKey ], [ 1 ], null, out error),
+            Assert.That(CSMS.WebSocketLogins.TryAddOrUpdateGroup("field-test", "Field test", true, [ AuthMethod.Basic, AuthMethod.SSHKey ], [ WebSocketClientAuthentication.HTTPAuthWithoutTLS ], null, out error),
                         Is.True, error);
 
             var (after, why) = await Connect("cs001", cs001Key);
@@ -498,7 +500,7 @@ namespace cloud.charging.open.CSMS.Tests
             Assert.That(after, Is.Not.Null,
                         $"A group that accepts SSH keys - and only security profile 1, which SSH is not - did not let the station in: {why}");
 
-            Assert.That(CSMS.StationLogins.TryAddOrUpdateGroup("field-test", "Field test", false, [ AuthMethod.Basic, AuthMethod.SSHKey ], [ 1 ], null, out error),
+            Assert.That(CSMS.WebSocketLogins.TryAddOrUpdateGroup("field-test", "Field test", false, [ AuthMethod.Basic, AuthMethod.SSHKey ], [ WebSocketClientAuthentication.HTTPAuthWithoutTLS ], null, out error),
                         Is.True, error);
 
             Assert.That(await EndsWithin(after!, TimeSpan.FromSeconds(10)), Is.True, "A station of a group switched off stayed connected.");
@@ -593,11 +595,11 @@ namespace cloud.charging.open.CSMS.Tests
             Assert.That(cs001, Is.Not.Null, why1);
             Assert.That(cs002, Is.Not.Null, why2);
 
-            Assert.That(CSMS.StationLogins.TrySetEnabled("cs001", false, out var error), Is.True, error);
+            Assert.That(CSMS.WebSocketLogins.TrySetEnabled("cs001", false, out var error), Is.True, error);
             Assert.That(await EndsWithin(cs001!, TimeSpan.FromSeconds(10)), Is.True, "A station switched off stayed connected over SSH.");
             Assert.That(cs002!.IsAlive, Is.True, "Switching one station off ended another's session.");
 
-            Assert.That(CSMS.StationLogins.TryRemoveSSHKey("cs002", FingerprintOf(cs002Key), out error), Is.True, error);
+            Assert.That(CSMS.WebSocketLogins.TryRemoveSSHKey("cs002", FingerprintOf(cs002Key), out error), Is.True, error);
             Assert.That(await EndsWithin(cs002, TimeSpan.FromSeconds(10)), Is.True, "A station whose key was taken away stayed connected over SSH.");
 
             var (again, _) = await Connect("cs002", cs002Key);
@@ -685,22 +687,22 @@ namespace cloud.charging.open.CSMS.Tests
 
             Assert.Multiple(() => {
 
-                Assert.That(CSMS.StationLogins.TryAddSSHKey("cs002", LineOf(cs001Key), null, null, null, null, out _, out var shared),
+                Assert.That(CSMS.WebSocketLogins.TryAddSSHKey("cs002", LineOf(cs001Key), null, null, null, null, out _, out var shared),
                             Is.False, "One key was given to two stations.");
                 Assert.That(shared, Does.Contain("cs001"));
 
-                Assert.That(CSMS.StationLogins.TryAddSSHKey("cs001", LineOf(cs001Key), null, null, null, null, out _, out var twice),
+                Assert.That(CSMS.WebSocketLogins.TryAddSSHKey("cs001", LineOf(cs001Key), null, null, null, null, out _, out var twice),
                             Is.False, "One key was given to one station twice.");
                 Assert.That(twice, Does.Contain("already"));
 
-                Assert.That(CSMS.StationLogins.TryAddSSHKey("cs003", LineOf(cs002Key, "cert-authority"), null, null, null, null, out _, out var authority),
+                Assert.That(CSMS.WebSocketLogins.TryAddSSHKey("cs003", LineOf(cs002Key, "cert-authority"), null, null, null, null, out _, out var authority),
                             Is.False, "A certificate authority was taken as a station's key.");
                 Assert.That(authority, Does.Contain("cert-authority"));
 
-                Assert.That(CSMS.StationLogins.TryAddSSHKey("cs003", "not a key at all", null, null, null, null, out _, out _),
+                Assert.That(CSMS.WebSocketLogins.TryAddSSHKey("cs003", "not a key at all", null, null, null, null, out _, out _),
                             Is.False);
 
-                Assert.That(CSMS.StationLogins.TryRemoveSSHKey("cs001", FingerprintOf(cs002Key), out _),
+                Assert.That(CSMS.WebSocketLogins.TryRemoveSSHKey("cs001", FingerprintOf(cs002Key), out _),
                             Is.False, "A key the station does not have was taken away from it.");
 
             });
@@ -715,10 +717,10 @@ namespace cloud.charging.open.CSMS.Tests
         public void TheStore_KeepsTheKeys_AcrossAStart()
         {
 
-            Assert.That(CSMS.StationLogins.TryAddSSHKey("cs001", LineOf(cs001Key, "from=\"10.10.0.0/16\""), "bay 1", null, "Ladepunkt 1", "tests", out var key, out var error),
+            Assert.That(CSMS.WebSocketLogins.TryAddSSHKey("cs001", LineOf(cs001Key, "from=\"10.10.0.0/16\""), "bay 1", null, "Ladepunkt 1", "tests", out var key, out var error),
                         Is.True, error);
 
-            var again = new ChargingStationLogins(CSMS.StationLogins.Path);
+            var again = new WebSocketLogins(CSMS.WebSocketLogins.Path);
 
             Assert.That(again.TryLoad(out error), Is.True, error);
             Assert.That(again.TryGet("cs001", out var login), Is.True);
@@ -761,7 +763,7 @@ namespace cloud.charging.open.CSMS.Tests
             var cs003Key = SshHostKey.GenerateEd25519();
 
             File.WriteAllText(file, new JObject(
-                new JProperty("stations", new JArray(
+                new JProperty("logins", new JArray(
                     new JObject(new JProperty("id", "cs001"), new JProperty("sshKeys", new JArray(KeyOf(cs001Key, Disabled: true)))),
                     new JObject(new JProperty("id", "cs002"), new JProperty("sshKeys", new JArray(KeyOf(cs002Key, "expiry-time=\"20200101\"")))),
                     new JObject(new JProperty("id", "cs003"), new JProperty("enabled", false), new JProperty("sshKeys", new JArray(KeyOf(cs003Key)))),
@@ -769,7 +771,7 @@ namespace cloud.charging.open.CSMS.Tests
                 ))
             ).ToString());
 
-            var store = new ChargingStationLogins(file);
+            var store = new WebSocketLogins(file);
 
             Assert.That(store.TryLoad(out var error), Is.True, error);
 
@@ -781,13 +783,13 @@ namespace cloud.charging.open.CSMS.Tests
             });
 
             File.WriteAllText(file, new JObject(
-                new JProperty("stations", new JArray(
+                new JProperty("logins", new JArray(
                     new JObject(new JProperty("id", "cs001"), new JProperty("sshKeys", new JArray(KeyOf(cs001Key)))),
                     new JObject(new JProperty("id", "cs002"), new JProperty("sshKeys", new JArray(KeyOf(cs001Key))))
                 ))
             ).ToString());
 
-            Assert.That(new ChargingStationLogins(file).TryLoad(out error), Is.False, "A file giving one key to two stations was read.");
+            Assert.That(new WebSocketLogins(file).TryLoad(out error), Is.False, "A file giving one key to two stations was read.");
             Assert.That(error, Does.Contain("one key is one charging station"));
 
         }
@@ -860,24 +862,24 @@ namespace cloud.charging.open.CSMS.Tests
 
             Assert.Multiple(() => {
 
-                Assert.That(CSMSConfig.OCPPServerConfiguration.TryParse(JObject.Parse("""{ "ssh": { "subprotocols": [ "ocpp3.0" ] } }"""), out _, out var unknown), Is.False);
-                Assert.That(unknown, Does.Contain("ocppServer.ssh.subprotocols"));
+                Assert.That(WebSocketServerConfiguration.TryParse(JObject.Parse("""{ "ssh": { "subprotocols": [ "ocpp3.0" ] } }"""), out _, out var unknown), Is.False);
+                Assert.That(unknown, Does.Contain("webSocketServer.ssh.subprotocols"));
 
-                Assert.That(CSMSConfig.OCPPServerConfiguration.TryParse(JObject.Parse("""{ "ssh": { "maxMessageSize": 100 } }"""),       out _, out var tooSmall), Is.False);
-                Assert.That(tooSmall, Does.Contain("ocppServer.ssh"));
+                Assert.That(WebSocketServerConfiguration.TryParse(JObject.Parse("""{ "ssh": { "maxMessageSize": 100 } }"""),       out _, out var tooSmall), Is.False);
+                Assert.That(tooSmall, Does.Contain("webSocketServer.ssh"));
 
-                Assert.That(CSMSConfig.OCPPServerConfiguration.TryParse(JObject.Parse("""{ "ssh": true }"""),                            out _, out var notAnObject), Is.False);
-                Assert.That(notAnObject, Does.Contain("ocppServer.ssh"));
+                Assert.That(WebSocketServerConfiguration.TryParse(JObject.Parse("""{ "ssh": true }"""),                            out _, out var notAnObject), Is.False);
+                Assert.That(notAnObject, Does.Contain("webSocketServer.ssh"));
 
-                Assert.That(CSMSConfig.OCPPServerConfiguration.TryParse(JObject.Parse("""{ "ssh": { "enabled": true, "subprotocols": [ "ocpp2.1" ], "pingEverySeconds": 60 } }"""),
+                Assert.That(WebSocketServerConfiguration.TryParse(JObject.Parse("""{ "ssh": { "enabled": true, "subprotocols": [ "ocpp2.1" ], "pingEverySeconds": 60 } }"""),
                                                                            out var parsed, out var error), Is.True, error);
                 Assert.That(parsed!.ToJSON()["ssh"]?.ToString(Newtonsoft.Json.Formatting.None),
                             Is.EqualTo("""{"enabled":true,"subprotocols":["ocpp2.1"],"pingEverySeconds":60.0}"""));
 
-                var running = new CSMSConfig.OCPPServerConfiguration().Effective();
+                var running = new WebSocketServerConfiguration().Effective();
 
                 Assert.That(running.NeedsARestartFor(parsed),             Is.EquivalentTo(new[] { "ssh.subprotocols", "ssh.pingEverySeconds" }));
-                Assert.That(running.NeedsARestartFor(new CSMSConfig.OCPPServerConfiguration(SSH: new CSMSConfig.OCPPServerSSH(Enabled: true))),
+                Assert.That(running.NeedsARestartFor(new WebSocketServerConfiguration(SSH: new WebSocketServerSSH(Enabled: true))),
                             Is.Empty, "Switching OCPP over SSH on waits for a restart.");
 
             });
@@ -894,7 +896,7 @@ namespace cloud.charging.open.CSMS.Tests
 
             using var http = await SignedIn();
 
-            var root     = "/api/v1/configuration/ocpp-server/stations";
+            var root     = "/api/v1/configuration/ocpp-server/logins";
 
             var given    = await http.PostAsync($"{root}/cs001/sshKeys",
                                                 JSONBody(new JProperty("line",   LineOf(cs001Key)),
@@ -904,7 +906,7 @@ namespace cloud.charging.open.CSMS.Tests
             Assert.That(given.StatusCode, Is.EqualTo(HttpStatusCode.OK), await given.Content.ReadAsStringAsync());
 
             var stations = await GetJSON(http, root);
-            var cs001    = stations["stations"]!.OfType<JObject>().Single(station => station.Value<String>("id") == "cs001");
+            var cs001    = stations["logins"]!.OfType<JObject>().Single(station => station.Value<String>("id") == "cs001");
 
             Assert.Multiple(() => {
                 Assert.That(cs001.Value<Boolean>("hasSSHKey"),                     Is.True);
@@ -920,7 +922,7 @@ namespace cloud.charging.open.CSMS.Tests
             var taken    = await http.DeleteAsync($"{root}/cs001/sshKeys/{org.GraphDefined.Vanaheimr.Hermod.HTTP.UserSSHKey.FingerprintInURL(FingerprintOf(cs001Key))}");
 
             Assert.That(taken.StatusCode, Is.EqualTo(HttpStatusCode.OK), await taken.Content.ReadAsStringAsync());
-            Assert.That(CSMS.StationLogins.TryGet("cs001", out var login) && !login.HasSSHKey, Is.True);
+            Assert.That(CSMS.WebSocketLogins.TryGet("cs001", out var login) && !login.HasSSHKey, Is.True);
 
             var again    = await http.DeleteAsync($"{root}/cs001/sshKeys/{org.GraphDefined.Vanaheimr.Hermod.HTTP.UserSSHKey.FingerprintInURL(FingerprintOf(cs001Key))}");
 

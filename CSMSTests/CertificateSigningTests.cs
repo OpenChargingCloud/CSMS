@@ -34,6 +34,8 @@ using cloud.charging.open.protocols.WWCP.Node.Configuration;
 using cloud.charging.open.protocols.WWCP.Node.TestKit;
 
 using cloud.charging.open.CSMS.Configuration;
+using cloud.charging.open.protocols.OCPP.Node.Serving;
+using cloud.charging.open.protocols.WWCP.Node.Logins;
 using cloud.charging.open.CSMS.OCPP;
 
 #endregion
@@ -77,11 +79,11 @@ namespace cloud.charging.open.CSMS.Tests
 
                 return new (
                     new JProperty("nts",  new JObject(new JProperty("groups", new JObject(new JProperty("legal", new JObject(new JProperty("enabled", false))))))),
-                    new JProperty("ocppServer", new JObject(
+                    new JProperty("webSocketServer", new JObject(
                         new JProperty("enabled",           true),
                         new JProperty("address",           "127.0.0.1"),
                         new JProperty("port",              TestPorts.Free()),
-                        new JProperty("securityProfiles",  new JArray(1)),
+                        new JProperty("clientAuthentication",  new JArray("httpAuthWithoutTLS")),
                         new JProperty("subprotocols",      new JArray("ocpp2.1", "ocpp2.0.1"))
                     )),
                     new JProperty("certificateSigning", new JObject(
@@ -109,7 +111,7 @@ namespace cloud.charging.open.CSMS.Tests
                                                     Boolean  Overlay = false)
         {
 
-            Assert.That(CSMS.StationLogins.TrySetPassword(Id, ThePassword, null, null, out _, out var error), Is.True, error);
+            Assert.That(CSMS.WebSocketLogins.TrySetPassword(Id, ThePassword, null, null, out var error), Is.True, error);
 
             var client = new ClientWebSocket();
             client.Options.AddSubProtocol("ocpp2.1");
@@ -555,7 +557,7 @@ namespace cloud.charging.open.CSMS.Tests
             Assert.That(again.Get("cs001", "V2GCertificate"), Is.Null);
 
             // The station removed: its certificates with it, and no other's.
-            using var removed = await browser.DeleteAsync("api/v1/configuration/ocpp-server/stations/cs001");
+            using var removed = await browser.DeleteAsync("api/v1/configuration/ocpp-server/logins/cs001");
 
             Assert.Multiple(() => {
                 Assert.That(removed.StatusCode,                                                     Is.EqualTo(HttpStatusCode.OK));

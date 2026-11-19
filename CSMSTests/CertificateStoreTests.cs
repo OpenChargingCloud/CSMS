@@ -167,10 +167,10 @@ namespace cloud.charging.open.CSMS.Tests
             Assert.Multiple(() => {
 
                 Assert.That(((JObject) store["kinds"]!).Properties().Select(kind => kind.Name),
-                            Is.EqualTo(new[] { "v2gRoot", "moRoot", "oemRoot", "tlsRoot", "tlsServer", "tlsIdentity" }));
+                            Is.EqualTo(new[] { "v2gRoot", "moRoot", "oemRoot", "tlsRoot", "tlsServer", "tlsIdentity", "tlsServerIdentity" }));
 
                 Assert.That(store["trustAnchors"]!.Values<String>(),  Is.EqualTo(new[] { "v2gRoot", "moRoot", "oemRoot", "tlsRoot" }));
-                Assert.That(store["credentials"]!.Values<String>(),   Is.EqualTo(new[] { "tlsIdentity" }));
+                Assert.That(store["credentials"]!.Values<String>(),   Is.EqualTo(new[] { "tlsIdentity", "tlsServerIdentity" }));
                 Assert.That(store["recognised"]!.Values<String>(),    Is.EqualTo(new[] { "tlsServer" }),
                             "a server certificate is recognised, neither believed nor presented");
 
@@ -191,7 +191,7 @@ namespace cloud.charging.open.CSMS.Tests
                             "the store is beside the configuration file");
 
                 Assert.That(refused,                                  Is.EqualTo(HttpStatusCode.BadRequest));
-                Assert.That(refusal.ToString(),                       Does.Contain("'kind' has to be one of v2gRoot, moRoot, oemRoot, tlsRoot, tlsServer, tlsIdentity."),
+                Assert.That(refusal.ToString(),                       Does.Contain("'kind' has to be one of v2gRoot, moRoot, oemRoot, tlsRoot, tlsServer, tlsIdentity, tlsServerIdentity."),
                             "the node's API names the kinds this store keeps");
 
                 // The clients of a CSMS are its charging stations, let in by

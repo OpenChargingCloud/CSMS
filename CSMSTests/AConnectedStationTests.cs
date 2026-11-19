@@ -26,6 +26,7 @@ using Newtonsoft.Json.Linq;
 using NUnit.Framework;
 
 using cloud.charging.open.protocols.WWCP.Node.TestKit;
+using cloud.charging.open.protocols.WWCP.Node.Logins;
 
 #endregion
 
@@ -76,11 +77,11 @@ namespace cloud.charging.open.CSMS.Tests
         protected override JObject Configuration
             => new (
                    new JProperty("nts",  new JObject(new JProperty("groups", new JObject(new JProperty("legal", new JObject(new JProperty("enabled", false))))))),
-                   new JProperty("ocppServer", new JObject(
+                   new JProperty("webSocketServer", new JObject(
                        new JProperty("enabled",           true),
                        new JProperty("address",           "127.0.0.1"),
                        new JProperty("port",              TestPorts.Free()),
-                       new JProperty("securityProfiles",  new JArray(1)),
+                       new JProperty("clientAuthentication",  new JArray("httpAuthWithoutTLS")),
                        new JProperty("subprotocols",      new JArray("ocpp2.1"))
                    ))
                );
@@ -105,7 +106,7 @@ namespace cloud.charging.open.CSMS.Tests
             OnCall  = (action, payload, n) => [];
             Calls.Clear();
 
-            Assert.That(CSMS.StationLogins.TrySetPassword("cs001", ThePassword, null, null, out _, out var error), Is.True, error);
+            Assert.That(CSMS.WebSocketLogins.TrySetPassword("cs001", ThePassword, null, null, out var error), Is.True, error);
 
             station = new ClientWebSocket();
             station.Options.AddSubProtocol("ocpp2.1");

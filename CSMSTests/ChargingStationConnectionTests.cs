@@ -25,6 +25,7 @@ using Newtonsoft.Json.Linq;
 using NUnit.Framework;
 
 using cloud.charging.open.protocols.WWCP.Node.TestKit;
+using cloud.charging.open.protocols.WWCP.Node.Logins;
 
 #endregion
 
@@ -67,11 +68,11 @@ namespace cloud.charging.open.CSMS.Tests
 
                    new JProperty("nts",  new JObject(new JProperty("groups", new JObject(new JProperty("legal", new JObject(new JProperty("enabled", false))))))),
 
-                   new JProperty("ocppServer", new JObject(
+                   new JProperty("webSocketServer", new JObject(
                        new JProperty("enabled",           true),
                        new JProperty("address",           "127.0.0.1"),
                        new JProperty("port",              TestPorts.Free()),
-                       new JProperty("securityProfiles",  new JArray(1)),
+                       new JProperty("clientAuthentication",  new JArray("httpAuthWithoutTLS")),
                        new JProperty("subprotocols",      new JArray("ocpp2.1", "ocpp2.0.1"))
                    ))
 
@@ -160,7 +161,7 @@ namespace cloud.charging.open.CSMS.Tests
         public async Task AStationWithAPasswordGetsIn()
         {
 
-            Assert.That(CSMS.StationLogins.TrySetPassword("cs001", ThePassword, null, "Ladepunkt 1", out _, out var error),
+            Assert.That(CSMS.WebSocketLogins.TrySetPassword("cs001", ThePassword, null, "Ladepunkt 1", out var error),
                         Is.True, error);
 
             var (connected, why, subprotocol) = await Connect("cs001", ThePassword);
@@ -195,7 +196,7 @@ namespace cloud.charging.open.CSMS.Tests
         public async Task AWrongPasswordIsTurnedAway()
         {
 
-            CSMS.StationLogins.TrySetPassword("cs001", ThePassword, null, null, out _, out _);
+            CSMS.WebSocketLogins.TrySetPassword("cs001", ThePassword, null, null, out _);
 
             var (connected, _, _) = await Connect("cs001", "not-the-password-at-all");
 
@@ -211,7 +212,7 @@ namespace cloud.charging.open.CSMS.Tests
         public async Task AStationWithNoCredentialsAtAllIsTurnedAway()
         {
 
-            CSMS.StationLogins.TrySetPassword("cs001", ThePassword, null, null, out _, out _);
+            CSMS.WebSocketLogins.TrySetPassword("cs001", ThePassword, null, null, out _);
 
             using var client  = new ClientWebSocket();
 
@@ -246,13 +247,13 @@ namespace cloud.charging.open.CSMS.Tests
         public async Task AStationThatWasSwitchedOffIsTurnedAwayAtOnce()
         {
 
-            CSMS.StationLogins.TrySetPassword("cs001", ThePassword, null, null, out _, out _);
+            CSMS.WebSocketLogins.TrySetPassword("cs001", ThePassword, null, null, out _);
 
             var (before, why, _) = await Connect("cs001", ThePassword);
 
             Assert.That(before, Is.True, why);
 
-            Assert.That(CSMS.StationLogins.TrySetEnabled("cs001", false, out var error), Is.True, error);
+            Assert.That(CSMS.WebSocketLogins.TrySetEnabled("cs001", false, out var error), Is.True, error);
 
             var (after, _, _) = await Connect("cs001", ThePassword);
 
@@ -269,8 +270,8 @@ namespace cloud.charging.open.CSMS.Tests
         public async Task AStationThatWasRemovedIsTurnedAwayAtOnce()
         {
 
-            CSMS.StationLogins.TrySetPassword("cs001", ThePassword, null, null, out _, out _);
-            CSMS.StationLogins.TryRemove     ("cs001", out _);
+            CSMS.WebSocketLogins.TrySetPassword("cs001", ThePassword, null, null, out _);
+            CSMS.WebSocketLogins.TryRemove     ("cs001", out _);
 
             var (connected, _, _) = await Connect("cs001", ThePassword);
 
@@ -286,7 +287,7 @@ namespace cloud.charging.open.CSMS.Tests
         public async Task AStationSpeakingAnotherOCPPVersionIsTurnedAway()
         {
 
-            CSMS.StationLogins.TrySetPassword("cs001", ThePassword, null, null, out _, out _);
+            CSMS.WebSocketLogins.TrySetPassword("cs001", ThePassword, null, null, out _);
 
             var (connected, _, _) = await Connect("cs001", ThePassword, "ocpp1.6");
 
@@ -307,7 +308,7 @@ namespace cloud.charging.open.CSMS.Tests
         public async Task WhatHappenedIsInTheLog()
         {
 
-            CSMS.StationLogins.TrySetPassword("cs001", ThePassword, null, null, out _, out _);
+            CSMS.WebSocketLogins.TrySetPassword("cs001", ThePassword, null, null, out _);
 
             await Connect("cs001", ThePassword);
             await Connect("cs404", ThePassword);
@@ -338,7 +339,7 @@ namespace cloud.charging.open.CSMS.Tests
         public async Task SwitchingTheServerOffStopsLettingAnybodyIn()
         {
 
-            CSMS.StationLogins.TrySetPassword("cs001", ThePassword, null, null, out _, out _);
+            CSMS.WebSocketLogins.TrySetPassword("cs001", ThePassword, null, null, out _);
 
             Assert.That(CSMS.TryUpdateOCPPServerConfiguration(
                             new JObject(new JProperty("enabled", false)),
@@ -367,7 +368,7 @@ namespace cloud.charging.open.CSMS.Tests
         public async Task SwitchingTheServerBackOnLetsThemInAgain()
         {
 
-            CSMS.StationLogins.TrySetPassword("cs001", ThePassword, null, null, out _, out _);
+            CSMS.WebSocketLogins.TrySetPassword("cs001", ThePassword, null, null, out _);
 
             CSMS.TryUpdateOCPPServerConfiguration(new JObject(new JProperty("enabled", false)), out _);
 
@@ -388,52 +389,6 @@ namespace cloud.charging.open.CSMS.Tests
 
         #endregion
 
-        #region WhatTheCertificatesSayReachesTheControllersLog()
-
-        /// <summary>
-        /// The stores say things; the CSMS is what writes them down. A
-        /// warning that never left the store is a warning nobody gets.
-        /// </summary>
-        [Test]
-        public void WhatTheCertificatesSayReachesTheControllersLog()
-        {
-
-            Assert.That(CSMS.ServerCertificates.TryCreateKey(
-                            "csms001.example.org",
-                            [ "csms001.example.org" ],
-                            null,
-                            out var id,
-                            out var csr,
-                            out var error
-                        ), Is.True, error);
-
-            using var ca          = TestCA.Create("Test CA");
-            using var certificate = ca.Sign(csr!, DateTimeOffset.UtcNow.AddYears(-1), DateTimeOffset.UtcNow.AddDays(9));
-
-            Assert.That(CSMS.ServerCertificates.TryAddCertificate(
-                            ca.ChainPEM(certificate),
-                            [ "csms001.example.org" ],
-                            out _, out _, out var problem
-                        ), Is.True, problem);
-
-            CSMS.ServerCertificates.CheckExpiry([ "csms001.example.org" ]);
-
-            var messages = CSMS.Log.Recent(200).Select(entry => entry.Message).ToArray();
-
-            Assert.Multiple(() => {
-
-                Assert.That(messages.Any(message => message.Contains("key") && message.Contains(id!)), Is.True,
-                            "Generating a key was not written to the log of this CSMS.");
-
-                Assert.That(messages.Any(message => message.Contains("runs out in")), Is.True,
-                            $"A certificate nine days from running out was not announced: {String.Join(" | ", messages.TakeLast(6))}");
-
-            });
-
-        }
-
-        #endregion
-
         #region StoppingTheControllerLetsGoOfThePort()
 
         /// <summary>
@@ -446,7 +401,7 @@ namespace cloud.charging.open.CSMS.Tests
         public async Task StoppingTheControllerLetsGoOfThePort()
         {
 
-            CSMS.StationLogins.TrySetPassword("cs001", ThePassword, null, null, out _, out _);
+            CSMS.WebSocketLogins.TrySetPassword("cs001", ThePassword, null, null, out _);
 
             using var client  = new ClientWebSocket();
             client.Options.AddSubProtocol("ocpp2.1");
@@ -501,7 +456,7 @@ namespace cloud.charging.open.CSMS.Tests
                                              var configuration = Configuration;
 
                                              if (made++ == 0)
-                                                 configuration["ocppServer"]!["port"] = taken;
+                                                 configuration["webSocketServer"]!["port"] = taken;
 
                                              return TestCSMSs.New(directory, configuration);
 

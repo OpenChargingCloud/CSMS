@@ -25,6 +25,8 @@ using Newtonsoft.Json.Linq;
 using NUnit.Framework;
 
 using cloud.charging.open.CSMS.OCPP;
+using cloud.charging.open.protocols.OCPP.Node.Serving;
+using cloud.charging.open.protocols.WWCP.Node.Logins;
 
 #endregion
 
@@ -66,7 +68,7 @@ namespace cloud.charging.open.CSMS.Tests
                             "A CSMS nobody configured is listening for charging stations.");
 
                 Assert.That(server.Value<Int32>("port"),                     Is.EqualTo(2352));
-                Assert.That(server["securityProfiles"]?.Values<Int32>(),     Is.EquivalentTo(new[] { 1, 2, 3 }));
+                Assert.That(server["clientAuthentication"]?.Values<String>(), Is.EquivalentTo(new[] { "httpAuthWithoutTLS", "httpAuthOverTLS", "tlsClientCertificate" }));
                 Assert.That(server["subprotocols"]?.Values<String>(),        Is.EquivalentTo(new[] { "ocpp2.1", "ocpp2.0.1" }));
                 Assert.That(server["state"]?.Value<Boolean>("running"),      Is.False);
                 Assert.That(server["state"]?.Value<Boolean>("tls"),          Is.False);
@@ -88,7 +90,7 @@ namespace cloud.charging.open.CSMS.Tests
 
             using var http = Anonymous();
 
-            foreach (var path in new[] { Root, $"{Root}/certificates", $"{Root}/trust", $"{Root}/stations" })
+            foreach (var path in new[] { Root, $"{Root}/trust", $"{Root}/logins" })
             {
                 var response = await http.GetAsync(path);
                 Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized), $"GET {path}");
@@ -150,12 +152,12 @@ namespace cloud.charging.open.CSMS.Tests
 
             var response = await http.PutAsync(
                                      Root,
-                                     JSONBody(new JProperty("securityProfiles", new JArray(4)))
+                                     JSONBody(new JProperty("clientAuthentication", new JArray("securityProfile4")))
                                  );
 
             Assert.Multiple(() => {
                 Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
-                Assert.That(CSMS.OCPPServerSettings.SecurityProfiles, Is.EquivalentTo(new Byte[] { 1, 2, 3 }));
+                Assert.That(CSMS.OCPPSecurityProfiles,                Is.EquivalentTo(new Byte[] { 1, 2, 3 }));
             });
 
         }
@@ -177,7 +179,7 @@ namespace cloud.charging.open.CSMS.Tests
 
             var response = await http.PutAsync(
                                      Root,
-                                     JSONBody(new JProperty("securityProfiles", new JArray(2, 3)))
+                                     JSONBody(new JProperty("clientAuthentication", new JArray("httpAuthOverTLS", "tlsClientCertificate")))
                                  );
 
             await Assert.MultipleAsync(async () => {
@@ -260,8 +262,8 @@ namespace cloud.charging.open.CSMS.Tests
 
             System.IO.Directory.CreateDirectory(CSMS.ConfigFile.Path + ".tmp");
 
-            var noSuchProfile  = await http.PutAsync(Root, JSONBody(new JProperty("securityProfiles", new JArray(4))));
-            var tlsAlone       = await http.PutAsync(Root, JSONBody(new JProperty("securityProfiles", new JArray(2, 3))));
+            var noSuchProfile  = await http.PutAsync(Root, JSONBody(new JProperty("clientAuthentication", new JArray("securityProfile4"))));
+            var tlsAlone       = await http.PutAsync(Root, JSONBody(new JProperty("clientAuthentication", new JArray("httpAuthOverTLS", "tlsClientCertificate"))));
             var pastWindow     = await http.PutAsync(Root, JSONBody(new JProperty("logging", new JObject(
                                                                   new JProperty("payloads",       true),
                                                                   new JProperty("payloadsUntil",  DateTimeOffset.UtcNow.AddHours(-1).ToString("o"))
@@ -271,154 +273,6 @@ namespace cloud.charging.open.CSMS.Tests
                 Assert.That(noSuchProfile.StatusCode,  Is.EqualTo(HttpStatusCode.BadRequest),  "a security profile there is none of");
                 Assert.That(tlsAlone.     StatusCode,  Is.EqualTo(HttpStatusCode.BadRequest),  "TLS alone, and no certificate to speak it with");
                 Assert.That(pastWindow.   StatusCode,  Is.EqualTo(HttpStatusCode.BadRequest),  "message contents logged until a time gone by");
-            });
-
-        }
-
-        #endregion
-
-
-        #region AKeyIsMadeAndItsRequestCanBeFetched()
-
-        [Test]
-        public async Task AKeyIsMadeAndItsRequestCanBeFetched()
-        {
-
-            using var http = await SignedIn();
-
-            await http.PutAsync(Root, JSONBody(new JProperty("reachableAs", new JArray("csms001.example.org"))));
-
-            var made = await http.PostAsync(
-                                 $"{Root}/certificates",
-                                 JSONBody(
-                                     new JProperty("subject",    "csms001.example.org"),
-                                     new JProperty("algorithm",  "ecdsa-p256")
-                                 )
-                             );
-
-            Assert.That(made.StatusCode, Is.EqualTo(HttpStatusCode.Created), await made.Content.ReadAsStringAsync());
-
-            var answer = JObject.Parse(await made.Content.ReadAsStringAsync());
-            var id     = answer.Value<String>("id")!;
-
-            var csr    = await http.GetAsync($"{Root}/certificates/{id}/csr");
-
-            await Assert.MultipleAsync(async () => {
-
-                Assert.That(answer.Value<String>("csr"), Does.StartWith("-----BEGIN CERTIFICATE REQUEST-----"));
-
-                Assert.That(csr.IsSuccessStatusCode,                     Is.True);
-                Assert.That(await csr.Content.ReadAsStringAsync(),        Does.StartWith("-----BEGIN CERTIFICATE REQUEST-----"));
-
-                // A file to save, under the name of its key.
-                Assert.That(csr.Content.Headers.ContentDisposition?.DispositionType,  Is.EqualTo("attachment"));
-                Assert.That(csr.Content.Headers.ContentDisposition?.FileName?.Trim('"'), Is.EqualTo($"{id}.csr.pem"));
-
-                // And nothing anywhere hands out the private key.
-                var listed = await GetJSON(http, $"{Root}/certificates");
-
-                Assert.That(listed.ToString(),                            Does.Not.Contain("PRIVATE KEY"));
-                Assert.That(listed.Value<Boolean>("canImportPrivateKeys"), Is.False);
-
-            });
-
-        }
-
-        #endregion
-
-        #region AKeyCannotBeMadeWithoutKnowingWhatWeAreReachedAs()
-
-        [Test]
-        public async Task AKeyCannotBeMadeWithoutKnowingWhatWeAreReachedAs()
-        {
-
-            using var http = await SignedIn();
-
-            var made = await http.PostAsync(
-                                 $"{Root}/certificates",
-                                 JSONBody(new JProperty("algorithm", "ecdsa-p256"))
-                             );
-
-            await Assert.MultipleAsync(async () => {
-                Assert.That(made.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
-                Assert.That(await made.Content.ReadAsStringAsync(), Does.Contain("reachable as"));
-            });
-
-        }
-
-        #endregion
-
-        #region ACertificateForAnotherKeySaysWhoseItIs()
-
-        [Test]
-        public async Task ACertificateForAnotherKeySaysWhoseItIs()
-        {
-
-            using var http = await SignedIn();
-
-            await http.PutAsync(Root, JSONBody(new JProperty("reachableAs", new JArray("csms001.example.org"))));
-
-            var first  = JObject.Parse(await (await http.PostAsync($"{Root}/certificates",
-                             JSONBody(new JProperty("algorithm", "ecdsa-p256")))).Content.ReadAsStringAsync());
-
-            var second = JObject.Parse(await (await http.PostAsync($"{Root}/certificates",
-                             JSONBody(new JProperty("algorithm", "ecdsa-p256")))).Content.ReadAsStringAsync());
-
-            using var ca = TestCA.Create("Test CA");
-
-            // A certificate that answers the first request, uploaded to the
-            // second row.
-            using var certificate = ca.Sign(first.Value<String>("csr")!,
-                                            DateTimeOffset.UtcNow.AddDays(-1),
-                                            DateTimeOffset.UtcNow.AddYears(1));
-
-            var response = await http.PutAsync(
-                                     $"{Root}/certificates/{second.Value<String>("id")}",
-                                     JSONBody(new JProperty("pem", ca.ChainPEM(certificate)))
-                                 );
-
-            await Assert.MultipleAsync(async () => {
-                Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Conflict));
-                Assert.That(await response.Content.ReadAsStringAsync(), Does.Contain(first.Value<String>("id")!));
-            });
-
-        }
-
-        #endregion
-
-        #region ACertificateIsTakenInAndShowsUpOnThePage()
-
-        [Test]
-        public async Task ACertificateIsTakenInAndShowsUpOnThePage()
-        {
-
-            using var http = await SignedIn();
-
-            await http.PutAsync(Root, JSONBody(new JProperty("reachableAs", new JArray("csms001.example.org"))));
-
-            var made = JObject.Parse(await (await http.PostAsync($"{Root}/certificates",
-                           JSONBody(new JProperty("algorithm", "ecdsa-p256")))).Content.ReadAsStringAsync());
-
-            using var ca          = TestCA.Create("Test CA");
-            using var certificate = ca.Sign(made.Value<String>("csr")!,
-                                            DateTimeOffset.UtcNow.AddDays(-1),
-                                            DateTimeOffset.UtcNow.AddYears(1));
-
-            var response = await http.PutAsync(
-                                     $"{Root}/certificates/{made.Value<String>("id")}",
-                                     JSONBody(new JProperty("pem", ca.ChainPEM(certificate)))
-                                 );
-
-            Assert.That(response.IsSuccessStatusCode, Is.True, await response.Content.ReadAsStringAsync());
-
-            var listed = await GetJSON(http, $"{Root}/certificates");
-            var entry  = listed["entries"]?[0];
-
-            Assert.Multiple(() => {
-                Assert.That(entry?.Value<Boolean>("hasCertificate"),                 Is.True);
-                Assert.That(entry?["certificate"]?.Value<String>("state"),           Is.EqualTo("valid"));
-                Assert.That(entry?["certificate"]?["subjectAltNames"]?.Values<String>(),
-                            Does.Contain("csms001.example.org"));
             });
 
         }
@@ -482,57 +336,32 @@ namespace cloud.charging.open.CSMS.Tests
 
         #endregion
 
-        #region AChangeTheKeyOrChainFilesCannotTakeIsAServerError(Change)
+        #region AChangeTheChainFilesCannotTakeIsAServerError(Change)
 
         /// <summary>
-        /// A change of the server's keys or of the accepted chains that is fine
-        /// in itself, and that their files cannot be written with, is answered
-        /// 500 with why, rather than with the 400 of what could have been wrong
-        /// with it: nothing was. Every route that writes those files. It was the
-        /// status of the refusals, as it was on the stations file's routes. And
-        /// it changes nothing, now or when the stores are read again.
+        /// A change of the accepted chains that is fine in itself, and that
+        /// their files cannot be written with, is answered 500 with why, rather
+        /// than with the 400 of what could have been wrong with it: nothing was.
+        /// Every route that writes those files. It was the status of the
+        /// refusals, as it was on the stations file's routes. And it changes
+        /// nothing, now or when the store is read again.
         /// </summary>
-        [TestCase("POST certificates")]
-        [TestCase("PUT certificates/{id}")]
         [TestCase("POST trust")]
         [TestCase("POST trust, after its chain")]
         [TestCase("PUT trust/{id}, name")]
         [TestCase("PUT trust/{id}, enabled")]
-        public async Task AChangeTheKeyOrChainFilesCannotTakeIsAServerError(String Change)
+        public async Task AChangeTheChainFilesCannotTakeIsAServerError(String Change)
         {
 
             using var http = await SignedIn();
             using var ca   = TestCA.Create("Some Charging Network");
 
-            var reachable = await http.PutAsync(Root, JSONBody(new JProperty("reachableAs", new JArray("csms001.example.org"))));
-
-            Assert.That(reachable.IsSuccessStatusCode, Is.True, await reachable.Content.ReadAsStringAsync());
-
-            // What makes each change a fine one: a key and the certificate that
-            // answers its request, or a chain accepted already.
-            String? keyId    = null;
-            String? pem      = null;
+            // What makes each change a fine one: a chain accepted already.
             String? chainId  = null;
 
             // The handle the store gives the chain: its anchor's, and so known
             // before the chain is there.
             var anchorId     = Convert.ToHexStringLower(SHA256.HashData(ca.Certificate.RawData).AsSpan(0, 8));
-
-            if (Change == "PUT certificates/{id}")
-            {
-
-                var key = JObject.Parse(await (await http.PostAsync($"{Root}/certificates",
-                              JSONBody(new JProperty("algorithm", "ecdsa-p256")))).Content.ReadAsStringAsync());
-
-                keyId = key.Value<String>("id")!;
-
-                using var certificate = ca.Sign(key.Value<String>("csr")!,
-                                                DateTimeOffset.UtcNow.AddDays(-1),
-                                                DateTimeOffset.UtcNow.AddYears(1));
-
-                pem = ca.ChainPEM(certificate);
-
-            }
 
             if (Change.StartsWith("PUT trust", StringComparison.Ordinal))
             {
@@ -545,27 +374,22 @@ namespace cloud.charging.open.CSMS.Tests
 
             }
 
-            var keysBefore    = Keys();
             var chainsBefore  = Chains();
 
             // Where each change is written, something it cannot be written to.
             var blocked = Change switch {
-                "POST certificates"            => CSMS.ServerCertificates.Path,
-                "PUT certificates/{id}"        => System.IO.Path.Combine(CSMS.ServerCertificates.Path, $"{keyId}.cert.pem"),
                 "POST trust"                   => CSMS.ClientTrust.Path,
                 // What is said of the chain, which is written after the chain.
                 "POST trust, after its chain"  => System.IO.Path.Combine(CSMS.ClientTrust.Path,        $"{anchorId}.json"),
                 _                              => System.IO.Path.Combine(CSMS.ClientTrust.Path,        $"{chainId}.json")
             };
 
-            if (Change is "POST certificates" or "POST trust")
+            if (Change == "POST trust")
                 AFileWhere(blocked);
             else
                 ADirectoryWhere(blocked);
 
             var response = Change switch {
-                "POST certificates"            => await http.PostAsync($"{Root}/certificates",         JSONBody(new JProperty("algorithm",  "ecdsa-p256"))),
-                "PUT certificates/{id}"        => await http.PutAsync ($"{Root}/certificates/{keyId}",  JSONBody(new JProperty("pem",        pem))),
                 "POST trust" or
                 "POST trust, after its chain"  => await http.PostAsync($"{Root}/trust",                JSONBody(new JProperty("pem",        TestCA.ToPEM(ca.Certificate)))),
                 "PUT trust/{id}, name"         => await http.PutAsync ($"{Root}/trust/{chainId}",       JSONBody(new JProperty("name",       "Another Charging Network"))),
@@ -575,26 +399,21 @@ namespace cloud.charging.open.CSMS.Tests
 
             var body          = await response.Content.ReadAsStringAsync();
 
-            var keysNow       = Keys();
             var chainsNow     = Chains();
 
             // And as at the next start: read again, with nothing in the way.
             NothingWhere(blocked);
 
-            CSMS.ServerCertificates.Reload();
-            CSMS.ClientTrust.       Reload();
+            CSMS.ClientTrust.Reload();
 
-            var keysAgain     = Keys();
             var chainsAgain   = Chains();
 
             Assert.Multiple(() => {
 
                 Assert.That(response.StatusCode,                         Is.EqualTo(HttpStatusCode.InternalServerError), body);
-                Assert.That(JObject.Parse(body).Value<String>("error"),  Does.Contain(Change.Contains("trust") ? CSMS.ClientTrust.Path : CSMS.ServerCertificates.Path));
+                Assert.That(JObject.Parse(body).Value<String>("error"),  Does.Contain(CSMS.ClientTrust.Path));
 
-                Assert.That(keysNow,      Is.EqualTo(keysBefore),    "the keys, and whether each has its certificate");
                 Assert.That(chainsNow,    Is.EqualTo(chainsBefore),  "the chains accepted");
-                Assert.That(keysAgain,    Is.EqualTo(keysBefore),    "the keys, read again");
                 Assert.That(chainsAgain,  Is.EqualTo(chainsBefore),  "the chains accepted, read again: a chain written without what is said of it " +
                                                                      "was accepted at the next start, switched on and named by its subject");
 
@@ -604,9 +423,6 @@ namespace cloud.charging.open.CSMS.Tests
 
             });
 
-            String[] Keys()
-                => [.. CSMS.ServerCertificates.Entries.Select(entry => $"{entry.Id} {(entry.Certificate is null ? "without" : "with")} a certificate")];
-
             String[] Chains()
                 => [.. CSMS.ClientTrust.Entries.Select(entry => $"{entry.Id} '{entry.Name}' {(entry.Enabled ? "on" : "off")}")];
 
@@ -614,51 +430,30 @@ namespace cloud.charging.open.CSMS.Tests
 
         #endregion
 
-        #region AKeyOrAChainWhoseFilesCannotBeRemovedIsAServerError(Change)
+        #region AChainWhoseFilesCannotBeRemovedIsAServerError()
 
         /// <summary>
-        /// A key or a chain that is here, but whose files cannot be removed, is
-        /// answered 500 with why, rather than with the 409 or the 404 of one
-        /// that is not here.
+        /// A chain that is here, but whose files cannot be removed, is answered
+        /// 500 with why, rather than with the 404 of one that is not here.
         /// </summary>
         /// <remarks>
         /// Windows's alone: a file held open without leave to delete it stays
         /// there on Windows, where Linux lets it go all the same - and root
         /// takes it out of a directory it may not write to as well.
         /// </remarks>
-        [TestCase("DELETE certificates/{id}")]
-        [TestCase("DELETE trust/{id}")]
+        [Test]
         [Platform("Win")]
-        public async Task AKeyOrAChainWhoseFilesCannotBeRemovedIsAServerError(String Change)
+        public async Task AChainWhoseFilesCannotBeRemovedIsAServerError()
         {
 
             using var http = await SignedIn();
             using var ca   = TestCA.Create("Some Charging Network");
 
-            String id, file, route;
-
-            if (Change == "DELETE certificates/{id}")
-            {
-
-                await http.PutAsync(Root, JSONBody(new JProperty("reachableAs", new JArray("csms001.example.org"))));
-
-                id     = JObject.Parse(await (await http.PostAsync($"{Root}/certificates",
-                             JSONBody(new JProperty("algorithm", "ecdsa-p256")))).Content.ReadAsStringAsync()).Value<String>("id")!;
-
-                file   = System.IO.Path.Combine(CSMS.ServerCertificates.Path, $"{id}.key.pem");
-                route  = $"{Root}/certificates/{id}";
-
-            }
-            else
-            {
-
-                id     = JObject.Parse(await (await http.PostAsync($"{Root}/trust",
+            var id     = JObject.Parse(await (await http.PostAsync($"{Root}/trust",
                              JSONBody(new JProperty("pem", TestCA.ToPEM(ca.Certificate))))).Content.ReadAsStringAsync()).Value<String>("id")!;
 
-                file   = System.IO.Path.Combine(CSMS.ClientTrust.Path, $"{id}.pem");
-                route  = $"{Root}/trust/{id}";
-
-            }
+            var file   = System.IO.Path.Combine(CSMS.ClientTrust.Path, $"{id}.pem");
+            var route  = $"{Root}/trust/{id}";
 
             HttpResponseMessage response;
 
@@ -676,47 +471,27 @@ namespace cloud.charging.open.CSMS.Tests
 
         #endregion
 
-        #region ADeletionItsLastFileDoesNotLetHappenLeavesEveryFile(Change)
+        #region ADeletionItsLastFileDoesNotLetHappenLeavesEveryFile()
 
         /// <summary>
-        /// A key or a chain whose last file cannot be deleted keeps all of its
-        /// files, and is there when it is read again. Deleted one after the
-        /// other, the files before it were gone: the key's own and its request,
-        /// the chain's certificates - and the key or the chain, listed until the
-        /// next start, was gone after it (found by the charging station).
+        /// A chain whose last file cannot be deleted keeps all of its files,
+        /// and is there when it is read again. Deleted one after the other, the
+        /// files before it were gone: the chain's certificates - and the chain,
+        /// listed until the next start, was gone after it (found by the
+        /// charging station).
         /// </summary>
-        [TestCase("DELETE certificates/{id}")]
-        [TestCase("DELETE trust/{id}")]
+        [Test]
         [Platform("Win", Reason = "A file somebody holds open is deleted all the same on Linux, and a test run as root there deletes what it likes: nothing but Windows keeps a file from being deleted.")]
-        public async Task ADeletionItsLastFileDoesNotLetHappenLeavesEveryFile(String Change)
+        public async Task ADeletionItsLastFileDoesNotLetHappenLeavesEveryFile()
         {
 
             using var http  = await SignedIn();
             using var ca    = TestCA.Create("Some Charging Network");
 
-            String id;
-            String directory;
-
-            if (Change == "DELETE certificates/{id}")
-            {
-
-                await http.PutAsync(Root, JSONBody(new JProperty("reachableAs", new JArray("csms001.example.org"))));
-
-                id         = JObject.Parse(await (await http.PostAsync($"{Root}/certificates",
-                                 JSONBody(new JProperty("algorithm", "ecdsa-p256")))).Content.ReadAsStringAsync()).Value<String>("id")!;
-
-                directory  = CSMS.ServerCertificates.Path;
-
-            }
-            else
-            {
-
-                id         = JObject.Parse(await (await http.PostAsync($"{Root}/trust",
+            var id         = JObject.Parse(await (await http.PostAsync($"{Root}/trust",
                                  JSONBody(new JProperty("pem", TestCA.ToPEM(ca.Certificate))))).Content.ReadAsStringAsync()).Value<String>("id")!;
 
-                directory  = CSMS.ClientTrust.Path;
-
-            }
+            var directory  = CSMS.ClientTrust.Path;
 
             String[] FilesOf() => System.IO.Directory.GetFiles(directory, $"{id}.*").Order(StringComparer.Ordinal).Select(file => System.IO.Path.GetFileName(file)).ToArray();
 
@@ -724,24 +499,20 @@ namespace cloud.charging.open.CSMS.Tests
 
             HttpResponseMessage response;
 
-            // The description is the last of either's files to be taken away.
+            // The description is the last of its files to be taken away.
             using (new FileStream(System.IO.Path.Combine(directory, $"{id}.json"), FileMode.Open, FileAccess.Read, FileShare.Read))
-                response = Change == "DELETE certificates/{id}"
-                               ? await http.DeleteAsync($"{Root}/certificates/{id}")
-                               : await http.DeleteAsync($"{Root}/trust/{id}");
+                response = await http.DeleteAsync($"{Root}/trust/{id}");
 
             var body   = await response.Content.ReadAsStringAsync();
             var after  = FilesOf();
 
-            CSMS.ServerCertificates.Reload();
             CSMS.ClientTrust.Reload();
 
             Assert.Multiple(() => {
                 Assert.That(response.StatusCode,  Is.EqualTo(HttpStatusCode.InternalServerError), body);
-                Assert.That(before,               Has.Length.GreaterThan(1),  "a key or a chain of one file");
+                Assert.That(before,               Has.Length.GreaterThan(1),  "a chain of one file");
                 Assert.That(after,                Is.EqualTo(before),         "its files");
-                Assert.That(CSMS.ServerCertificates.Entries.Select(entry => entry.Id).
-                                Concat(CSMS.ClientTrust.Entries.Select(entry => entry.Id)),
+                Assert.That(CSMS.ClientTrust.Entries.Select(entry => entry.Id),
                             Does.Contain(id), "read again");
             });
 
@@ -749,35 +520,26 @@ namespace cloud.charging.open.CSMS.Tests
 
         #endregion
 
-        #region ARefusalOfAKeyOrAChainIsWhatItWasWhileTheirFilesCannotBeWritten()
+        #region ARefusalOfAChainIsWhatItWasWhileItsFilesCannotBeWritten()
 
         /// <summary>
-        /// What was wrong with a change of the keys or the chains is answered as
-        /// it was while their files cannot be written: a 500 is the files', and
-        /// only where it was the files that refused.
+        /// What was wrong with a change of the chains is answered as it was
+        /// while their files cannot be written: a 500 is the files', and only
+        /// where it was the files that refused.
         /// </summary>
         [Test]
-        public async Task ARefusalOfAKeyOrAChainIsWhatItWasWhileTheirFilesCannotBeWritten()
+        public async Task ARefusalOfAChainIsWhatItWasWhileItsFilesCannotBeWritten()
         {
 
             using var http = await SignedIn();
 
-            await http.PutAsync(Root, JSONBody(new JProperty("reachableAs", new JArray("csms001.example.org"))));
-
-            AFileWhere(CSMS.ServerCertificates.Path);
             AFileWhere(CSMS.ClientTrust.Path);
 
-            var unknownAlgorithm  = await http.PostAsync  ($"{Root}/certificates",                  JSONBody(new JProperty("algorithm", "rot13")));
-            var notACertificate   = await http.PutAsync   ($"{Root}/certificates/0123456789abcdef", JSONBody(new JProperty("pem",       "a certificate, honestly")));
-            var noSuchKey         = await http.DeleteAsync($"{Root}/certificates/0123456789abcdef");
             var notAChain         = await http.PostAsync  ($"{Root}/trust",                         JSONBody(new JProperty("pem",       "trust us, we are a charging network")));
             var noChainToName     = await http.PutAsync   ($"{Root}/trust/0123456789abcdef",        JSONBody(new JProperty("name",      "Another Charging Network")));
             var noSuchChain       = await http.DeleteAsync($"{Root}/trust/0123456789abcdef");
 
             Assert.Multiple(() => {
-                Assert.That(unknownAlgorithm.StatusCode,  Is.EqualTo(HttpStatusCode.BadRequest),  "a key this CSMS does not make");
-                Assert.That(notACertificate. StatusCode,  Is.EqualTo(HttpStatusCode.BadRequest),  "a certificate that is none");
-                Assert.That(noSuchKey.       StatusCode,  Is.EqualTo(HttpStatusCode.Conflict),    "a key that is not here");
                 Assert.That(notAChain.       StatusCode,  Is.EqualTo(HttpStatusCode.BadRequest),  "a chain that is none");
                 Assert.That(noChainToName.   StatusCode,  Is.EqualTo(HttpStatusCode.BadRequest),  "a chain that is not here, to name");
                 Assert.That(noSuchChain.     StatusCode,  Is.EqualTo(HttpStatusCode.NotFound),    "a chain that is not here");
@@ -841,40 +603,53 @@ namespace cloud.charging.open.CSMS.Tests
         #endregion
 
 
-        #region AStationIsAddedWithAPasswordShownOnce()
+        #region AStationIsAddedWithItsPasswordWhichIsNotShownAgain()
 
+        /// <summary>
+        /// The password is given, and none is made up: it is kept only as a
+        /// hash, and neither the answer nor the list shows it again.
+        /// </summary>
         [Test]
-        public async Task AStationIsAddedWithAPasswordShownOnce()
+        public async Task AStationIsAddedWithItsPasswordWhichIsNotShownAgain()
         {
 
             using var http = await SignedIn();
 
-            var added = await http.PostAsync(
-                                  $"{Root}/stations",
+            const String password = "a-password-long-enough-for-ocpp";
+
+            var none  = await http.PostAsync(
+                                  $"{Root}/logins",
                                   JSONBody(
                                       new JProperty("id",    "cs001"),
                                       new JProperty("note",  "Ladepunkt 1")
                                   )
                               );
 
+            Assert.That(none.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest), "A charging station was added without a password.");
+
+            var added = await http.PostAsync(
+                                  $"{Root}/logins",
+                                  JSONBody(
+                                      new JProperty("id",        "cs001"),
+                                      new JProperty("password",  password),
+                                      new JProperty("note",      "Ladepunkt 1")
+                                  )
+                              );
+
             Assert.That(added.IsSuccessStatusCode, Is.True, await added.Content.ReadAsStringAsync());
 
-            var answer   = JObject.Parse(await added.Content.ReadAsStringAsync());
-            var password = answer.Value<String>("password");
+            var answer = await added.Content.ReadAsStringAsync();
 
             await Assert.MultipleAsync(async () => {
 
-                Assert.That(password, Is.Not.Null.And.Not.Empty,
-                            "No password came back, so nobody can configure the charging station.");
+                Assert.That(CSMS.WebSocketLogins.Verify("cs001", password), Is.True);
+                Assert.That(answer,                                       Does.Not.Contain(password));
 
-                Assert.That(CSMS.StationLogins.Verify("cs001", password!), Is.True);
+                var listed = await GetJSON(http, $"{Root}/logins");
 
-                // And a second look is not a second copy of it.
-                var listed = await GetJSON(http, $"{Root}/stations");
-
-                Assert.That(listed.ToString(), Does.Not.Contain(password!));
+                Assert.That(listed.ToString(), Does.Not.Contain(password));
                 Assert.That(listed.ToString(), Does.Not.Contain("$pbkdf2"));
-                Assert.That(listed["stations"]?[0]?.Value<String>("note"), Is.EqualTo("Ladepunkt 1"));
+                Assert.That(listed["logins"]?[0]?.Value<String>("note"), Is.EqualTo("Ladepunkt 1"));
 
             });
 
@@ -890,20 +665,19 @@ namespace cloud.charging.open.CSMS.Tests
 
             using var http = await SignedIn();
 
-            var added    = JObject.Parse(await (await http.PostAsync($"{Root}/stations",
-                               JSONBody(new JProperty("id", "cs001")))).Content.ReadAsStringAsync());
+            const String password = "a-password-long-enough-for-ocpp";
 
-            var password = added.Value<String>("password")!;
+            await http.PostAsync($"{Root}/logins", JSONBody(new JProperty("id", "cs001"), new JProperty("password", password)));
 
-            await http.PutAsync($"{Root}/stations/cs001", JSONBody(new JProperty("enabled", false)));
+            await http.PutAsync($"{Root}/logins/cs001", JSONBody(new JProperty("enabled", false)));
 
-            Assert.That(CSMS.StationLogins.Verify("cs001", password), Is.False);
+            Assert.That(CSMS.WebSocketLogins.Verify("cs001", password), Is.False);
 
-            var gone = await http.DeleteAsync($"{Root}/stations/cs001");
+            var gone = await http.DeleteAsync($"{Root}/logins/cs001");
 
             Assert.Multiple(() => {
                 Assert.That(gone.IsSuccessStatusCode,        Is.True);
-                Assert.That(CSMS.StationLogins.Logins, Is.Empty);
+                Assert.That(CSMS.WebSocketLogins.Logins, Is.Empty);
             });
 
         }
@@ -918,7 +692,7 @@ namespace cloud.charging.open.CSMS.Tests
 
             using var http = await SignedIn();
 
-            var response = await http.DeleteAsync($"{Root}/stations/cs404");
+            var response = await http.DeleteAsync($"{Root}/logins/cs404");
 
             Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
 
@@ -954,27 +728,27 @@ namespace cloud.charging.open.CSMS.Tests
             // What makes each change a fine one: a station with a password and
             // a token, in the default group, and a group of its own, empty.
             foreach (var made in new[] {
-                                     await http.PostAsync($"{Root}/stations",           JSONBody(new JProperty("id", "cs001"))),
-                                     await http.PutAsync ($"{Root}/stations/cs001/totp", JSONBody()),
+                                     await http.PostAsync($"{Root}/logins",           JSONBody(new JProperty("id", "cs001"), new JProperty("password", "a-password-long-enough-for-ocpp"))),
+                                     await http.PutAsync ($"{Root}/logins/cs001/totp", JSONBody()),
                                      await http.PostAsync($"{Root}/groups",             JSONBody(new JProperty("id", "field-test")))
                                  })
                 Assert.That(made.IsSuccessStatusCode, Is.True, await made.Content.ReadAsStringAsync());
 
             // Where the file's next version is written first is a directory.
-            System.IO.Directory.CreateDirectory(CSMS.StationLogins.Path + ".tmp");
+            System.IO.Directory.CreateDirectory(CSMS.WebSocketLogins.Path + ".tmp");
 
             var response = Change switch {
                 "POST groups"                    => await http.PostAsync  ($"{Root}/groups",                 JSONBody(new JProperty("id",      "another"))),
                 "PUT groups/{id}"                => await http.PutAsync   ($"{Root}/groups/field-test",      JSONBody(new JProperty("enabled", false))),
                 "DELETE groups/{id}"             => await http.DeleteAsync($"{Root}/groups/field-test"),
-                "POST stations"                  => await http.PostAsync  ($"{Root}/stations",               JSONBody(new JProperty("id",      "cs002"))),
-                "PUT stations/{id}, enabled"     => await http.PutAsync   ($"{Root}/stations/cs001",         JSONBody(new JProperty("enabled", false))),
-                "PUT stations/{id}, group"       => await http.PutAsync   ($"{Root}/stations/cs001",         JSONBody(new JProperty("group",   "field-test"))),
-                "PUT stations/{id}/totp"         => await http.PutAsync   ($"{Root}/stations/cs001/totp",    JSONBody()),
-                "DELETE stations/{id}/totp"      => await http.DeleteAsync($"{Root}/stations/cs001/totp"),
-                "PUT stations/{id}/totp/binding" => await http.PutAsync   ($"{Root}/stations/cs001/totp/binding", JSONBody(new JProperty("tlsChannelBinding", true))),
-                "DELETE stations/{id}/password"  => await http.DeleteAsync($"{Root}/stations/cs001/password"),
-                "DELETE stations/{id}"           => await http.DeleteAsync($"{Root}/stations/cs001"),
+                "POST stations"                  => await http.PostAsync  ($"{Root}/logins",               JSONBody(new JProperty("id",      "cs002"), new JProperty("password", "a-password-long-enough-for-ocpp"))),
+                "PUT stations/{id}, enabled"     => await http.PutAsync   ($"{Root}/logins/cs001",         JSONBody(new JProperty("enabled", false))),
+                "PUT stations/{id}, group"       => await http.PutAsync   ($"{Root}/logins/cs001",         JSONBody(new JProperty("group",   "field-test"))),
+                "PUT stations/{id}/totp"         => await http.PutAsync   ($"{Root}/logins/cs001/totp",    JSONBody()),
+                "DELETE stations/{id}/totp"      => await http.DeleteAsync($"{Root}/logins/cs001/totp"),
+                "PUT stations/{id}/totp/binding" => await http.PutAsync   ($"{Root}/logins/cs001/totp/binding", JSONBody(new JProperty("tlsChannelBinding", true))),
+                "DELETE stations/{id}/password"  => await http.DeleteAsync($"{Root}/logins/cs001/password"),
+                "DELETE stations/{id}"           => await http.DeleteAsync($"{Root}/logins/cs001"),
                 _                                => throw new ArgumentException($"No change '{Change}' here.", nameof(Change))
             };
 
@@ -982,7 +756,7 @@ namespace cloud.charging.open.CSMS.Tests
 
             Assert.Multiple(() => {
                 Assert.That(response.StatusCode,                         Is.EqualTo(HttpStatusCode.InternalServerError), body);
-                Assert.That(JObject.Parse(body).Value<String>("error"),  Does.StartWith($"'{CSMS.StationLogins.Path}' could not be written: "));
+                Assert.That(JObject.Parse(body).Value<String>("error"),  Does.StartWith($"'{CSMS.WebSocketLogins.Path}' could not be written: "));
             });
 
         }
@@ -1004,15 +778,15 @@ namespace cloud.charging.open.CSMS.Tests
 
             using var http = await SignedIn();
 
-            var added = await http.PostAsync($"{Root}/stations", JSONBody(new JProperty("id", "cs001"), new JProperty("group", "default")));
+            var added = await http.PostAsync($"{Root}/logins", JSONBody(new JProperty("id", "cs001"), new JProperty("group", "default"), new JProperty("password", "a-password-long-enough-for-ocpp")));
             Assert.That(added.IsSuccessStatusCode, Is.True, await added.Content.ReadAsStringAsync());
 
-            System.IO.Directory.CreateDirectory(CSMS.StationLogins.Path + ".tmp");
+            System.IO.Directory.CreateDirectory(CSMS.WebSocketLogins.Path + ".tmp");
 
-            var unknown   = await http.DeleteAsync($"{Root}/stations/cs404");
-            var tooShort  = await http.PostAsync  ($"{Root}/stations",               JSONBody(new JProperty("id", "cs002"), new JProperty("password", "short")));
+            var unknown   = await http.DeleteAsync($"{Root}/logins/cs404");
+            var tooShort  = await http.PostAsync  ($"{Root}/logins",               JSONBody(new JProperty("id", "cs002"), new JProperty("password", "short")));
             var notEmpty  = await http.DeleteAsync($"{Root}/groups/default");
-            var noToken   = await http.DeleteAsync($"{Root}/stations/cs001/totp");
+            var noToken   = await http.DeleteAsync($"{Root}/logins/cs001/totp");
 
             Assert.Multiple(() => {
                 Assert.That(unknown. StatusCode,  Is.EqualTo(HttpStatusCode.NotFound),    "a station this CSMS never heard of");
@@ -1041,20 +815,20 @@ namespace cloud.charging.open.CSMS.Tests
                 ("POST groups",           http.PostAsync  ($"{Root}/groups",                   JSONBody(new JProperty("id", "sneaky")))),
                 ("PUT groups/{id}",       http.PutAsync   ($"{Root}/groups/default",           JSONBody(new JProperty("enabled", false)))),
                 ("DELETE groups/{id}",    http.DeleteAsync($"{Root}/groups/default")),
-                ("POST stations",         http.PostAsync  ($"{Root}/stations",                 JSONBody(new JProperty("id", "cs666")))),
-                ("PUT stations/../totp",  http.PutAsync   ($"{Root}/stations/cs001/totp",      JSONBody())),
-                ("DELETE ../totp",        http.DeleteAsync($"{Root}/stations/cs001/totp")),
-                ("DELETE ../password",    http.DeleteAsync($"{Root}/stations/cs001/password"))
+                ("POST stations",         http.PostAsync  ($"{Root}/logins",                 JSONBody(new JProperty("id", "cs666"), new JProperty("password", "a-password-long-enough-for-ocpp")))),
+                ("PUT stations/../totp",  http.PutAsync   ($"{Root}/logins/cs001/totp",      JSONBody())),
+                ("DELETE ../totp",        http.DeleteAsync($"{Root}/logins/cs001/totp")),
+                ("DELETE ../password",    http.DeleteAsync($"{Root}/logins/cs001/password"))
             };
 
             foreach (var (what, response) in attempts)
                 Assert.That((await response).StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized), what);
 
             Assert.Multiple(() => {
-                Assert.That(CSMS.StationLogins.Logins,                        Is.Empty);
-                Assert.That(CSMS.StationLogins.GetGroup("sneaky"),            Is.Null);
-                Assert.That(CSMS.StationLogins.GetGroup(LoginGroup.DefaultId), Is.Not.Null);
-                Assert.That(CSMS.StationLogins.GetGroup(LoginGroup.DefaultId)!.Enabled, Is.True);
+                Assert.That(CSMS.WebSocketLogins.Logins,                        Is.Empty);
+                Assert.That(CSMS.WebSocketLogins.GetGroup("sneaky"),            Is.Null);
+                Assert.That(CSMS.WebSocketLogins.GetGroup(WebSocketLoginGroup.DefaultId), Is.Not.Null);
+                Assert.That(CSMS.WebSocketLogins.GetGroup(WebSocketLoginGroup.DefaultId)!.Enabled, Is.True);
             });
 
         }
@@ -1076,19 +850,19 @@ namespace cloud.charging.open.CSMS.Tests
                                      new JProperty("name",              "Field test"),
                                      new JProperty("enabled",           true),
                                      new JProperty("authMethods",       new JArray("basic", "totp")),
-                                     new JProperty("securityProfiles",  new JArray(1, 2))
+                                     new JProperty("clientAuthentication",  new JArray("httpAuthWithoutTLS", "httpAuthOverTLS"))
                                  )
                              );
 
             Assert.That(made.IsSuccessStatusCode, Is.True, await made.Content.ReadAsStringAsync());
 
-            var group = CSMS.StationLogins.GetGroup("field-test");
+            var group = CSMS.WebSocketLogins.GetGroup("field-test");
 
             Assert.That(group, Is.Not.Null);
 
             Assert.Multiple(() => {
                 Assert.That(group!.AuthMethods,       Is.EquivalentTo(new[] { AuthMethod.Basic, AuthMethod.TOTP }));
-                Assert.That(group.SecurityProfiles,   Is.EquivalentTo(new Byte[] { 1, 2 }));
+                Assert.That(group.ClientAuthentication,   Is.EquivalentTo(new[] { WebSocketClientAuthentication.HTTPAuthWithoutTLS, WebSocketClientAuthentication.HTTPAuthOverTLS }));
                 Assert.That(group.Allows(AuthMethod.Certificate), Is.False);
             });
 
@@ -1100,22 +874,22 @@ namespace cloud.charging.open.CSMS.Tests
                                          new JProperty("name",              "Field test"),
                                          new JProperty("enabled",           true),
                                          new JProperty("authMethods",       new JArray("totp")),
-                                         new JProperty("securityProfiles",  new JArray(2))
+                                         new JProperty("clientAuthentication",  new JArray("httpAuthOverTLS"))
                                      )
                                  );
 
             Assert.That(narrowed.IsSuccessStatusCode, Is.True, await narrowed.Content.ReadAsStringAsync());
 
             Assert.Multiple(() => {
-                Assert.That(CSMS.StationLogins.GetGroup("field-test")!.Allows(AuthMethod.Basic),  Is.False);
-                Assert.That(CSMS.StationLogins.GetGroup("field-test")!.Allows((Byte) 1),          Is.False);
+                Assert.That(CSMS.WebSocketLogins.GetGroup("field-test")!.Allows(AuthMethod.Basic),  Is.False);
+                Assert.That(CSMS.WebSocketLogins.GetGroup("field-test")!.Allows(WebSocketClientAuthentication.HTTPAuthWithoutTLS),          Is.False);
             });
 
             var gone = await http.DeleteAsync($"{Root}/groups/field-test");
 
             Assert.Multiple(() => {
                 Assert.That(gone.IsSuccessStatusCode,                   Is.True);
-                Assert.That(CSMS.StationLogins.GetGroup("field-test"), Is.Null);
+                Assert.That(CSMS.WebSocketLogins.GetGroup("field-test"), Is.Null);
             });
 
         }
@@ -1133,18 +907,19 @@ namespace cloud.charging.open.CSMS.Tests
             await http.PostAsync($"{Root}/groups",
                                  JSONBody(new JProperty("id",           "field-test"),
                                           new JProperty("authMethods",  new JArray("basic")),
-                                          new JProperty("securityProfiles", new JArray(1))));
+                                          new JProperty("clientAuthentication", new JArray("httpAuthWithoutTLS"))));
 
-            await http.PostAsync($"{Root}/stations",
-                                 JSONBody(new JProperty("id",     "cs001"),
-                                          new JProperty("group",  "field-test")));
+            await http.PostAsync($"{Root}/logins",
+                                 JSONBody(new JProperty("id",        "cs001"),
+                                          new JProperty("group",     "field-test"),
+                                          new JProperty("password",  "a-password-long-enough-for-ocpp")));
 
             var refused = await http.DeleteAsync($"{Root}/groups/field-test");
 
             Assert.Multiple(() => {
                 Assert.That(refused.StatusCode,                              Is.EqualTo(HttpStatusCode.Conflict));
-                Assert.That(CSMS.StationLogins.GetGroup("field-test"),  Is.Not.Null);
-                Assert.That(CSMS.StationLogins.Logins.Single().GroupId, Is.EqualTo("field-test"));
+                Assert.That(CSMS.WebSocketLogins.GetGroup("field-test"),  Is.Not.Null);
+                Assert.That(CSMS.WebSocketLogins.Logins.Single().GroupId, Is.EqualTo("field-test"));
             });
 
         }
@@ -1159,9 +934,9 @@ namespace cloud.charging.open.CSMS.Tests
 
             using var http = await SignedIn();
 
-            await http.PostAsync($"{Root}/stations", JSONBody(new JProperty("id", "cs001")));
+            await http.PostAsync($"{Root}/logins", JSONBody(new JProperty("id", "cs001"), new JProperty("password", "a-password-long-enough-for-ocpp")));
 
-            var given = await http.PutAsync($"{Root}/stations/cs001/totp", JSONBody());
+            var given = await http.PutAsync($"{Root}/logins/cs001/totp", JSONBody());
 
             Assert.That(given.IsSuccessStatusCode, Is.True, await given.Content.ReadAsStringAsync());
 
@@ -1173,14 +948,14 @@ namespace cloud.charging.open.CSMS.Tests
                 Assert.That(secret, Is.Not.Null.And.Not.Empty,
                             "No shared secret came back, so nobody can configure the charging station.");
 
-                Assert.That(CSMS.StationLogins.TryGet("cs001", out var login) && login.HasTOTP, Is.True);
+                Assert.That(CSMS.WebSocketLogins.TryGet("cs001", out var login) && login.HasTOTP, Is.True);
 
                 // The list the page reads must never carry it, however often it
                 // is asked - this is the one credential that works as it stands.
-                var listed = await GetJSON(http, $"{Root}/stations");
+                var listed = await GetJSON(http, $"{Root}/logins");
 
                 Assert.That(listed.ToString(), Does.Not.Contain(secret!));
-                Assert.That(listed["stations"]?[0]?.Value<Boolean>("hasTOTP"), Is.True);
+                Assert.That(listed["logins"]?[0]?.Value<Boolean>("hasTOTP"), Is.True);
 
             });
 
@@ -1200,23 +975,23 @@ namespace cloud.charging.open.CSMS.Tests
 
             using var http = await SignedIn();
 
-            await http.PostAsync($"{Root}/stations", JSONBody(new JProperty("id", "cs001")));
+            await http.PostAsync($"{Root}/logins", JSONBody(new JProperty("id", "cs001"), new JProperty("password", "a-password-long-enough-for-ocpp")));
 
-            var nothingYet  = await http.PutAsync($"{Root}/stations/cs001/totp/binding", JSONBody(new JProperty("tlsChannelBinding", true)));
+            var nothingYet  = await http.PutAsync($"{Root}/logins/cs001/totp/binding", JSONBody(new JProperty("tlsChannelBinding", true)));
 
-            await http.PutAsync ($"{Root}/stations/cs001/totp", JSONBody());
+            await http.PutAsync ($"{Root}/logins/cs001/totp", JSONBody());
 
-            CSMS.StationLogins.TryGet("cs001", out var before);
+            CSMS.WebSocketLogins.TryGet("cs001", out var before);
 
-            var mistyped    = await http.PutAsync($"{Root}/stations/cs001/totp/binding", JSONBody(new JProperty("tlsChannelBinding", "yes")));
-            var bound       = await http.PutAsync($"{Root}/stations/cs001/totp/binding", JSONBody(new JProperty("tlsChannelBinding", true)));
+            var mistyped    = await http.PutAsync($"{Root}/logins/cs001/totp/binding", JSONBody(new JProperty("tlsChannelBinding", "yes")));
+            var bound       = await http.PutAsync($"{Root}/logins/cs001/totp/binding", JSONBody(new JProperty("tlsChannelBinding", true)));
             var answer      = JObject.Parse(await bound.Content.ReadAsStringAsync());
 
-            CSMS.StationLogins.TryGet("cs001", out var after);
+            CSMS.WebSocketLogins.TryGet("cs001", out var after);
 
-            var unbound     = await http.PutAsync($"{Root}/stations/cs001/totp/binding", JSONBody(new JProperty("tlsChannelBinding", false)));
+            var unbound     = await http.PutAsync($"{Root}/logins/cs001/totp/binding", JSONBody(new JProperty("tlsChannelBinding", false)));
 
-            CSMS.StationLogins.TryGet("cs001", out var atLast);
+            CSMS.WebSocketLogins.TryGet("cs001", out var atLast);
 
             Assert.Multiple(() => {
                 Assert.That((Int32) nothingYet.StatusCode,           Is.EqualTo(404),  "a token that is not there was bound");
@@ -1225,7 +1000,7 @@ namespace cloud.charging.open.CSMS.Tests
                 Assert.That(after?.TOTP?.TLSChannelBinding,          Is.True);
                 Assert.That(after?.TOTP?.SharedSecret,               Is.EqualTo(before?.TOTP?.SharedSecret),  "the secret was changed");
                 Assert.That(answer.ToString(),                       Does.Not.Contain(before!.TOTP!.SharedSecret));
-                Assert.That(answer["stations"]?[0]?["totp"]?.Value<Boolean>("tlsChannelBinding"), Is.True);
+                Assert.That(answer["logins"]?[0]?["totp"]?.Value<Boolean>("tlsChannelBinding"), Is.True);
                 Assert.That(unbound.IsSuccessStatusCode,             Is.True);
                 Assert.That(atLast?.TOTP?.TLSChannelBinding,         Is.False);
             });
@@ -1238,15 +1013,15 @@ namespace cloud.charging.open.CSMS.Tests
 
             using var http = await SignedIn();
 
-            await http.PostAsync($"{Root}/stations", JSONBody(new JProperty("id", "cs001")));
-            await http.PutAsync ($"{Root}/stations/cs001/totp", JSONBody());
+            await http.PostAsync($"{Root}/logins", JSONBody(new JProperty("id", "cs001"), new JProperty("password", "a-password-long-enough-for-ocpp")));
+            await http.PutAsync ($"{Root}/logins/cs001/totp", JSONBody());
 
-            var gone = await http.DeleteAsync($"{Root}/stations/cs001/totp");
+            var gone = await http.DeleteAsync($"{Root}/logins/cs001/totp");
 
             Assert.Multiple(() => {
                 Assert.That(gone.IsSuccessStatusCode, Is.True);
-                Assert.That(CSMS.StationLogins.TryGet("cs001", out var login) && login.HasTOTP, Is.False);
-                Assert.That(CSMS.StationLogins.TryGet("cs001", out var still) && still.HasPassword, Is.True,
+                Assert.That(CSMS.WebSocketLogins.TryGet("cs001", out var login) && login.HasTOTP, Is.False);
+                Assert.That(CSMS.WebSocketLogins.TryGet("cs001", out var still) && still.HasPassword, Is.True,
                             "Taking the token away took the password with it.");
             });
 
@@ -1262,16 +1037,16 @@ namespace cloud.charging.open.CSMS.Tests
 
             using var http = await SignedIn();
 
-            await http.PostAsync($"{Root}/stations", JSONBody(new JProperty("id", "cs001")));
+            await http.PostAsync($"{Root}/logins", JSONBody(new JProperty("id", "cs001"), new JProperty("password", "a-password-long-enough-for-ocpp")));
 
             var refused = await http.PutAsync(
-                                    $"{Root}/stations/cs001/totp",
+                                    $"{Root}/logins/cs001/totp",
                                     JSONBody(new JProperty("sharedSecret", "short"))
                                 );
 
             Assert.Multiple(() => {
                 Assert.That(refused.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
-                Assert.That(CSMS.StationLogins.TryGet("cs001", out var login) && login.HasTOTP, Is.False);
+                Assert.That(CSMS.WebSocketLogins.TryGet("cs001", out var login) && login.HasTOTP, Is.False);
             });
 
         }

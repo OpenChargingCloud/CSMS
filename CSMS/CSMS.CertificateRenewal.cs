@@ -121,9 +121,12 @@ namespace cloud.charging.open.CSMS
 
             csms01.OCPP.OUT.OnBootNotificationResponseSent += (timestamp, sender, connection, request, response, runtime, sentMessageResult, cancellationToken) => {
 
-                if (response.Status == RegistrationStatus.Accepted)
+                // A local controller or a gateway registers as well, and has no
+                // station certificate of this CSMS's to renew.
+                if (response.Status == RegistrationStatus.Accepted &&
+                    request.NetworkPath.Source.ToString() is String station &&
+                    IsAStation(station))
                 {
-                    var station = request.NetworkPath.Source.ToString();
                     _ = Task.Run(() => RenewDueCertificates(station));
                 }
 

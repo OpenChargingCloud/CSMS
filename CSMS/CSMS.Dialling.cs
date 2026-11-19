@@ -30,6 +30,7 @@ using cloud.charging.open.protocols.WWCP.Node.Certificates;
 
 using cloud.charging.open.protocols.OCPP.Node;
 using cloud.charging.open.protocols.WWCP.Node.Connections;
+using cloud.charging.open.protocols.WWCP.Node.Logins;
 
 using ConnectionType = cloud.charging.open.protocols.WWCP.Node.Connections.ConnectionType;
 
@@ -115,35 +116,18 @@ namespace cloud.charging.open.CSMS
 
         #endregion
 
-        #region OCPPDialling / Nodes
-
-        /// <summary>
-        /// What OCPP says of the connections of this node.
-        /// </summary>
-        public OCPPDialling OCPPDialling
-            => (OCPPDialling) Dialling;
-
-        /// <summary>
-        /// The OCPP nodes this one has: the one for OCPP 2.1, and before it
-        /// the one for OCPP 1.6 where it speaks that.
-        /// </summary>
-        protected IEnumerable<cloud.charging.open.protocols.OCPP.NetworkingNode.AOCPPNetworkingNode> Nodes
-            => OCPPDialling.Nodes;
-
-        #endregion
-
         #region Node16 / Node21
 
         /// <summary>
         /// A CSMS dials in OCPP 2.1 alone.
         /// </summary>
-        protected OCPPv1_6.NetworkingNode.AOCPPNetworkingNode? Node16
+        protected override OCPPv1_6.NetworkingNode.AOCPPNetworkingNode? Node16
             => null;
 
         /// <summary>
         /// The node that speaks OCPP 2.1 for this CSMS.
         /// </summary>
-        protected OCPPv2_1.NetworkingNode.AOCPPNetworkingNode Node21
+        protected override OCPPv2_1.NetworkingNode.AOCPPNetworkingNode Node21
             => csms01;
 
         #endregion
@@ -174,7 +158,8 @@ namespace cloud.charging.open.CSMS
 
             Connections = new ConnectionStore(
                               System.IO.Path.Combine(directory, ConnectionStore.DefaultDirectoryName),
-                              TimeProvider
+                              TimeProvider,
+                              NodeNoun
                           ) {
 
                               // What a CSMS dials is below it, and is spoken
@@ -197,7 +182,7 @@ namespace cloud.charging.open.CSMS
 
             // A node that is dialled is a login of this CSMS: where it is
             // switched off, marked as a local controller, and given a group.
-            Connections.WhyItLeadsToNoSuchNode  = node => StationLogins?.TryGet(node, out _) == false
+            Connections.WhyItLeadsToNoSuchNode  = node => WebSocketLogins?.TryGet(node, out _) == false
                                                               ? $"'{node}' is no login of this CSMS. A charging station or a local controller this CSMS " +
                                                                 "dials is written down under Logins and groups as one that dials is, so that it " +
                                                                 "can be switched off, marked as a local controller and given a group."
@@ -210,7 +195,7 @@ namespace cloud.charging.open.CSMS
 
             // A login switched off, or marked as a local controller: what is
             // dialled to it is let go of, or dialled as what it is now.
-            StationLogins.OnChanged            += () => {
+            WebSocketLogins.OnChanged            += () => {
                                                       if (dials)
                                                           _ = ApplyConnectionChanges();
                                                   };
@@ -220,7 +205,8 @@ namespace cloud.charging.open.CSMS
             // it shares with them.
             SshKey = new SshClientKey(
                          System.IO.Path.Combine(Connections.Path, SshClientKey.DirectoryName),
-                         $"csms@{Environment.MachineName}"
+                         $"csms@{Environment.MachineName}",
+                         NodeNoun:  NodeNoun
                      );
 
             SshKey.OnNotice += (level, message) => Log.Log(level, message, "ocpp", "connections", "ssh", "security");
@@ -419,7 +405,7 @@ namespace cloud.charging.open.CSMS
             if (Connection.RemoteNodeId is not String node)
                 return "it names no node at its other end";
 
-            if (!StationLogins.TryGet(node, out var login))
+            if (!WebSocketLogins.TryGet(node, out var login))
                 return $"'{node}' is no login of this CSMS any more";
 
             if (!login.Enabled)

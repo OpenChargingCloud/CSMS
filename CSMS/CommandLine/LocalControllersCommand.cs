@@ -20,6 +20,7 @@
 using org.GraphDefined.Vanaheimr.CLI;
 
 using cloud.charging.open.protocols.WWCP.Node.Web;
+using cloud.charging.open.protocols.WWCP.Node.Logins;
 
 #endregion
 
@@ -113,7 +114,7 @@ namespace cloud.charging.open.CSMS.CommandLine
         private String[] List()
         {
 
-            var controllers = cli.CSMS.StationLogins.Logins.
+            var controllers = cli.CSMS.WebSocketLogins.Logins.
                                   Where  (login => login.LocalController).
                                   OrderBy(login => login.Id, StringComparer.Ordinal).
                                   Select (login => $"{login.Id}{(login.Enabled ? "" : " (switched off)")}: " +
@@ -134,9 +135,9 @@ namespace cloud.charging.open.CSMS.CommandLine
                               Boolean  LocalController)
         {
 
-            var wasAGateway = LocalController && cli.CSMS.StationLogins.IsGateway(Login);
+            var wasAGateway = LocalController && cli.CSMS.WebSocketLogins.IsGateway(Login);
 
-            if (!cli.CSMS.StationLogins.TrySetLocalController(Login, LocalController, out var error))
+            if (!cli.CSMS.WebSocketLogins.TrySetLocalController(Login, LocalController, out var error))
                 return [ error ];
 
             cli.Node.Log.Notice(LocalController

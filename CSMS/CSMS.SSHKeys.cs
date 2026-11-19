@@ -18,6 +18,7 @@
 #region Usings
 
 using cloud.charging.open.protocols.WWCP.NetworkingNode;
+using cloud.charging.open.protocols.WWCP.Node.Logins;
 
 using OCPPv2_1      = cloud.charging.open.protocols.OCPPv2_1;
 using OCPPv2_1_CSMS = cloud.charging.open.protocols.OCPPv2_1.CSMS;
@@ -75,9 +76,9 @@ namespace cloud.charging.open.CSMS
                                      String                      PublicKey)
         {
 
-            var before = StationLogins.Logins.FirstOrDefault(login => login.Id == Station.ToString())?.Keys.Select(key => key.Fingerprint).ToArray() ?? [];
+            var before = WebSocketLogins.Logins.FirstOrDefault(login => login.Id == Station.ToString())?.Keys.Select(key => key.Fingerprint).ToArray() ?? [];
 
-            if (!StationLogins.TryAddSSHKey(Station.ToString(), PublicKey, "Rotated by SignSSHKey", null, null, "OCPP", out var added, out var error))
+            if (!WebSocketLogins.TryAddSSHKey(Station.ToString(), PublicKey, "Rotated by SignSSHKey", null, null, "OCPP", out var added, out var error))
             {
                 Log.Warning($"The next SSH key of the charging station '{Station}' was not enrolled: {error}", "ocpp", "station", "ssh");
                 return;
@@ -93,7 +94,7 @@ namespace cloud.charging.open.CSMS
             }
 
             foreach (var old in before.Where(fingerprint => fingerprint != added.Fingerprint))
-                StationLogins.TryRemoveSSHKey(Station.ToString(), old, out _);
+                WebSocketLogins.TryRemoveSSHKey(Station.ToString(), old, out _);
 
             Log.Notice($"The charging station '{Station}' signs in with its next SSH key {added.Fingerprint} from now on; {before.Length} old one(s) taken away.",
                        "ocpp", "station", "ssh");

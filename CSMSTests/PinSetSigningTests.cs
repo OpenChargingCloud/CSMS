@@ -33,6 +33,7 @@ using OCPPv2_1      = cloud.charging.open.protocols.OCPPv2_1;
 using OCPPv2_1_CSMS = cloud.charging.open.protocols.OCPPv2_1.CSMS;
 
 using cloud.charging.open.CSMS.OCPP;
+using cloud.charging.open.protocols.OCPP.Node.Serving;
 
 #endregion
 

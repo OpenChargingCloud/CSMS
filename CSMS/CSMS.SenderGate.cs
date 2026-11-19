@@ -20,6 +20,7 @@
 using org.GraphDefined.Vanaheimr.Hermod.Messaging;
 
 using cloud.charging.open.protocols.WWCP.NetworkingNode;
+using cloud.charging.open.protocols.WWCP.Node.Logins;
 
 using OCPPv2_1_CSMS = cloud.charging.open.protocols.OCPPv2_1.CSMS;
 
@@ -43,8 +44,8 @@ namespace cloud.charging.open.CSMS
     /// </para>
     /// <para>
     /// <b>A connection speaks for itself, and a local controller's or a gateway's for the stations behind it.</b>
-    /// Whether a login is one of theirs is the operator's to say (<see cref="OCPP.ChargingStationLogin.LocalController"/>,
-    /// <see cref="OCPP.ChargingStationLogin.Gateway"/>):
+    /// Whether a login is one of theirs is the operator's to say (<see cref="OCPP.WebSocketLogin.LocalController"/>,
+    /// <see cref="OCPP.WebSocketLogin.Gateway"/>):
     /// any station can dial in the overlay network and name itself the way to another station, so a frame
     /// does not say it.
     /// </para>
@@ -111,7 +112,7 @@ namespace cloud.charging.open.CSMS
             if (Path.Source == node)
                 return null;
 
-            if (!StationLogins.SpeaksForOthers(node.ToString()))
+            if (!WebSocketLogins.SpeaksForOthers(node.ToString()))
                 return $"'{node}' is no local controller and no gateway, and sends in its own name alone. Where it is one, mark it as one: " +
                        $"'localControllers {node} on' or 'gateways {node} on' on the command line, or on the page of the charging stations.";
 

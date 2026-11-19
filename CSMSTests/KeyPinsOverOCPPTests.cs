@@ -37,6 +37,7 @@ using org.GraphDefined.Vanaheimr.Hermod.Mail;
 using cloud.charging.open.protocols.WWCP.NetworkingNode;
 using cloud.charging.open.protocols.WWCP.Node.CommandLine;
 using cloud.charging.open.protocols.WWCP.Node.TestKit;
+using cloud.charging.open.protocols.WWCP.Node.Logins;
 
 using cloud.charging.open.CSMS.CommandLine;
 
@@ -770,11 +771,11 @@ namespace cloud.charging.open.CSMS.Tests
         protected override JObject Configuration
             => new (
                    new JProperty("nts",  new JObject(new JProperty("groups", new JObject(new JProperty("legal", new JObject(new JProperty("enabled", false))))))),
-                   new JProperty("ocppServer", new JObject(
+                   new JProperty("webSocketServer", new JObject(
                        new JProperty("enabled",           true),
                        new JProperty("address",           "127.0.0.1"),
                        new JProperty("port",              TestPorts.Free()),
-                       new JProperty("securityProfiles",  new JArray(1)),
+                       new JProperty("clientAuthentication",  new JArray("httpAuthWithoutTLS")),
                        new JProperty("subprotocols",      new JArray("ocpp2.1"))
                    ))
                );
@@ -839,8 +840,8 @@ namespace cloud.charging.open.CSMS.Tests
                                                    Boolean  Overlay)
         {
 
-            Assert.That(CSMS.StationLogins.TrySetPassword        (Id, ThePassword, null, null, out _, out var error), Is.True, error);
-            Assert.That(CSMS.StationLogins.TrySetLocalController(Id, true, out var markError),                     Is.True, markError);
+            Assert.That(CSMS.WebSocketLogins.TrySetPassword        (Id, ThePassword, null, null, out var error), Is.True, error);
+            Assert.That(CSMS.WebSocketLogins.TrySetLocalController(Id, true, out var markError),                 Is.True, markError);
 
             var controller = await Controller.Connect(CSMS.OCPPServerSettings.TCPPort!.Value.ToUInt16(), ThePassword, Id, Overlay);
 
@@ -1945,7 +1946,7 @@ namespace cloud.charging.open.CSMS.Tests
             await Until(() => said.Any(line => line.Contains("keyPins uplink lc001") && line.Contains("no signing key for pin sets")),
                         "the log saying why no pin set was sent");
 
-            Assert.That(CSMS.StationLogins.TrySetPassword("cs009", ThePassword, null, null, out _, out var error), Is.True, error);
+            Assert.That(CSMS.WebSocketLogins.TrySetPassword("cs009", ThePassword, null, null, out var error), Is.True, error);
 
             await using var station = await Controller.Connect(CSMS.OCPPServerSettings.TCPPort!.Value.ToUInt16(), ThePassword, "cs009", Overlay: true);
             await Until(() => CSMS.IsConnected("cs009"), "'cs009' counting as connected");

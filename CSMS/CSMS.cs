@@ -35,6 +35,8 @@ using cloud.charging.open.protocols.WWCP.Node.Logging;
 using cloud.charging.open.protocols.WWCP.Node.SecureShell;
 
 using cloud.charging.open.protocols.OCPP.Node;
+using cloud.charging.open.protocols.OCPP.Node.Serving;
+using cloud.charging.open.protocols.WWCP.Node.Logins;
 
 using OCPPv2_1_CSMS = cloud.charging.open.protocols.OCPPv2_1.CSMS;
 
@@ -72,7 +74,7 @@ namespace cloud.charging.open.CSMS
     /// stations, the OCPI endpoints its roaming partners call, and the OCPP
     /// node it speaks through.
     /// </remarks>
-    public partial class CSMS : WWCPNode
+    public partial class CSMS : OCPPServingNode
     {
 
         #region Data
@@ -98,11 +100,10 @@ namespace cloud.charging.open.CSMS
         public static new readonly IPPort DefaultHTTPPort = IPPort.Parse(2351);
 
         /// <summary>
-        /// The port the charging stations connect to, as a sentence names it
-        /// when it cannot be had: the other of the two things this CSMS
-        /// listens for, beside <see cref="NodePort.WebInterface"/>.
+        /// The port the charging stations connect to, where the configuration
+        /// file names none: the one after the web interface's.
         /// </summary>
-        public static readonly NodePort  StationServerPort  = new ("The charging station server");
+        public static readonly IPPort DefaultStationServerPort = IPPort.Parse(2352);
 
         /// <summary>
         /// What a CSMS is to the node below it: what it calls itself in
@@ -292,41 +293,37 @@ namespace cloud.charging.open.CSMS
                     SSHSettings?           SSH                = null,
                     WebConfiguration?      Web                = null)
 
-            : base(Kind:              CSMSKind,
-                   Version:           typeof(CSMS).Assembly.GetName().Version?.ToString(3) ?? "0.0.0",
-                   HTTPPort:          HTTPPort ?? DefaultHTTPPort,
-                   HTTPHostname:      HTTPHostname,
-                   HTTPServer:        HTTPServer,
-                   BasePath:          BasePath,
-                   HTTPRootPath:      HTTPRootPath,
-                   ExtAPI:            ExtAPI,
-                   AccountsPath:      AccountsPath,
-                   Resources:         CSMSAccess.Resources,
-                   RoleDefinitions:   CSMSAccess.Roles,
-                   ConfigFile:        ConfigFile,
-                   DNSClient:         DNSClient,
-                   NTSClient:         NTSClient,
-                   Frontend:          Frontend ?? new EmbeddedContentSource(HTTPRoot, typeof(CSMS).Assembly),
+            : base(Kind:               CSMSKind,
+                   Version:            typeof(CSMS).Assembly.GetName().Version?.ToString(3) ?? "0.0.0",
+                   HTTPPort:           HTTPPort ?? DefaultHTTPPort,
+                   HTTPHostname:       HTTPHostname,
+                   HTTPServer:         HTTPServer,
+                   BasePath:           BasePath,
+                   HTTPRootPath:       HTTPRootPath,
+                   ExtAPI:             ExtAPI,
+                   AccountsPath:       AccountsPath,
+                   Resources:          CSMSAccess.Resources,
+                   RoleDefinitions:    CSMSAccess.Roles,
+                   ConfigFile:         ConfigFile,
+                   DNSClient:          DNSClient,
+                   NTSClient:          NTSClient,
+                   Frontend:           Frontend ?? new EmbeddedContentSource(HTTPRoot, typeof(CSMS).Assembly),
 
-                   CertificatesPath:  CertificatesPath,
-                   CertificateKinds:  CertificateKinds,
-                   CertificateUsages: [ StationsCertificateUsage ],
+                   CertificatesPath:   CertificatesPath,
+                   CertificateKinds:   CertificateKinds,
+                   CertificateUsages:  [ StationsCertificateUsage ],
 
-                   Log:               Log,
-                   LogToConsole:      LogToConsole,
-                   ConsoleLogLevel:   ConsoleLogLevel,
-                   LogPath:           LogPath,
-                   BridgeDebugLog:    BridgeDebugLog,
-                   TraceTags:         TraceTags,
-                   TimeProvider:      TimeProvider,
-                   SSH:               SSH,
-                   Web:               Web)
+                   Log:                Log,
+                   LogToConsole:       LogToConsole,
+                   ConsoleLogLevel:    ConsoleLogLevel,
+                   LogPath:            LogPath,
+                   BridgeDebugLog:     BridgeDebugLog,
+                   TraceTags:          TraceTags,
+                   TimeProvider:       TimeProvider,
+                   SSH:                SSH,
+                   Web:                Web)
 
         {
-
-            // OCPP is what its connections speak, before anything of them is
-            // asked: its OCPP nodes are asked for whenever they are needed.
-            Dialling = new OCPPDialling(this, () => Node16, () => Node21);
 
             // "this." throughout, and not for tidiness: the parameters of this
             // constructor shadow the properties of the same name, and a
@@ -417,7 +414,16 @@ namespace cloud.charging.open.CSMS
             // configuration file, because what it listens on is written there.
             // Nothing listens yet: OnListening does, once the node below has
             // its own port.
-            BuildOCPPServer(configuration.OCPPServer);
+            // Its server keys of before, kept in a directory of their own, are
+            // server identities of the certificate store now: moved there
+            // before the server chooses what it presents.
+            MoveServerKeysIntoTheStore(Path.Combine(Path.GetDirectoryName(this.ConfigFile.Path) ?? ".", FormerServerKeysDirectoryName));
+
+            // The CSMS's port where the file names none - not written to the
+            // file, which goes on saying "the default decides".
+            BuildOCPPServer((configuration.OCPPServer ?? new WebSocketServerConfiguration()) with {
+                                TCPPort = configuration.OCPPServer?.TCPPort ?? DefaultStationServerPort
+                            });
 
             #endregion
 
@@ -475,18 +481,11 @@ namespace cloud.charging.open.CSMS
         protected override async Task OnListening()
         {
 
-            try
-            {
-                await StartOCPPServer();
-            }
-            catch (SocketException problem)
-            {
-                throw new PortUnavailableException(
-                          ocppServerSettings.TCPPort ?? OCPPServerConfiguration.DefaultTCPPort,
-                          problem,
-                          StationServerPort
-                      );
-            }
+            await StartOCPPServer();
+
+            // A tool speaking OCPP to this CSMS over its SSH server, where the
+            // file says so - see OCPPServingNode.Commissioning.cs.
+            StartCommissioning();
 
         }
 
@@ -540,6 +539,7 @@ namespace cloud.charging.open.CSMS
             finally
             {
                 await HangUpOnTheNodesBelow();
+                StopCommissioning("the CSMS is stopping");
                 await StopOCPPServer();
             }
 
@@ -600,10 +600,10 @@ namespace cloud.charging.open.CSMS
                          new JProperty("tls",              ocppServerTLS),
                          new JProperty("url",              OCPPServerURL),
                          new JProperty("sshUrl",           OCPPOverSSHServed ? OCPPServerSSHURL : null),
-                         new JProperty("securityProfiles", new JArray((ocppServerSettings.SecurityProfiles ?? []).Select(profile => (Int32) profile))),
-                         new JProperty("stationLogins",    StationLogins.EnabledCount),
+                         new JProperty("clientAuthentication", new JArray((ocppServerSettings.ClientAuthentication ?? []).Select(authentication => authentication.ToText()))),
+                         new JProperty("webSocketLogins",    WebSocketLogins.EnabledCount),
                          new JProperty("trustedChains",    ClientTrust.EnabledCount),
-                         new JProperty("certificates",     ServerCertificates.Entries.Count)
+                         new JProperty("hasCertificate",   OCPPServerHasCertificate)
                      )));
 
             json.Add(new JProperty("ocpi",       new JObject(
@@ -706,9 +706,6 @@ namespace cloud.charging.open.CSMS
                 {
                     await DisposeOCPI();
                 }
-
-                ServerCertificates?.Dispose();
-                ClientTrust?       .Dispose();
 
             }
             finally

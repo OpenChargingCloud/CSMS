@@ -31,6 +31,7 @@ using cloud.charging.open.protocols.WWCP.Node.Logging;
 using cloud.charging.open.protocols.WWCP.Node.TestKit;
 
 using cloud.charging.open.protocols.WWCP.Node.Connections;
+using cloud.charging.open.protocols.WWCP.Node.Logins;
 
 #endregion
 
@@ -88,11 +89,11 @@ namespace cloud.charging.open.CSMS.Tests
                    // The name this CSMS comes under at what it dials: a local
                    // controller answers the node that asked, by that name.
                    new JProperty("ocpp", new JObject(new JProperty("nodeId", "csms-01"))),
-                   new JProperty("ocppServer", new JObject(
+                   new JProperty("webSocketServer", new JObject(
                        new JProperty("enabled",           true),
                        new JProperty("address",           "127.0.0.1"),
                        new JProperty("port",              TestPorts.Free()),
-                       new JProperty("securityProfiles",  new JArray(1)),
+                       new JProperty("clientAuthentication",  new JArray("httpAuthWithoutTLS")),
                        new JProperty("subprotocols",      new JArray("ocpp2.1")),
                        // What is said over a line this CSMS dialled is logged
                        // by the switch of the lines that dialled in.
@@ -234,20 +235,20 @@ namespace cloud.charging.open.CSMS.Tests
         private void ALogin(String Node, Boolean LocalController = false, Boolean Gateway = false)
         {
 
-            Assert.That(CSMS.StationLogins.TrySetPassword(Node, null, null, null, out _, out var error), Is.True, error);
+            Assert.That(CSMS.WebSocketLogins.TrySetPassword(Node, "a-password-long-enough-for-ocpp", null, null, out var error), Is.True, error);
 
             if (LocalController)
-                Assert.That(CSMS.StationLogins.TrySetLocalController(Node, true, out error), Is.True, error);
+                Assert.That(CSMS.WebSocketLogins.TrySetLocalController(Node, true, out error), Is.True, error);
 
             if (Gateway)
-                Assert.That(CSMS.StationLogins.TrySetGateway(Node, true, out error), Is.True, error);
+                Assert.That(CSMS.WebSocketLogins.TrySetGateway(Node, true, out error), Is.True, error);
 
         }
 
         private String ItsCredentials(String Password = ThePassword)
         {
 
-            Assert.That(CSMS.Connections.TryAddAuthentication("What this CSMS signs in with", "basic", "csms-01", Password, out var id, out var error),
+            Assert.That(CSMS.Connections.TryAddBasicAuthentication("csms-01", Password, "What this CSMS signs in with", out var id, out var error),
                         Is.True, error);
 
             return id!;
@@ -458,7 +459,7 @@ namespace cloud.charging.open.CSMS.Tests
 
             ALogin("lc01", LocalController: true);
 
-            Assert.That(CSMS.Connections.TryAddAuthentication("What this CSMS signs in with, as another", "basic", "csms-02", ThePassword, out var login, out var error),
+            Assert.That(CSMS.Connections.TryAddBasicAuthentication("csms-02", ThePassword, "What this CSMS signs in with, as another", out var login, out var error),
                         Is.True, error);
 
             // Under another name than its own: a controller of today finds
@@ -509,7 +510,7 @@ namespace cloud.charging.open.CSMS.Tests
 
             ALogin("cs007");
 
-            Assert.That(CSMS.StationLogins.TrySetEnabled("cs007", false, out var error), Is.True, error);
+            Assert.That(CSMS.WebSocketLogins.TrySetEnabled("cs007", false, out var error), Is.True, error);
 
             var id = AConnection("cs007");
 
@@ -534,13 +535,13 @@ namespace cloud.charging.open.CSMS.Tests
 
             Assert.That(await Until(() => CSMS.IsConnected("cs007")), Is.True, "the station never counted as connected");
 
-            Assert.That(CSMS.StationLogins.TrySetEnabled("cs007", false, out var error), Is.True, error);
+            Assert.That(CSMS.WebSocketLogins.TrySetEnabled("cs007", false, out var error), Is.True, error);
 
             Assert.That(await Until(() => !CSMS.IsConnected("cs007")), Is.True, "a station whose login is switched off stayed connected");
 
             var dialledSoFar = dials.Count;
 
-            Assert.That(CSMS.StationLogins.TrySetEnabled("cs007", true, out error), Is.True, error);
+            Assert.That(CSMS.WebSocketLogins.TrySetEnabled("cs007", true, out error), Is.True, error);
 
             Assert.That(await Until(() => CSMS.IsConnected("cs007")), Is.True, "a station whose login is on again was not dialled again");
             Assert.That(dials.Count, Is.GreaterThan(dialledSoFar));

@@ -223,7 +223,7 @@ namespace cloud.charging.open.CSMS.Tests
             Assert.Multiple(() => {
                 Assert.That(cs.Roles,             Is.EqualTo(new[] { "viewer", "support", "cpo", WWCPNode.AdminRole }));
                 Assert.That(cs.Access.Resources,  Is.SupersetOf(new[] { "configuration", "dns", "nts", "certificates", "ssh", "log", "state" }), "the node's resources are not all there");
-                Assert.That(cs.Access.Resources.TakeLast(3), Is.EqualTo(new[] { "stations", "locations", "roaming" }), "the CSMS's own do not come after the node's");
+                Assert.That(cs.Access.Resources.TakeLast(4), Is.EqualTo(new[] { "stations", "locations", "roaming", "commissioning" }), "the CSMS's own do not come after the node's");
             });
 
         }
@@ -286,9 +286,10 @@ namespace cloud.charging.open.CSMS.Tests
         #region ACPOMayLookAtTheCertificatesAndIsToldWhoMayChangeThem()
 
         /// <summary>
-        /// Over the wire, as a browser signed in as a CPO sees it: the page
-        /// opens, a signing request is refused with the role to ask for, and
-        /// what the browser is told it may do says the same beforehand.
+        /// Over the wire, as a browser signed in as a CPO sees it: the page of
+        /// the accepted chains opens, a chain is refused with the role to ask
+        /// for, and what the browser is told it may do says the same
+        /// beforehand.
         /// </summary>
         [Test]
         public async Task ACPOMayLookAtTheCertificatesAndIsToldWhoMayChangeThem()
@@ -298,8 +299,8 @@ namespace cloud.charging.open.CSMS.Tests
 
             using var cpo    = await SignedInAs("cpo1", "cpo");
 
-            var looked       = await cpo.GetAsync("api/v1/configuration/ocpp-server/certificates");
-            var requested    = await Post(cpo, "api/v1/configuration/ocpp-server/certificates", "{}");
+            var looked       = await cpo.GetAsync("api/v1/configuration/ocpp-server/trust");
+            var requested    = await Post(cpo, "api/v1/configuration/ocpp-server/trust", "{}");
             var refusal      = await requested.Content.ReadAsStringAsync();
             var me           = JObject.Parse(await (await cpo.GetAsync("api/v1/auth/me")).Content.ReadAsStringAsync());
             var permissions  = me["permissions"]!.Values<String>().OfType<String>().ToArray();
@@ -342,7 +343,7 @@ namespace cloud.charging.open.CSMS.Tests
             using var support  = await SignedInAs("supporter", "helpdesk");
 
             var dns            = await support.GetAsync("api/v1/configuration/dns");
-            var stations       = await support.GetAsync("api/v1/configuration/ocpp-server/stations");
+            var stations       = await support.GetAsync("api/v1/configuration/ocpp-server/logins");
             var partners       = await support.GetAsync("api/v1/ocpi/partners");
             var refusal        = await partners.Content.ReadAsStringAsync();
 
@@ -407,23 +408,16 @@ namespace cloud.charging.open.CSMS.Tests
         [TestCase("POST",    "api/v1/configuration/nts/test",                             "nts:run")]
         [TestCase("GET",     "api/v1/configuration/ocpp-server",                          "stations:read")]
         [TestCase("PUT",     "api/v1/configuration/ocpp-server",                          "stations:edit")]
-        [TestCase("GET",     "api/v1/configuration/ocpp-server/stations",                 "stations:read")]
-        [TestCase("POST",    "api/v1/configuration/ocpp-server/stations",                 "stations:edit")]
-        [TestCase("PUT",     "api/v1/configuration/ocpp-server/stations/cs001",           "stations:edit")]
-        [TestCase("DELETE",  "api/v1/configuration/ocpp-server/stations/cs001",           "stations:edit")]
-        [TestCase("PUT",     "api/v1/configuration/ocpp-server/stations/cs001/totp",      "stations:edit")]
-        [TestCase("DELETE",  "api/v1/configuration/ocpp-server/stations/cs001/totp",      "stations:edit")]
-        [TestCase("DELETE",  "api/v1/configuration/ocpp-server/stations/cs001/password",  "stations:edit")]
+        [TestCase("GET",     "api/v1/configuration/ocpp-server/logins",                 "stations:read")]
+        [TestCase("POST",    "api/v1/configuration/ocpp-server/logins",                 "stations:edit")]
+        [TestCase("PUT",     "api/v1/configuration/ocpp-server/logins/cs001",           "stations:edit")]
+        [TestCase("DELETE",  "api/v1/configuration/ocpp-server/logins/cs001",           "stations:edit")]
+        [TestCase("PUT",     "api/v1/configuration/ocpp-server/logins/cs001/totp",      "stations:edit")]
+        [TestCase("DELETE",  "api/v1/configuration/ocpp-server/logins/cs001/totp",      "stations:edit")]
+        [TestCase("DELETE",  "api/v1/configuration/ocpp-server/logins/cs001/password",  "stations:edit")]
         [TestCase("POST",    "api/v1/configuration/ocpp-server/groups",                   "stations:edit")]
         [TestCase("PUT",     "api/v1/configuration/ocpp-server/groups/site",              "stations:edit")]
         [TestCase("DELETE",  "api/v1/configuration/ocpp-server/groups/site",              "stations:edit")]
-        [TestCase("GET",     "api/v1/configuration/ocpp-server/certificates",             "certificates:read")]
-        [TestCase("POST",    "api/v1/configuration/ocpp-server/certificates",             "certificates:edit")]
-        [TestCase("POST",    "api/v1/configuration/ocpp-server/certificates/inspect",     "certificates:edit")]
-        [TestCase("POST",    "api/v1/configuration/ocpp-server/certificates/upload",      "certificates:edit")]
-        [TestCase("GET",     "api/v1/configuration/ocpp-server/certificates/k1/csr",      "certificates:read")]
-        [TestCase("PUT",     "api/v1/configuration/ocpp-server/certificates/k1",          "certificates:edit")]
-        [TestCase("DELETE",  "api/v1/configuration/ocpp-server/certificates/k1",          "certificates:edit")]
         [TestCase("GET",     "api/v1/configuration/ocpp-server/trust",                    "certificates:read")]
         [TestCase("POST",    "api/v1/configuration/ocpp-server/trust",                    "certificates:edit")]
         [TestCase("PUT",     "api/v1/configuration/ocpp-server/trust/t1",                 "certificates:edit")]
