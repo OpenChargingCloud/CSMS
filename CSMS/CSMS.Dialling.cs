@@ -59,13 +59,13 @@ namespace cloud.charging.open.CSMS
     /// client identities, the same key pins and the same page.
     /// </para>
     /// <para>
-    /// What is different is said here. What a CSMS dials is below it: a
-    /// charging station, a local controller or a gateway, each of which it speaks to by
-    /// its name - so a connection names the node at its other end, and is
-    /// routed by that name and not as "the CSMS". It dials over ws:// and
-    /// wss:// alone, in OCPP 2.1 alone, and writes down no connection the
-    /// other end makes: what dials a CSMS are its charging stations, on the
-    /// server it has for them.
+    /// What a connection may be is what it may be on every node (see
+    /// ConnectionRules): what is said here is what a CSMS does with what it
+    /// dials below it - a charging station, a local controller or a gateway,
+    /// each of which it speaks to by its name, routed by that name and not
+    /// as "the CSMS". It speaks OCPP 2.1 alone. A connection that names no
+    /// node leads to a back end of this CSMS, and is dialled as every node
+    /// dials its back end.
     /// </para>
     /// <para>
     /// <b>A node that is dialled is a login of this CSMS all the same.</b>
@@ -163,14 +163,10 @@ namespace cloud.charging.open.CSMS
                               NodeNoun
                           ) {
 
-                              // What a CSMS dials is below it, and is spoken
-                              // to by its name.
+                              // The one rule of every node, but in OCPP 2.1:
+                              // a CSMS has no node of OCPP 1.6 that dials.
                               Rules = new ConnectionRules {
-                                          Types                  = ConnectionRules.NodesBelow,
-                                          Inbound                = false,
-                                          SSH                    = false,
-                                          OCPP1_6                = false,
-                                          NamesTheNodeItLeadsTo  = true
+                                          OCPP1_6 = false
                                       }
 
                           };
@@ -403,8 +399,10 @@ namespace cloud.charging.open.CSMS
         public String? WhyNotConnected(ConnectionEntry Connection)
         {
 
+            // A back end of this CSMS, and no login of it: dialled as every
+            // node dials its back end.
             if (Connection.RemoteNodeId is not String node)
-                return "it names no node at its other end";
+                return null;
 
             if (!WebSocketLogins.TryGet(node, out var login))
                 return $"'{node}' is no login of this CSMS any more";

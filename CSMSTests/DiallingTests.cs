@@ -289,7 +289,7 @@ namespace cloud.charging.open.CSMS.Tests
         #region What a CSMS writes down
 
         [Test]
-        public async Task TheConnectionsOfACSMSLeadToWhatIsBelowIt()
+        public async Task TheConnectionsOfACSMSLeadToEveryKindOfNode_InOCPP21()
         {
 
             using var http = await SignedIn();
@@ -298,11 +298,11 @@ namespace cloud.charging.open.CSMS.Tests
 
             Assert.Multiple(() => {
                 Assert.That(json["connectionTypes"]!.Select(type => type.Value<String>()),
-                            Is.EqualTo(new[] { "ChargingStation", "LocalController", "Gateway" }));
+                            Is.EqualTo(new[] { "CSMS", "CSMSBackup", "LocalController", "Gateway", "ChargingStation" }));
                 Assert.That(json["ocppVersions"]!.Select(version => version.Value<String>()),
                             Is.EqualTo(new[] { "OCPP2.1" }));
-                Assert.That(json["rules"]!.Value<Boolean>("inbound"),                Is.False);
-                Assert.That(json["rules"]!.Value<Boolean>("ssh"),                    Is.False);
+                Assert.That(json["rules"]!.Value<Boolean>("inbound"),                Is.True);
+                Assert.That(json["rules"]!.Value<Boolean>("ssh"),                    Is.True);
                 Assert.That(json["rules"]!.Value<Boolean>("namesTheNodeItLeadsTo"),  Is.True);
             });
 
@@ -341,14 +341,15 @@ namespace cloud.charging.open.CSMS.Tests
 
             Assert.That(CSMS.Connections.Connections.Single().RemoteNodeId, Is.EqualTo("cs007"));
 
-            // And none over ssh://, none that is dialled, none in OCPP 1.6.
-            var overSSH = await http.PostAsync("api/v1/configuration/connections",
-                                               JSONBody(new JProperty("description",     new JObject(new JProperty("en", "Station 7, over SSH"))),
-                                                        new JProperty("url",             "ssh://csms-01@127.0.0.1"),
-                                                        new JProperty("connectionType",  "ChargingStation"),
-                                                        new JProperty("remoteNodeId",    "cs007")));
+            // And none in OCPP 1.6: a CSMS has no node of it that dials.
+            var inOCPP16 = await http.PostAsync("api/v1/configuration/connections",
+                                                JSONBody(new JProperty("description",     new JObject(new JProperty("en", "Station 7, in OCPP 1.6"))),
+                                                         new JProperty("url",             $"ws://127.0.0.1:{port}/csms-01"),
+                                                         new JProperty("connectionType",  "ChargingStation"),
+                                                         new JProperty("ocppVersion",     "OCPP1.6"),
+                                                         new JProperty("remoteNodeId",    "cs007")));
 
-            Assert.That((Int32) overSSH.StatusCode, Is.EqualTo(400));
+            Assert.That((Int32) inOCPP16.StatusCode, Is.EqualTo(400), await inOCPP16.Content.ReadAsStringAsync());
 
         }
 
