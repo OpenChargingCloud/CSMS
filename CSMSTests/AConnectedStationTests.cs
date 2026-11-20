@@ -106,7 +106,7 @@ namespace cloud.charging.open.CSMS.Tests
             OnCall  = (action, payload, n) => [];
             Calls.Clear();
 
-            Assert.That(CSMS.WebSocketLogins.TrySetPassword("cs001", ThePassword, null, null, out var error), Is.True, error);
+            Assert.That(CSMS.WebSocketLogins.TrySetPasswordAuthentication("cs001", ThePassword, null, null, out var error), Is.True, error);
 
             station = new ClientWebSocket();
             station.Options.AddSubProtocol("ocpp2.1");

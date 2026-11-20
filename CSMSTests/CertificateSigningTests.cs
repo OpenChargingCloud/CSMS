@@ -111,7 +111,7 @@ namespace cloud.charging.open.CSMS.Tests
                                                     Boolean  Overlay = false)
         {
 
-            Assert.That(CSMS.WebSocketLogins.TrySetPassword(Id, ThePassword, null, null, out var error), Is.True, error);
+            Assert.That(CSMS.WebSocketLogins.TrySetPasswordAuthentication(Id, ThePassword, null, null, out var error), Is.True, error);
 
             var client = new ClientWebSocket();
             client.Options.AddSubProtocol("ocpp2.1");

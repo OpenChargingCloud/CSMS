@@ -266,8 +266,8 @@ namespace cloud.charging.open.CSMS.Tests
         private void GiveATokenTo(String Id, String? Group = null)
         {
 
-            if (!CSMS.WebSocketLogins.TrySetTOTP(Id, TheSecret, null, null, null, null, Group, null,
-                                                     out _, out var error))
+            if (!CSMS.WebSocketLogins.TrySetTOTPAuthentication(Id, TheSecret, null, null, null, null, Group, null,
+                                                     out var error))
             {
                 throw new InvalidOperationException($"The test's own TOTP login was refused: {error}");
             }
@@ -346,7 +346,7 @@ namespace cloud.charging.open.CSMS.Tests
         public async Task AStationWithOnlyAPasswordCannotUseAToken()
         {
 
-            CSMS.WebSocketLogins.TrySetPassword("cs001", ThePassword, null, null, out _);
+            CSMS.WebSocketLogins.TrySetPasswordAuthentication("cs001", ThePassword, null, null, out _);
 
             var (connected, _) = await Connect(TOTPAuth("cs001"));
 
@@ -393,7 +393,7 @@ namespace cloud.charging.open.CSMS.Tests
         public async Task ALoginMayCarryBothAndEitherOneGetsItIn()
         {
 
-            CSMS.WebSocketLogins.TrySetPassword("cs001", ThePassword, null, null, out _);
+            CSMS.WebSocketLogins.TrySetPasswordAuthentication("cs001", ThePassword, null, null, out _);
             GiveATokenTo("cs001");
 
             var withAPassword = await Connect(BasicAuth("cs001", ThePassword));
@@ -414,7 +414,7 @@ namespace cloud.charging.open.CSMS.Tests
         public async Task TakingThePasswordAwayLeavesTheTokenWorking()
         {
 
-            CSMS.WebSocketLogins.TrySetPassword("cs001", ThePassword, null, null, out _);
+            CSMS.WebSocketLogins.TrySetPasswordAuthentication("cs001", ThePassword, null, null, out _);
             GiveATokenTo("cs001");
 
             Assert.That(CSMS.WebSocketLogins.TryClearPassword("cs001", out var error), Is.True, error);
@@ -462,7 +462,7 @@ namespace cloud.charging.open.CSMS.Tests
             CSMS.WebSocketLogins.TryAddOrUpdateGroup(
                 "tokens-only", "Tokens only", true, [AuthMethod.TOTP], [ WebSocketClientAuthentication.HTTPAuthWithoutTLS, WebSocketClientAuthentication.HTTPAuthOverTLS, WebSocketClientAuthentication.TLSClientCertificate ], null, out _);
 
-            CSMS.WebSocketLogins.TrySetPassword("cs001", ThePassword, "tokens-only", null, out _);
+            CSMS.WebSocketLogins.TrySetPasswordAuthentication("cs001", ThePassword, "tokens-only", null, out _);
 
             var (connected, _) = await Connect(BasicAuth("cs001", ThePassword));
 
@@ -485,7 +485,7 @@ namespace cloud.charging.open.CSMS.Tests
             CSMS.WebSocketLogins.TryAddOrUpdateGroup(
                 "field", "Field test", true, [AuthMethod.Basic, AuthMethod.TOTP], [ WebSocketClientAuthentication.HTTPAuthWithoutTLS, WebSocketClientAuthentication.HTTPAuthOverTLS, WebSocketClientAuthentication.TLSClientCertificate ], null, out _);
 
-            CSMS.WebSocketLogins.TrySetPassword("cs001", ThePassword, "field", null, out _);
+            CSMS.WebSocketLogins.TrySetPasswordAuthentication("cs001", ThePassword, "field", null, out _);
             GiveATokenTo("cs002", "field");
 
             var beforehand = await Connect(BasicAuth("cs001", ThePassword));
@@ -519,7 +519,7 @@ namespace cloud.charging.open.CSMS.Tests
             CSMS.WebSocketLogins.TryAddOrUpdateGroup(
                 "encrypted-only", "Encrypted only", true, [AuthMethod.Basic, AuthMethod.TOTP], [ WebSocketClientAuthentication.HTTPAuthOverTLS, WebSocketClientAuthentication.TLSClientCertificate ], null, out _);
 
-            CSMS.WebSocketLogins.TrySetPassword("cs001", ThePassword, "encrypted-only", null, out _);
+            CSMS.WebSocketLogins.TrySetPasswordAuthentication("cs001", ThePassword, "encrypted-only", null, out _);
 
             var (connected, _) = await Connect(BasicAuth("cs001", ThePassword));
 
@@ -543,7 +543,7 @@ namespace cloud.charging.open.CSMS.Tests
             CSMS.WebSocketLogins.TryAddOrUpdateGroup(
                 "tokens-only", "Tokens only", true, [AuthMethod.TOTP], [ WebSocketClientAuthentication.HTTPAuthWithoutTLS, WebSocketClientAuthentication.HTTPAuthOverTLS, WebSocketClientAuthentication.TLSClientCertificate ], null, out _);
 
-            CSMS.WebSocketLogins.TrySetPassword("cs001", ThePassword, null, null, out _);
+            CSMS.WebSocketLogins.TrySetPasswordAuthentication("cs001", ThePassword, null, null, out _);
 
             var beforehand = await Connect(BasicAuth("cs001", ThePassword));
 

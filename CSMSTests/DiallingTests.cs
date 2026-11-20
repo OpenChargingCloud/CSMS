@@ -18,6 +18,8 @@
 #region Usings
 
 using System.Collections.Concurrent;
+using org.GraphDefined.Vanaheimr.Illias;
+using org.GraphDefined.Vanaheimr.Hermod.HTTP;
 using System.Net;
 using System.Net.WebSockets;
 using System.Text;
@@ -235,7 +237,7 @@ namespace cloud.charging.open.CSMS.Tests
         private void ALogin(String Node, Boolean LocalController = false, Boolean Gateway = false)
         {
 
-            Assert.That(CSMS.WebSocketLogins.TrySetPassword(Node, "a-password-long-enough-for-ocpp", null, null, out var error), Is.True, error);
+            Assert.That(CSMS.WebSocketLogins.TrySetPasswordAuthentication(Node, "a-password-long-enough-for-ocpp", null, null, out var error), Is.True, error);
 
             if (LocalController)
                 Assert.That(CSMS.WebSocketLogins.TrySetLocalController(Node, true, out error), Is.True, error);
@@ -248,7 +250,7 @@ namespace cloud.charging.open.CSMS.Tests
         private String ItsCredentials(String Password = ThePassword)
         {
 
-            Assert.That(CSMS.Connections.TryAddBasicAuthentication("csms-01", Password, "What this CSMS signs in with", out var id, out var error),
+            Assert.That(CSMS.Connections.TryAddPasswordAuthentication("csms-01", Password, I18NString.Create("What this CSMS signs in with"), out var id, out var error),
                         Is.True, error);
 
             return id!;
@@ -261,7 +263,7 @@ namespace cloud.charging.open.CSMS.Tests
                                    String?  Credentials    = null)
         {
 
-            Assert.That(CSMS.Connections.TryAddConnection($"The node '{Node}'", $"ws://127.0.0.1:{port}/csms-01", Type, AutoConnect,
+            Assert.That(CSMS.Connections.TryAddConnection(I18NString.Create($"The node '{Node}'"), URL.Parse($"ws://127.0.0.1:{port}/csms-01"), Type, AutoConnect,
                                                           Credentials ?? ItsCredentials(), null,
                                                           out var id, out var error,
                                                           RemoteNodeId: Node),
@@ -310,7 +312,7 @@ namespace cloud.charging.open.CSMS.Tests
         public void ANodeThatIsDialledIsALoginOfThisCSMS()
         {
 
-            Assert.That(CSMS.Connections.TryAddConnection("A stranger", $"ws://127.0.0.1:{port}/csms-01", "ChargingStation", true, null, null,
+            Assert.That(CSMS.Connections.TryAddConnection(I18NString.Create("A stranger"), URL.Parse($"ws://127.0.0.1:{port}/csms-01"), "ChargingStation", true, null, null,
                                                           out _, out var error,
                                                           RemoteNodeId: "cs404"),
                         Is.False);
@@ -328,7 +330,7 @@ namespace cloud.charging.open.CSMS.Tests
             using var http = await SignedIn();
 
             var response = await http.PostAsync("api/v1/configuration/connections",
-                                                JSONBody(new JProperty("description",     "Station 7"),
+                                                JSONBody(new JProperty("description",     new JObject(new JProperty("en", "Station 7"))),
                                                          new JProperty("url",             $"ws://127.0.0.1:{port}/csms-01"),
                                                          new JProperty("connectionType",  "ChargingStation"),
                                                          new JProperty("ocppVersion",     "OCPP2.1"),
@@ -341,7 +343,7 @@ namespace cloud.charging.open.CSMS.Tests
 
             // And none over ssh://, none that is dialled, none in OCPP 1.6.
             var overSSH = await http.PostAsync("api/v1/configuration/connections",
-                                               JSONBody(new JProperty("description",     "Station 7, over SSH"),
+                                               JSONBody(new JProperty("description",     new JObject(new JProperty("en", "Station 7, over SSH"))),
                                                         new JProperty("url",             "ssh://csms-01@127.0.0.1"),
                                                         new JProperty("connectionType",  "ChargingStation"),
                                                         new JProperty("remoteNodeId",    "cs007")));
@@ -459,13 +461,13 @@ namespace cloud.charging.open.CSMS.Tests
 
             ALogin("lc01", LocalController: true);
 
-            Assert.That(CSMS.Connections.TryAddBasicAuthentication("csms-02", ThePassword, "What this CSMS signs in with, as another", out var login, out var error),
+            Assert.That(CSMS.Connections.TryAddPasswordAuthentication("csms-02", ThePassword, I18NString.Create("What this CSMS signs in with, as another"), out var login, out var error),
                         Is.True, error);
 
             // Under another name than its own: a controller of today finds
             // the way back for its answers, an older one does not - so it is
             // dialled, and said.
-            Assert.That(CSMS.Connections.TryAddConnection("The controller", $"ws://127.0.0.1:{port}/csms-02", "LocalController", true, login, null,
+            Assert.That(CSMS.Connections.TryAddConnection(I18NString.Create("The controller"), URL.Parse($"ws://127.0.0.1:{port}/csms-02"), "LocalController", true, login, null,
                                                           out var id, out error,
                                                           RemoteNodeId: "lc01"),
                         Is.True, error);

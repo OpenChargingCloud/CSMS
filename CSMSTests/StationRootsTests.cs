@@ -306,7 +306,7 @@ namespace cloud.charging.open.CSMS.Tests
             public static async Task<FakeStation> Connect(CSMS CSMS, String Id, String Password)
             {
 
-                Assert.That(CSMS.WebSocketLogins.TrySetPassword(Id, Password, null, null, out var error), Is.True, error);
+                Assert.That(CSMS.WebSocketLogins.TrySetPasswordAuthentication(Id, Password, null, null, out var error), Is.True, error);
 
                 var client = new ClientWebSocket();
                 client.Options.AddSubProtocol("ocpp2.1");

@@ -19,6 +19,7 @@
 
 using System.Security.Cryptography.X509Certificates;
 
+using org.GraphDefined.Vanaheimr.Illias;
 using org.GraphDefined.Vanaheimr.Hermod;
 using org.GraphDefined.Vanaheimr.Hermod.HTTP;
 using org.GraphDefined.Vanaheimr.Hermod.WebSocket;
@@ -484,7 +485,7 @@ namespace cloud.charging.open.CSMS
 
                 Note(Connection, $"Connected, and will come back by itself if it drops. {warning}");
 
-                Log.Warning($"'{Connection.Description}' ({Connection.URL}): {warning}",
+                Log.Warning($"'{Connection.Description.FirstText()}' ({Connection.URL}): {warning}",
                             "ocpp", "station", "connection");
 
             }

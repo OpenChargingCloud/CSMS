@@ -23,6 +23,7 @@ using Newtonsoft.Json.Linq;
 
 using NUnit.Framework;
 
+using org.GraphDefined.Vanaheimr.Illias;
 using org.GraphDefined.Vanaheimr.Hermod.SSH;
 using org.GraphDefined.Vanaheimr.Hermod.SSH.Client;
 
@@ -717,7 +718,7 @@ namespace cloud.charging.open.CSMS.Tests
         public void TheStore_KeepsTheKeys_AcrossAStart()
         {
 
-            Assert.That(CSMS.WebSocketLogins.TryAddSSHKey("cs001", LineOf(cs001Key, "from=\"10.10.0.0/16\""), "bay 1", null, "Ladepunkt 1", "tests", out var key, out var error),
+            Assert.That(CSMS.WebSocketLogins.TryAddSSHKey("cs001", LineOf(cs001Key, "from=\"10.10.0.0/16\""), "bay 1", null, I18NString.Create("Ladepunkt 1"), "tests", out var key, out var error),
                         Is.True, error);
 
             var again = new WebSocketLogins(CSMS.WebSocketLogins.Path);
@@ -901,7 +902,7 @@ namespace cloud.charging.open.CSMS.Tests
             var given    = await http.PostAsync($"{root}/cs001/sshKeys",
                                                 JSONBody(new JProperty("line",   LineOf(cs001Key)),
                                                          new JProperty("label",  "bay 1"),
-                                                         new JProperty("note",   "Ladepunkt 1")));
+                                                         new JProperty("description",   new JObject(new JProperty("en", "Ladepunkt 1")))));
 
             Assert.That(given.StatusCode, Is.EqualTo(HttpStatusCode.OK), await given.Content.ReadAsStringAsync());
 

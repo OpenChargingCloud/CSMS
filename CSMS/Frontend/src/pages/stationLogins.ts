@@ -1,4 +1,4 @@
-import { api, type AuthMethod, type ClientAuthentication, type LoginGroup, type WebSocketLogin, type WebSocketLogins } from '../api/client';
+import { api, type AuthMethod, type ClientAuthentication, type LoginGroup, type WebSocketLogin, type WebSocketLogins, type I18NString, inEnglish, textOf } from '../api/client';
 import { auth } from '../auth';
 import { must } from '@node/html';
 import { toURL } from '@node/basePath';
@@ -164,7 +164,7 @@ export const stationLoginsPage: Page = {
                     <td>
                         <code>${group.id}</code>
                         ${group.builtIn ? html`<span class="badge">built in</span>` : nothing}
-                        <div class="small muted">${group.name}${group.note ? ` - ${group.note}` : ''}</div>
+                        <div class="small muted">${group.name}${group.description ? ` - ${textOf(group.description)}` : ''}</div>
                     </td>
 
                     <td>
@@ -233,7 +233,7 @@ export const stationLoginsPage: Page = {
                     </label>
 
                     <label>What it is
-                        <input type="text" name="note" maxlength="200" value="${group?.note ?? ''}" />
+                        <input type="text" name="description" maxlength="200" value="${textOf(group?.description) ?? ''}" />
                     </label>
 
                     <fieldset>
@@ -350,7 +350,7 @@ export const stationLoginsPage: Page = {
                         </label>
 
                         <label>What it is
-                            <input type="text" name="note" placeholder="Ladepunkt 1" maxlength="200"
+                            <input type="text" name="description" placeholder="Ladepunkt 1" maxlength="200"
                                    ?disabled=${!mayChange} />
                         </label>
 
@@ -435,7 +435,7 @@ export const stationLoginsPage: Page = {
 
                     <td><code>${station.id}</code></td>
 
-                    <td>${station.note ?? '-'}</td>
+                    <td>${textOf(station.description) ?? '-'}</td>
 
                     <td>
                         <select class="station-group" data-id="${station.id}" ?disabled=${!mayChange}
@@ -611,7 +611,7 @@ export const stationLoginsPage: Page = {
                     authMethods:       methods,
                     clientAuthentication:  profiles.map(profile => BY_PROFILE[profile - 1]!),
                     sshChannels:       channels,
-                    note:              field(form, 'note', false)
+                    description:       inEnglish(field(form, 'description', false))
                 });
 
                 if (cancelled)
@@ -647,12 +647,12 @@ export const stationLoginsPage: Page = {
             const form = event.currentTarget as HTMLFormElement;
 
             void tellStation(form, field(form, 'id'), field(form, 'password', false),
-                             field(form, 'group'), field(form, 'note', false));
+                             field(form, 'group'), inEnglish(field(form, 'description', false)));
 
         }
 
 
-        async function tellStation(form: HTMLFormElement, id: string, password: string, group: string, note: string): Promise<void> {
+        async function tellStation(form: HTMLFormElement, id: string, password: string, group: string, description?: I18NString): Promise<void> {
 
             const error = must<HTMLElement>(content, '#station-error');
             error.textContent = '';
@@ -660,7 +660,7 @@ export const stationLoginsPage: Page = {
             try
             {
 
-                const answer = await api.ocppServer.logins.save(id, password, group, note);
+                const answer = await api.ocppServer.logins.save(id, password, group, description);
 
                 if (cancelled)
                     return;
@@ -703,10 +703,10 @@ export const stationLoginsPage: Page = {
             try
             {
 
-                // The group and the note are the station form's business; a key
+                // The group and the description are the station form's business; a key
                 // is given to a station as it is.
                 const answer = await api.ocppServer.logins.addSSHKey(
-                                   field(form, 'id'), field(form, 'line'), field(form, 'label', false), '', '');
+                                   field(form, 'id'), field(form, 'line'), field(form, 'label', false), '');
 
                 if (cancelled)
                     return;

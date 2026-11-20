@@ -150,7 +150,7 @@ namespace cloud.charging.open.CSMS.Tests
         private async Task<JObject> AStationAsksAbout(String UID)
         {
 
-            Assert.That(CSMS.WebSocketLogins.TrySetPassword("cs001", ThePassword, null, null, out var error), Is.True, error);
+            Assert.That(CSMS.WebSocketLogins.TrySetPasswordAuthentication("cs001", ThePassword, null, null, out var error), Is.True, error);
 
             using var station = new ClientWebSocket();
 

@@ -840,7 +840,7 @@ namespace cloud.charging.open.CSMS.Tests
                                                    Boolean  Overlay)
         {
 
-            Assert.That(CSMS.WebSocketLogins.TrySetPassword        (Id, ThePassword, null, null, out var error), Is.True, error);
+            Assert.That(CSMS.WebSocketLogins.TrySetPasswordAuthentication        (Id, ThePassword, null, null, out var error), Is.True, error);
             Assert.That(CSMS.WebSocketLogins.TrySetLocalController(Id, true, out var markError),                 Is.True, markError);
 
             var controller = await Controller.Connect(CSMS.OCPPServerSettings.TCPPort!.Value.ToUInt16(), ThePassword, Id, Overlay);
@@ -1946,7 +1946,7 @@ namespace cloud.charging.open.CSMS.Tests
             await Until(() => said.Any(line => line.Contains("keyPins uplink lc001") && line.Contains("no signing key for pin sets")),
                         "the log saying why no pin set was sent");
 
-            Assert.That(CSMS.WebSocketLogins.TrySetPassword("cs009", ThePassword, null, null, out var error), Is.True, error);
+            Assert.That(CSMS.WebSocketLogins.TrySetPasswordAuthentication("cs009", ThePassword, null, null, out var error), Is.True, error);
 
             await using var station = await Controller.Connect(CSMS.OCPPServerSettings.TCPPort!.Value.ToUInt16(), ThePassword, "cs009", Overlay: true);
             await Until(() => CSMS.IsConnected("cs009"), "'cs009' counting as connected");

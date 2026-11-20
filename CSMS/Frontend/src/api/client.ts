@@ -7,6 +7,7 @@ import { apiURL,
          type NodeResource,
          type NodeStatus,
          type Operation }  from '@node/api/client';
+import type { I18NString }  from '@ocpp/api/i18n';
 
 
 // What every node answers - the log, name resolution, the time, the store,
@@ -218,6 +219,8 @@ export interface TOTPSettings {
     tlsChannelBinding?: boolean;
 }
 
+export { inEnglish, textOf, type I18NString } from '@ocpp/api/i18n';
+
 /** One charging station that may sign in. */
 export interface WebSocketLogin {
     id:           string;
@@ -229,7 +232,7 @@ export interface WebSocketLogin {
     totp?:        TOTPSettings;
     hasSSHKey?:   boolean;
     sshKeys?:     StationSSHKey[];
-    note?:        string;
+    description?: I18NString;
     /** A local controller's login: it may send in the name of the stations behind it. */
     localController?: boolean;
     /** A gateway's login: like a local controller's, it may send in the name of the stations behind it. */
@@ -249,7 +252,7 @@ export interface LoginGroup {
     /** What its stations have over their SSH connection besides OCPP: the names of SSH subsystems. */
     sshChannels?:      string[];
     members:           number;
-    note?:             string;
+    description?:      I18NString;
 }
 
 /** Which charging stations may sign in, and with what. */
@@ -275,7 +278,7 @@ export interface LoginGroupUpdate {
     clientAuthentication:  ClientAuthentication[];
     /** Replaced like everything else about a group: left out, its stations have OCPP alone. */
     sshChannels?:      string[];
-    note?:             string;
+    description?:      I18NString;
 }
 
 /** What a one-time token may be set to. */
@@ -286,7 +289,7 @@ export interface TOTPUpdate {
     alphabet?:         string;
     hashAlgorithm?:    string;
     group?:            string;
-    note?:             string;
+    description?:      I18NString;
 }
 
 
@@ -593,9 +596,9 @@ export const api = {
              * "make one up", and the made-up one comes back here and nowhere
              * else: it is kept only as a hash.
              */
-            save:     (id: string, password: string, group: string, note: string) =>
+            save:     (id: string, password: string, group: string, description?: I18NString) =>
                           request<{ id: string; password?: string; logins: WebSocketLogins }>(
-                              'POST', '/configuration/ocpp-server/logins', { id, password, group, note }),
+                              'POST', '/configuration/ocpp-server/logins', { id, password, group, description }),
 
             enable:   (id: string, enabled: boolean) =>
                           request<WebSocketLogins>('PUT', `/configuration/ocpp-server/logins/${encodeURIComponent(id)}`, { enabled }),
@@ -650,9 +653,9 @@ export const api = {
              * authorized_keys file - adding the station where it is not listed
              * yet. A public key: nothing secret goes either way.
              */
-            addSSHKey: (id: string, line: string, label: string, group: string, note: string) =>
+            addSSHKey: (id: string, line: string, label: string, group: string, description?: I18NString) =>
                           request<{ id: string; fingerprint: string; logins: WebSocketLogins }>(
-                              'POST', `/configuration/ocpp-server/logins/${encodeURIComponent(id)}/sshKeys`, { line, label, group, note }),
+                              'POST', `/configuration/ocpp-server/logins/${encodeURIComponent(id)}/sshKeys`, { line, label, group, description }),
 
             /** Take a key away; a session it opened ends. */
             removeSSHKey: (id: string, fingerprint: string) =>

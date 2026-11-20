@@ -121,7 +121,7 @@ namespace cloud.charging.open.CSMS.Tests
                                           Boolean  Overlay   = true)
         {
 
-            Assert.That(CSMS.WebSocketLogins.TrySetPassword(Id, ThePassword, null, null, out var error), Is.True, error);
+            Assert.That(CSMS.WebSocketLogins.TrySetPasswordAuthentication(Id, ThePassword, null, null, out var error), Is.True, error);
 
             var node = await Node.Connect(CSMS.OCPPServerSettings.TCPPort!.Value.ToUInt16(), ThePassword, Id, Overlay);
 
@@ -203,7 +203,7 @@ namespace cloud.charging.open.CSMS.Tests
         public async Task AStation_CannotHaveAnSSHKeyEnrolled_InAnotherStationsName()
         {
 
-            Assert.That(CSMS.WebSocketLogins.TrySetPassword("cs001", ThePassword, null, null, out var error), Is.True, error);
+            Assert.That(CSMS.WebSocketLogins.TrySetPasswordAuthentication("cs001", ThePassword, null, null, out var error), Is.True, error);
 
             var impostor  = await Dialling("cs009");
             var key       = AnSSHKey();
@@ -509,7 +509,7 @@ namespace cloud.charging.open.CSMS.Tests
         public async Task TheGatewaysMark_IsSetAtTheConsole_AndByTheAPI_AndTakesTheControllersAway()
         {
 
-            Assert.That(CSMS.WebSocketLogins.TrySetPassword("gw001", ThePassword, null, null, out var error), Is.True, error);
+            Assert.That(CSMS.WebSocketLogins.TrySetPasswordAuthentication("gw001", ThePassword, null, null, out var error), Is.True, error);
 
             using var console   = new CSMSCLI(CSMS);
 
@@ -573,7 +573,7 @@ namespace cloud.charging.open.CSMS.Tests
         public async Task TheMark_IsSetAtTheConsole_AndByTheAPI_AtTheStationsEditing()
         {
 
-            Assert.That(CSMS.WebSocketLogins.TrySetPassword("lc001", ThePassword, null, null, out var error), Is.True, error);
+            Assert.That(CSMS.WebSocketLogins.TrySetPasswordAuthentication("lc001", ThePassword, null, null, out var error), Is.True, error);
 
             var (vera, veraPassword) = await AnAccount("vera", "viewer");
 

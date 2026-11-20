@@ -621,7 +621,7 @@ namespace cloud.charging.open.CSMS.Tests
                                   $"{Root}/logins",
                                   JSONBody(
                                       new JProperty("id",    "cs001"),
-                                      new JProperty("note",  "Ladepunkt 1")
+                                      new JProperty("description",  new JObject(new JProperty("en", "Ladepunkt 1")))
                                   )
                               );
 
@@ -632,7 +632,7 @@ namespace cloud.charging.open.CSMS.Tests
                                   JSONBody(
                                       new JProperty("id",        "cs001"),
                                       new JProperty("password",  password),
-                                      new JProperty("note",      "Ladepunkt 1")
+                                      new JProperty("description",      new JObject(new JProperty("en", "Ladepunkt 1")))
                                   )
                               );
 
@@ -649,7 +649,7 @@ namespace cloud.charging.open.CSMS.Tests
 
                 Assert.That(listed.ToString(), Does.Not.Contain(password));
                 Assert.That(listed.ToString(), Does.Not.Contain("$pbkdf2"));
-                Assert.That(listed["logins"]?[0]?.Value<String>("note"), Is.EqualTo("Ladepunkt 1"));
+                Assert.That(listed["logins"]?[0]?["description"]?.Value<String>("en"), Is.EqualTo("Ladepunkt 1"));
 
             });
 

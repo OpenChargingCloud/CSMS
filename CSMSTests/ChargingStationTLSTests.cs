@@ -126,7 +126,7 @@ namespace cloud.charging.open.CSMS.Tests
                                       )
                                   );
 
-                       csms.WebSocketLogins.TrySetPassword("cs001", ThePassword, null, null, out _);
+                       csms.WebSocketLogins.TrySetPasswordAuthentication("cs001", ThePassword, null, null, out _);
 
                        return csms;
 
