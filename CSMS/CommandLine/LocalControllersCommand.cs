@@ -17,6 +17,7 @@
 
 #region Usings
 
+using org.GraphDefined.Vanaheimr.Illias;
 using org.GraphDefined.Vanaheimr.CLI;
 
 using cloud.charging.open.protocols.WWCP.Node.Web;
@@ -90,8 +91,8 @@ namespace cloud.charging.open.CSMS.CommandLine
             return Task.FromResult(
                        rest switch {
                            []                                                                     => List(),
-                           [ var login, var onOff ] when onOff.Equals("on",  StringComparison.OrdinalIgnoreCase) => Mark(login, true),
-                           [ var login, var onOff ] when onOff.Equals("off", StringComparison.OrdinalIgnoreCase) => Mark(login, false),
+                           [ var login, var onOff ] when onOff.Equals("on",  StringComparison.OrdinalIgnoreCase) => Mark(User_Id.Parse(login), true),
+                           [ var login, var onOff ] when onOff.Equals("off", StringComparison.OrdinalIgnoreCase) => Mark(User_Id.Parse(login), false),
                            _                                                                      => [ $"Usage: {Help()}" ]
                        }
                    );
@@ -116,10 +117,10 @@ namespace cloud.charging.open.CSMS.CommandLine
 
             var controllers = cli.CSMS.WebSocketLogins.Logins.
                                   Where  (login => login.LocalController).
-                                  OrderBy(login => login.Id, StringComparer.Ordinal).
-                                  Select (login => $"{login.Id}{(login.Enabled ? "" : " (switched off)")}: " +
-                                                   (cli.CSMS.IsConnected(login.Id)
-                                                        ? cli.CSMS.InOverlayNetwork(login.Id)
+                                  OrderBy(login => login.Login).
+                                  Select (login => $"{login.Login}{(login.Enabled ? "" : " (switched off)")}: " +
+                                                   (cli.CSMS.IsConnected(login.Login.ToString())
+                                                        ? cli.CSMS.InOverlayNetwork(login.Login.ToString())
                                                               ? "connected, in the overlay network"
                                                               : "connected, in standard mode"
                                                         : "not connected")).
@@ -131,7 +132,7 @@ namespace cloud.charging.open.CSMS.CommandLine
 
         }
 
-        private String[] Mark(String   Login,
+        private String[] Mark(User_Id  Login,
                               Boolean  LocalController)
         {
 

@@ -17,6 +17,7 @@
 
 #region Usings
 
+using org.GraphDefined.Vanaheimr.Illias;
 using System.Collections.Concurrent;
 using System.Formats.Asn1;
 using System.Net;
@@ -37,6 +38,7 @@ using cloud.charging.open.CSMS.Configuration;
 using cloud.charging.open.protocols.OCPP.Node.Serving;
 using cloud.charging.open.protocols.WWCP.Node.Logins;
 using cloud.charging.open.CSMS.OCPP;
+using IPPort = org.GraphDefined.Vanaheimr.Hermod.IPPort;
 
 #endregion
 
@@ -63,7 +65,7 @@ namespace cloud.charging.open.CSMS.Tests
         private const String TheAPIKey   = "the-api-key-of-the-registrar";
 
         private FakeEST? est;
-        private Int32    estPort;
+        private IPPort    estPort;
 
         #endregion
 
@@ -82,7 +84,7 @@ namespace cloud.charging.open.CSMS.Tests
                     new JProperty("webSocketServer", new JObject(
                         new JProperty("enabled",           true),
                         new JProperty("address",           "127.0.0.1"),
-                        new JProperty("port",              TestPorts.Free()),
+                        new JProperty("port",              TestPorts.Free().ToUInt16()),
                         new JProperty("clientAuthentication",  new JArray("httpAuthWithoutTLS")),
                         new JProperty("subprotocols",      new JArray("ocpp2.1", "ocpp2.0.1"))
                     )),
@@ -107,7 +109,7 @@ namespace cloud.charging.open.CSMS.Tests
 
         #region (private) A charging station speaking OCPP 2.1 JSON, and nothing else
 
-        private async Task<ClientWebSocket> Connect(String   Id,
+        private async Task<ClientWebSocket> Connect(User_Id  Id,
                                                     Boolean  Overlay = false)
         {
 
@@ -186,7 +188,7 @@ namespace cloud.charging.open.CSMS.Tests
         public async Task AStationIsSignedItsCertificateByThePKI()
         {
 
-            using var station = await Connect("cs001");
+            using var station = await Connect(User_Id.Parse("cs001"));
             var (key, csr)    = KeyAndCSR("cs001");
 
             using (key)
@@ -242,7 +244,7 @@ namespace cloud.charging.open.CSMS.Tests
         public async Task ACSRForAnotherStationIsRejected()
         {
 
-            using var station = await Connect("cs001");
+            using var station = await Connect(User_Id.Parse("cs001"));
             var (key, csr)    = KeyAndCSR("cs002");
 
             using (key)
@@ -271,7 +273,7 @@ namespace cloud.charging.open.CSMS.Tests
         public async Task WhatNoPKISignsIsRejected()
         {
 
-            using var station = await Connect("cs001");
+            using var station = await Connect(User_Id.Parse("cs001"));
             var (key, csr)    = KeyAndCSR("DE*OCC*E1234567*1");
 
             using (key)
@@ -305,7 +307,7 @@ namespace cloud.charging.open.CSMS.Tests
 
             est!.Refuse = "The CA of EST signs nothing: It is revoked.";
 
-            using var station = await Connect("cs001");
+            using var station = await Connect(User_Id.Parse("cs001"));
             var (key, csr)    = KeyAndCSR("cs001");
 
             using (key)
@@ -371,7 +373,7 @@ namespace cloud.charging.open.CSMS.Tests
             est!.ValidFor     = TimeSpan.FromDays(10);
             est.IssuedAgo     = TimeSpan.FromDays(355);
 
-            using var station = await Connect("cs001");
+            using var station = await Connect(User_Id.Parse("cs001"));
 
             await SignedACertificate(station, "cs001");
 
@@ -428,7 +430,7 @@ namespace cloud.charging.open.CSMS.Tests
         public async Task ARenewal_AskedOfAStationInTheOverlayNetwork_NamesTheCSMS()
         {
 
-            using var station  = await Connect("cs009", Overlay: true);
+            using var station  = await Connect(User_Id.Parse("cs009"), Overlay: true);
 
             var asking         = CSMS.AskToRenew("cs009", "ChargingStationCertificate");
             var trigger        = await Receive(station);
@@ -459,7 +461,7 @@ namespace cloud.charging.open.CSMS.Tests
         public async Task ACertificateThatHoldsLongIsNotRenewed()
         {
 
-            using var station = await Connect("cs001");
+            using var station = await Connect(User_Id.Parse("cs001"));
 
             await SignedACertificate(station, "cs001");
             await Booted(station, "b1");
@@ -486,7 +488,7 @@ namespace cloud.charging.open.CSMS.Tests
 
             est!.ValidFor     = TimeSpan.FromDays(10);
 
-            using var station = await Connect("cs001");
+            using var station = await Connect(User_Id.Parse("cs001"));
             using var browser = await SignedIn();
 
             await SignedACertificate(station, "cs001");
@@ -530,7 +532,7 @@ namespace cloud.charging.open.CSMS.Tests
         public async Task ACertificateIsForgotten()
         {
 
-            using var station = await Connect("cs001");
+            using var station = await Connect(User_Id.Parse("cs001"));
             using var browser = await SignedIn();
 
             await SignedACertificate(station, "cs001");
@@ -575,7 +577,7 @@ namespace cloud.charging.open.CSMS.Tests
         public async Task AStationIsAskedByHandToRenew()
         {
 
-            using var station = await Connect("cs001");
+            using var station = await Connect(User_Id.Parse("cs001"));
             using var browser = await SignedIn();
 
             await SignedACertificate(station, "cs001");
@@ -704,7 +706,7 @@ namespace cloud.charging.open.CSMS.Tests
         public async Task AStationAsksWhetherACertificateIsRevoked()
         {
 
-            using var station = await Connect("cs001");
+            using var station = await Connect(User_Id.Parse("cs001"));
             using var browser = await SignedIn();
 
             est!.Revoked.TryAdd("1a2b3c", 0);
@@ -752,7 +754,7 @@ namespace cloud.charging.open.CSMS.Tests
         public async Task AResponderNoneToldOfIsNotAsked()
         {
 
-            using var station = await Connect("cs001");
+            using var station = await Connect(User_Id.Parse("cs001"));
 
             await Send(station, GetCertificateStatus("s1", "1A2B3C", $"http://127.0.0.2:{estPort}/api/v1/pki/ocsp"));
             var elsewhere = await Receive(station);
@@ -847,7 +849,7 @@ namespace cloud.charging.open.CSMS.Tests
         public async Task ARevokedCertificateOfAStationIsReplaced()
         {
 
-            using var station = await Connect("cs001");
+            using var station = await Connect(User_Id.Parse("cs001"));
 
             await SignedACertificate(station, "cs001");
 
@@ -1034,7 +1036,7 @@ namespace cloud.charging.open.CSMS.Tests
             private readonly CancellationTokenSource  stop = new ();
 
             public TestCA                             CA        { get; } = TestCA.Create("EST Test CA", WithIntermediate: true);
-            public Int32                              Port      { get; }
+            public IPPort                              Port      { get; }
             public ConcurrentQueue<String>            Requests  { get; } = new ();
             public ConcurrentQueue<String>            APIKeys   { get; } = new ();
             public String?                            Refuse    { get; set; }
@@ -1054,7 +1056,7 @@ namespace cloud.charging.open.CSMS.Tests
             {
                 listener = new TcpListener(IPAddress.Loopback, 0);
                 listener.Start();
-                Port     = ((IPEndPoint) listener.LocalEndpoint).Port;
+                Port     = IPPort.Parse(((IPEndPoint) listener.LocalEndpoint).Port);
                 _        = Task.Run(Serve);
             }
 

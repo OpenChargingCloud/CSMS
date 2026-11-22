@@ -82,14 +82,14 @@ namespace cloud.charging.open.CSMS.Tests
                                     new JProperty("webSocketServer", new JObject(
                                         new JProperty("enabled",           true),
                                         new JProperty("address",           "127.0.0.1"),
-                                        new JProperty("port",              TestPorts.Free()),
+                                        new JProperty("port",              TestPorts.Free().ToUInt16()),
                                         new JProperty("clientAuthentication",  new JArray("httpAuthWithoutTLS"))
                                     ))
                                 ).ToString()
                             );
 
                             return new CSMS(
-                                       HTTPPort:        IPPort.Parse(TestPorts.Free()),
+                                       HTTPPort:        TestPorts.Free(),
                                        AccountsPath:    Path.Combine(directory, "accounts"),
                                        ConfigFile:      new WWCPConfigFile(configuration),
                                        LogToConsole:    false,
@@ -176,14 +176,14 @@ namespace cloud.charging.open.CSMS.Tests
         /// <summary>
         /// Whether nothing listens on the given port of the loopback address.
         /// </summary>
-        private static async Task<Boolean> Refused(UInt16 Port)
+        private static async Task<Boolean> Refused(IPPort Port)
         {
 
             using var client = new TcpClient();
 
             try
             {
-                await client.ConnectAsync(System.Net.IPAddress.Loopback, Port);
+                await client.ConnectAsync(System.Net.IPAddress.Loopback, Port.ToInt32());
                 return false;
             }
             catch (SocketException e) when (e.SocketErrorCode == SocketError.ConnectionRefused)
@@ -229,8 +229,8 @@ namespace cloud.charging.open.CSMS.Tests
         {
 
             var failing      = FailingToStop(out _);
-            var webPort      = failing.HTTPPort.ToUInt16();
-            var stationPort  = failing.OCPPServerSettings.TCPPort!.Value.ToUInt16();
+            var webPort      = failing.HTTPPort;
+            var stationPort  = failing.OCPPServerSettings.TCPPort!.Value;
 
             Assert.That(await Refused(stationPort), Is.False, "The charging station port was not open before, so the test below proves nothing.");
 

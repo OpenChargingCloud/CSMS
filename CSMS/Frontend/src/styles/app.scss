@@ -7,7 +7,7 @@
     $color-accent-dark:  #14495f
 );
 
-// The charging stations and local controllers this CSMS dials, and what it
+// The charging stations and local controllers this CSMS connects to, and what it
 // signs in with there, are drawn by the pages of WWCP_OCPP_Node, as the
 // connections of a charging station are, and look as they do there.
 @use '@ocpp/styles/connections';

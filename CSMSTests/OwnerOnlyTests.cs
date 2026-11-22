@@ -17,6 +17,7 @@
 
 #region Usings
 
+using org.GraphDefined.Vanaheimr.Illias;
 using NUnit.Framework;
 
 using cloud.charging.open.protocols.WWCP.Node.TestKit;
@@ -85,7 +86,7 @@ namespace cloud.charging.open.CSMS.Tests
             var logins = new WebSocketLogins(file, clock);
 
             Assert.That(logins.TryLoad(out var loadError), Is.True, loadError);
-            Assert.That(logins.TrySetPasswordAuthentication("cs001", "a-password-long-enough-for-ocpp", null, null, out var error), Is.True, error);
+            Assert.That(logins.TrySetPasswordAuthentication(User_Id.Parse("cs001"), "a-password-long-enough-for-ocpp", null, null, out var error), Is.True, error);
 
             Assert.That(File.Exists(file), Is.True, "The logins were not written.");
             Assert.That(OwnerOnlyChecks.OthersMayGetIn(file), Is.Empty, "Others may read the charging stations' logins.");

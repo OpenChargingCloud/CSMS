@@ -313,14 +313,20 @@ namespace cloud.charging.open.CSMS.OCPI
 
             var result = await client.TryRegister();
 
-            return DescribeRegistration(
-                       Id,
-                       result.Response.StatusCode,
-                       result.Response.StatusMessage,
-                       result.Response.Data is not null,
-                       result.NotSaved,
-                       result.Reason
-                   );
+            var outcome = DescribeRegistration(
+                              Id,
+                              result.Response.StatusCode,
+                              result.Response.StatusMessage,
+                              result.Response.Data is not null,
+                              result.NotSaved,
+                              result.Reason
+                          );
+
+            // Registered: now the partner can be told this operator's locations.
+            if (outcome.Success)
+                await PushAllLocations();
+
+            return outcome;
 
         }
 
@@ -365,9 +371,12 @@ namespace cloud.charging.open.CSMS.OCPI
                                    )
                                );
 
-            return result.IsSuccess
-                       ? null
-                       : result.ErrorResponse ?? "The library declined to add the location and did not say why.";
+            if (!result.IsSuccess)
+                return result.ErrorResponse ?? "The library declined to add the location and did not say why.";
+
+            await PushToPartners(Spec.Id);
+
+            return null;
 
         }
 
@@ -384,6 +393,69 @@ namespace cloud.charging.open.CSMS.OCPI
 
             return result.IsSuccess;
 
+        }
+
+        #endregion
+
+        #region (private) PushToPartners(Id) / PushAllLocations()
+
+        /// <summary>
+        /// Send a location of this operator to every roaming partner there is
+        /// a way to: an EMSP has to know a place before its drivers can find
+        /// it, or charge there.
+        /// </summary>
+        /// <remarks>
+        /// Locations were published here, and no partner ever heard of them:
+        /// the library has the PUT of the OCPI locations module for an EMSP,
+        /// and nothing called it. A partner that cannot be reached, or
+        /// declines the location, is said in the log and does not undo what
+        /// was done here: it is sent everything again when it is registered
+        /// with. A location taken away here is not taken back from a partner,
+        /// because OCPI has no way to: it would have to be marked as removed.
+        /// </remarks>
+        private async Task PushToPartners(Location_Id Id)
+        {
+
+            if (commonAPI.GetLocations(CSMS.PartyId).FirstOrDefault(location => location.Id == Id) is not { } location)
+                return;
+
+            foreach (var party in commonAPI.RemoteParties.ToArray())
+            {
+
+                var client = cpoAPI.GetEMSPClient(party);
+
+                // No token and no versions URL of theirs yet: nowhere to send it.
+                if (client is null)
+                    continue;
+
+                try
+                {
+
+                    var response = await client.PutLocation(location);
+
+                    if (response.StatusCode == StatusCode.Success)
+                        CSMS.Log.Info   ($"The location '{Id}' was sent to '{party.Id}' on OCPI {Label}.", "ocpi", "locations", "partner");
+                    else
+                        CSMS.Log.Warning($"The location '{Id}' was not taken by '{party.Id}' on OCPI {Label}: {response.StatusCode} {response.StatusMessage}", "ocpi", "locations", "partner");
+
+                }
+                catch (Exception e)
+                {
+                    CSMS.Log.Warning($"The location '{Id}' could not be sent to '{party.Id}' on OCPI {Label}: {e.Message}", "ocpi", "locations", "partner");
+                }
+
+            }
+
+        }
+
+        /// <summary>
+        /// Send every location of this operator to its roaming partners: after
+        /// a registration, which is when a partner first can be told.
+        /// </summary>
+        private async Task PushAllLocations()
+        {
+            foreach (var id in commonAPI.GetLocations(CSMS.PartyId).Select(location => location.Id).ToArray())
+                await PushToPartners(id);
         }
 
         #endregion

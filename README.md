@@ -28,7 +28,7 @@ CSMS over a JSON API and one Server-Sent Events stream.
            ──       /ext/...                the HTTPExt API: accounts, API keys
 ```
 
-A CSMS sits above the charging stations and the local controllers that dial into
+A CSMS sits above the charging stations and the local controllers that connect to
 it, and is the thing they are all pointed at. That is what the web interface is
 for: it is the one place where somebody can see which of them got in, which were
 turned away and why, without reading a log file over somebody else's shoulder.
@@ -438,13 +438,13 @@ over may send it in that name:
   that forwards a frame puts itself at the end of its path;
 - a connection speaks for itself, and a local controller's or a gateway's
   login for the stations behind it. Whether a login is one of theirs is the
-  operator's to say, as any station can dial in the overlay network and name
+  operator's to say, as any station can connect in the overlay network and name
   itself the way to another: `localControllers <login> on|off` or
   `gateways <login> on|off`, "Local controller" or "Gateway" on the Station
   logins page, or `{"localController": true}` or `{"gateway": true}` in a
-  `PUT /api/v1/configuration/ocpp-server/logins/{id}`, at `stations:edit`.
+  `PUT /api/v1/configuration/ocpp-server/logins/{login}`, at `stations:edit`.
   To the CSMS a gateway is what a local controller is; it is marked as what
-  it is so that the list, the log and a connection that dials it say so. A
+  it is so that the list, the log and a connection that connects to it say so. A
   login is the one or the other: marked as a gateway's it is no local
   controller's any more, and the other way round.
 
@@ -452,7 +452,7 @@ A frame that is not taken is dropped, unanswered - an answer would go to the
 station it names - and the log says who sent what in whose name, and how to mark
 a local controller nobody marked yet. In standard mode a frame names no path,
 and the CSMS puts in the connection's, as it always did. A local controller
-that dials in the overlay network - its default since 2026-11-12 - needs its
+that connects in the overlay network - its default since 2026-11-12 - needs its
 login marked here before what it forwards of its stations is taken.
 
 ### Key pins of the stations behind a local controller
@@ -471,13 +471,13 @@ signer at commissioning.
 
 The CSMS learns which stations are behind which controller from their
 `BootNotification`s, which come with the controller as their last hop where the
-controller dials in the overlay network (`"networkingMode": "overlay"` in its
+controller connects in the overlay network (`"networkingMode": "overlay"` in its
 `csms` section), and keeps them in `ocpp-key-pins.json`, with the controller's
 pins as last read (`EVQICtrlr[TLSServer]`) and per station the endpoint the
 pins are for, the version last sent and whether it was taken. The routes to
 those stations are put back from it at the next start.
 
-The first controller a station comes through keeps it. Any node that dials in
+The first controller a station comes through keeps it. Any node that connects in
 the overlay network - a charging station as well as a controller - can name
 itself the last hop of any station; a frame that names another node than the
 station's controller moves nothing, and a `KeyPinLearned` sent up that way gets
@@ -529,16 +529,16 @@ Behind it, `/api/v1/key-pins`:
 Reading is at the stations' permission; a pin set, a rollover, forgetting where
 a station is and the signing key at the certificates'.
 
-### Stations, local controllers and gateways the CSMS dials
+### Stations, local controllers and gateways the CSMS connects to
 
-A charging station, a local controller or a gateway that cannot dial the CSMS - behind a
+A charging station, a local controller or a gateway that cannot connect to the CSMS - behind a
 firewall that lets nothing out, on a network only the back end reaches - is
-dialled by it. OCPP stays as it is; only who opens the WebSocket is the other
+connected to by it. OCPP stays as it is; only who opens the WebSocket is the other
 way round: the station tells the CSMS that it started, and the CSMS asks. A
 ChargingStationCLI and a LocalControllerCLI serve OCPP for that, where a
-connection is written down there with **The other end dials** ticked.
+connection is written down there with **The other end connects** ticked.
 
-What the CSMS dials is written down on the **Connections** page, which is the
+What the CSMS connects to is written down on the **Connections** page, which is the
 page a charging station and a local controller write their own connections
 down on, with the same store beside the configuration file
 (`ocpp-connections/`), the same credentials on its tab **Credentials**, the
@@ -550,12 +550,12 @@ and `GET /api/v1/status/connections`. What is different for a CSMS:
 - a connection leads to a **charging station**, a **local controller** or a
   **gateway**, and
   says **which node is there** (`"remoteNodeId"`): the name the CSMS speaks to
-  it by, as a station that dials is known by the last part of its URL. The URL
+  it by, as a station that connects is known by the last part of its URL. The URL
   of a connection ends with the name the CSMS comes under at the other end -
   `wss://station7.example.org:9443/csms-01` - and that is the login of the
   credentials it signs in with, too: the WebSocket login of that name at the
   other end, which says what it is let in with;
-- a local controller and a gateway are dialled in the overlay network
+- a local controller and a gateway are connected to in the overlay network
   (`X-OCPP-NetworkingMode: OverlayNetwork`), so that the stations behind it are
   reached through it, a charging station in the plain frame of OCPP. In the
   overlay network a controller sends an answer to the node that asked, by its
@@ -563,26 +563,26 @@ and `GET /api/v1/status/connections`. What is different for a CSMS:
   learns the name it is asked with as well; an older one does not, and what
   the CSMS asks it then runs into its timeout. So the URL of a connection to a
   local controller or a gateway should end with the name the CSMS has in OCPP
-  (`"ocpp": { "nodeId": ... }`): one that ends otherwise is dialled all the
+  (`"ocpp": { "nodeId": ... }`): one that ends otherwise is connected to all the
   same, and warned of, in the log and with how the connection stands;
-- it is dialled over `ws://` and `wss://` and in OCPP 2.1 alone, and nothing
-  is written down here that dials the CSMS: that is what the logins are for;
-- the certificate a dialled node shows is judged for the use `stations` of the
+- it is connected to over `ws://` and `wss://` and in OCPP 2.1 alone, and nothing
+  is written down here that connects to the CSMS: that is what the logins are for;
+- the certificate a node connected to shows is judged for the use `stations` of the
   certificate store - a TLS root kept for it - or by the key pins of the
   connection.
 
-**A node that is dialled is a login all the same.** The name a connection
+**A node that is connected to is a login all the same.** The name a connection
 leads to is a login under Logins and groups: where it is switched off, where a
 local controller or a gateway is marked as one - and so may send in the name of the stations
-behind it, over a line the CSMS dialled as over one that was dialled in - and
+behind it, over a line the CSMS made as over one that came in - and
 where its group says what it may do. A connection to a login that is switched
 off, or that says a local controller is there where the login says a station
 or a gateway (or any other two of them), is not connected: nothing is tried,
 and its state on the page says "not connected" and why;
 a login switched off while its connection is up is let go of. `connections` on
-the command line lists what was dialled beside what dialled in. The OCPP
-messages over a line the CSMS dialled are logged as the ones of a station that
-dialled in are, under the name the connection leads to and by the same
+the command line lists what the CSMS connected to beside what connected to it. The OCPP
+messages over a line the CSMS made are logged as the ones of a station that
+connected are, under the name the connection leads to and by the same
 switches: `messages` and the window for their contents, in the `logging` of the
 `webSocketServer` section.
 

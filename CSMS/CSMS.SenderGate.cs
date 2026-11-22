@@ -17,6 +17,7 @@
 
 #region Usings
 
+using org.GraphDefined.Vanaheimr.Illias;
 using org.GraphDefined.Vanaheimr.Hermod.Messaging;
 
 using cloud.charging.open.protocols.WWCP.NetworkingNode;
@@ -46,7 +47,7 @@ namespace cloud.charging.open.CSMS
     /// <b>A connection speaks for itself, and a local controller's or a gateway's for the stations behind it.</b>
     /// Whether a login is one of theirs is the operator's to say (<see cref="OCPP.WebSocketLogin.LocalController"/>,
     /// <see cref="OCPP.WebSocketLogin.Gateway"/>):
-    /// any station can dial in the overlay network and name itself the way to another station, so a frame
+    /// any station can connect in the overlay network and name itself the way to another station, so a frame
     /// does not say it.
     /// </para>
     /// <para>
@@ -89,13 +90,13 @@ namespace cloud.charging.open.CSMS
                                   NetworkPath         Path)
         {
 
-            // What this CSMS dialled is a station's or a local controller's
+            // What this CSMS connected to is a station's or a local controller's
             // where it is written down as a connection, and is held to what
-            // one that dialled in is held to: by the name the connection
+            // one that connected to it is held to: by the name the connection
             // leads to, which is a login as theirs are. Whatever else this
-            // CSMS dialled is not a station's.
+            // CSMS connected to is not a station's.
             if (Connection.Role != ConnectionRole.Server &&
-                !(Node is NetworkingNode_Id dialledNode && IsDialled(dialledNode.ToString())))
+                !(Node is NetworkingNode_Id connectedNode && IsConnectedTo(connectedNode.ToString())))
             {
                 return null;
             }
@@ -112,7 +113,7 @@ namespace cloud.charging.open.CSMS
             if (Path.Source == node)
                 return null;
 
-            if (!WebSocketLogins.SpeaksForOthers(node.ToString()))
+            if (!WebSocketLogins.SpeaksForOthers(WebSocketLogins.LoginOf(node.ToString())))
                 return $"'{node}' is no local controller and no gateway, and sends in its own name alone. Where it is one, mark it as one: " +
                        $"'localControllers {node} on' or 'gateways {node} on' on the command line, or on the page of the charging stations.";
 

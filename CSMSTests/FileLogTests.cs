@@ -63,7 +63,7 @@ namespace cloud.charging.open.CSMS.Tests
             {
 
                 var csms = new CSMS(
-                               HTTPPort:        IPPort.Parse(TestPorts.Free()),
+                               HTTPPort:        TestPorts.Free(),
                                AccountsPath:    Path.Combine(directory, "accounts"),
                                ConfigFile:      new WWCPConfigFile(Path.Combine(directory, WWCPConfigFile.DefaultFileName)),
                                LogToConsole:    false,

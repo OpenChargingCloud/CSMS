@@ -27,9 +27,11 @@ using org.GraphDefined.Vanaheimr.Hermod.WebSocket;
 using cloud.charging.open.protocols.WWCP;
 using cloud.charging.open.protocols.WWCP.NetworkingNode;
 using cloud.charging.open.protocols.WWCP.WebSockets;
+using cloud.charging.open.protocols.WWCP.Node;
 using cloud.charging.open.protocols.WWCP.Node.Certificates;
 
 using cloud.charging.open.protocols.OCPP.Node;
+using cloud.charging.open.protocols.OCPI.Transport;
 using cloud.charging.open.protocols.WWCP.Node.Connections;
 using cloud.charging.open.protocols.WWCP.Node.Logins;
 
@@ -44,31 +46,40 @@ namespace cloud.charging.open.CSMS
 {
 
     /// <summary>
-    /// The charging stations, local controllers and gateways this CSMS dials: the ones
-    /// that cannot dial it - behind a firewall that lets nothing out, on a
+    /// The charging stations, local controllers and gateways this CSMS connects to: the ones
+    /// that cannot connect to it - behind a firewall that lets nothing out, on a
     /// network only the back end reaches - and have an OCPP server of their
     /// own for it.
     /// </summary>
     /// <remarks>
     /// <para>
     /// OCPP stays as it is; only who opens the WebSocket is the other way
-    /// round. What is dialled is written down as a connection, kept, dialled,
-    /// followed and dialled again by what a charging station and a local
-    /// controller dial their CSMS with (<see cref="WWCPNode"/>, over OCPP: <see cref="OCPPDialling"/>): the
+    /// round. What is connected to is written down as a connection, kept, connected,
+    /// followed and connected again by what a charging station and a local
+    /// controller connect to their CSMS with (<see cref="WWCPNode"/>, over OCPP: <see cref="OCPPConnecting"/>): the
     /// same store beside the configuration file, the same credentials and
     /// client identities, the same key pins and the same page.
     /// </para>
     /// <para>
     /// What a connection may be is what it may be on every node (see
     /// ConnectionRules): what is said here is what a CSMS does with what it
-    /// dials below it - a charging station, a local controller or a gateway,
+    /// connects to below it - a charging station, a local controller or a gateway,
     /// each of which it speaks to by its name, routed by that name and not
     /// as "the CSMS". It speaks OCPP 2.1 alone. A connection that names no
-    /// node leads to a back end of this CSMS, and is dialled as every node
-    /// dials its back end.
+    /// node leads to a back end of this CSMS, and is connected to as every node
+    /// connects to its back end.
     /// </para>
     /// <para>
-    /// <b>A node that is dialled is a login of this CSMS all the same.</b>
+    /// <b>And the EMSPs of its roaming agreements, over OCPI.</b> A connection
+    /// to an EMSP carries OCPI rather than OCPP, over the networking node of OCPI
+    /// of this CSMS (<see cref="OCPINetworkingNode"/>): over a WebSocket of its
+    /// subprotocols "ocpi2.2.1" and the like, or over the SSH subsystem
+    /// "ocpi@open.charging.cloud". No station is behind an EMSP, and the
+    /// connection names no node at its other end. An EMSP may connect to this
+    /// CSMS as well - see CSMS.EMSPsThatConnect.cs.
+    /// </para>
+    /// <para>
+    /// <b>A node that is connected to is a login of this CSMS all the same.</b>
     /// The name a connection leads to is the name of a login under Logins and
     /// groups: that is where a station is switched off, where a local
     /// controller or a gateway is marked as one - and so may send in the name
@@ -85,22 +96,38 @@ namespace cloud.charging.open.CSMS
 
         /// <summary>
         /// What the certificate of a charging station or a local controller
-        /// this CSMS dials is judged for, and what a root of the certificate
+        /// this CSMS connects to is judged for, and what a root of the certificate
         /// store is kept for where it vouches for one.
         /// </summary>
         public const String  StationsCertificateUsage  = "stations";
 
         /// <summary>
-        /// How long this CSMS waits before it dials a connection again that
+        /// How long this CSMS waits before it tries a connection again that
         /// was lost or could not be made, at first and at most.
         /// </summary>
-        public static readonly TimeSpan  RedialAfterAtFirst  = TimeSpan.FromSeconds(5);
-        public static readonly TimeSpan  RedialAfterAtMost   = TimeSpan.FromMinutes(5);
+        public static readonly TimeSpan  ReconnectAfterAtFirst  = TimeSpan.FromSeconds(5);
+        public static readonly TimeSpan  ReconnectAfterAtMost   = TimeSpan.FromMinutes(5);
 
         /// <summary>
-        /// Whether this CSMS dials: from when it started until it stops.
+        /// Whether this CSMS connects: from when it started until it stops.
         /// </summary>
-        private Boolean dials;
+        private Boolean connectsBelow;
+
+        /// <summary>
+        /// The networking node of OCPI, which connects to the EMSPs.
+        /// </summary>
+        private OCPINetworkingNode? ocpiNetworkingNode;
+
+        #endregion
+
+        #region OCPINetworkingNode
+
+        /// <summary>
+        /// The networking node of OCPI of this CSMS: what connects to its EMSPs
+        /// over a WebSocket or over SSH.
+        /// </summary>
+        public OCPINetworkingNode OCPINetworkingNode
+            => ocpiNetworkingNode ?? throw new InvalidOperationException("The networking node of OCPI of this CSMS is not built yet.");
 
         #endregion
 
@@ -120,7 +147,7 @@ namespace cloud.charging.open.CSMS
         #region Node16 / Node21
 
         /// <summary>
-        /// A CSMS dials in OCPP 2.1 alone.
+        /// A CSMS connects in OCPP 2.1 alone.
         /// </summary>
         protected override OCPPv1_6.NetworkingNode.AOCPPNetworkingNode? Node16
             => null;
@@ -136,7 +163,7 @@ namespace cloud.charging.open.CSMS
         #region ConnectionsCertificateUsage
 
         /// <summary>
-        /// The certificate of a node this CSMS dials is judged for the use
+        /// The certificate of a node this CSMS connects to is judged for the use
         /// "stations".
         /// </summary>
         public override String ConnectionsCertificateUsage
@@ -148,7 +175,7 @@ namespace cloud.charging.open.CSMS
         #region (private) BuildConnectionStores()
 
         /// <summary>
-        /// The stores of what this CSMS dials - the connections and their
+        /// The stores of what this CSMS connects to - the connections and their
         /// credentials - beside the configuration file, and how it believes
         /// the servers of its connections by their key pins.
         /// </summary>
@@ -164,41 +191,43 @@ namespace cloud.charging.open.CSMS
                           ) {
 
                               // The one rule of every node, but in OCPP 2.1:
-                              // a CSMS has no node of OCPP 1.6 that dials.
+                              // a CSMS has no node of OCPP 1.6 that connects.
+                              // And an EMSP besides, which it connects to over OCPI.
                               Rules = new ConnectionRules {
-                                          OCPP1_6 = false
+                                          Types    = [ .. ConnectionRules.Every, ConnectionType.EMSP ],
+                                          OCPP1_6  = false
                                       }
 
                           };
 
             keyPinning       = NewKeyPinning();
-            OCPPDialling.MakeTLSClientSource();
+            OCPPConnecting.MakeTLSClientSource();
 
             Connections.KnownCertificateIds     = () => Certificates.ByKind(CertificateKind.TLSIdentity).Select(entry => entry.Id);
             Connections.OnNotice               += (level, message) => Log.Log(level, message, "ocpp", "connections");
 
-            // A node that is dialled is a login of this CSMS: where it is
+            // A node that is connected to is a login of this CSMS: where it is
             // switched off, marked as a local controller, and given a group.
-            Connections.WhyItLeadsToNoSuchNode  = node => WebSocketLogins?.TryGet(node, out _) == false
+            Connections.WhyItLeadsToNoSuchNode  = node => WebSocketLogins?.TryGet(WebSocketLogins.LoginOf(node), out _) == false
                                                               ? $"'{node}' is no login of this CSMS. A charging station or a local controller this CSMS " +
-                                                                "dials is written down under Logins and groups as one that dials is, so that it " +
+                                                                "connects to is written down under Logins and groups as one that connects is, so that it " +
                                                                 "can be switched off, marked as a local controller and given a group."
                                                               : null;
 
             Connections.OnConnectionsChanged   += () => {
-                                                      if (dials)
+                                                      if (connectsBelow)
                                                           _ = ApplyConnectionChanges();
                                                   };
 
             // A login switched off, or marked as a local controller: what is
-            // dialled to it is let go of, or dialled as what it is now.
+            // connected to it is let go of, or connected as what it is now.
             WebSocketLogins.OnChanged            += () => {
-                                                      if (dials)
+                                                      if (connectsBelow)
                                                           _ = ApplyConnectionChanges();
                                                   };
 
-            // Never used to dial with - a CSMS dials over no ssh:// - and
-            // made only when it is: what every node that dials has, for what
+            // Never used to connect with - a CSMS connects over no ssh:// - and
+            // made only when it is: what every node that connects has, for what
             // it shares with them.
             SshKey = new SshClientKey(
                          System.IO.Path.Combine(Connections.Path, SshClientKey.DirectoryName),
@@ -208,50 +237,68 @@ namespace cloud.charging.open.CSMS
 
             SshKey.OnNotice += (level, message) => Log.Log(level, message, "ocpp", "connections", "ssh", "security");
 
+            // The EMSPs, over OCPI: a networking node of its own, under the name
+            // this CSMS has in OCPP, offering the subprotocols of the version a
+            // connection says.
+            ocpiNetworkingNode = new OCPINetworkingNode(
+                                     csms01.Id,
+                                     I18NString.Create($"The networking node of OCPI of the CSMS '{csms01.Id}'"),
+                                     DNSClient,
+                                     TimeProvider
+                                 );
+
+            SetConnectingOf(ConnectionUse.OCPI,
+                            new MessageConnecting(
+                                this,
+                                () => OCPINetworkingNode,
+                                connection => OCPIWireNames.Offer(connection.OCPIVersion ?? "", connection.Encoding),
+                                OCPIWireNames.SshSubsystem
+                            ));
+
         }
 
         #endregion
 
-        #region (private) DialTheNodesBelow() / HangUpOnTheNodesBelow()
+        #region (private) ConnectToTheNodesBelow() / HangUpOnTheNodesBelow()
 
         /// <summary>
-        /// Dial every connection of the store that dials by itself.
+        /// Make every connection of the store that connects by itself.
         /// </summary>
         /// <remarks>
         /// Nothing here throws: a connection that cannot be made is a line in
         /// the log and a state the page shows, and the charging stations that
-        /// dial are let in whether the others are reached or not.
+        /// connect are let in whether the others are reached or not.
         /// </remarks>
-        private async Task DialTheNodesBelow()
+        private async Task ConnectToTheNodesBelow()
         {
 
-            dials = true;
+            connectsBelow = true;
 
-            var dialled = Connections.Connections.Count(connection => connection.AutoConnect);
+            var ownConnections = Connections.Connections.Count(connection => connection.AutoConnect);
 
-            if (dialled > 0)
-                Log.Notice($"This CSMS dials {dialled} connection{(dialled == 1 ? "" : "s")} by itself: charging stations and local controllers " +
-                            "that cannot dial it.",
+            if (ownConnections > 0)
+                Log.Notice($"This CSMS makes {ownConnections} connection{(ownConnections == 1 ? "" : "s")} by itself: to charging stations and local controllers " +
+                            "that cannot connect to it.",
                            "ocpp", "connections");
 
             try
             {
-                await DialConfiguredConnections();
+                await ConnectConfiguredConnections();
             }
             catch (Exception e)
             {
-                Log.Warning($"The connections of this CSMS could not be dialled: {e.Message}", "ocpp", "connections");
+                Log.Warning($"The connections of this CSMS could not be made: {e.Message}", "ocpp", "connections");
             }
 
         }
 
         /// <summary>
-        /// Hang up on everything this CSMS dialled.
+        /// Hang up on everything this CSMS connected to.
         /// </summary>
         private async Task HangUpOnTheNodesBelow()
         {
 
-            dials = false;
+            connectsBelow = false;
 
             try
             {
@@ -259,7 +306,7 @@ namespace cloud.charging.open.CSMS
             }
             catch (Exception e)
             {
-                Log.Warning($"Hanging up on what this CSMS dialled failed: {e.Message}", "ocpp", "connections");
+                Log.Warning($"Hanging up on what this CSMS connected to failed: {e.Message}", "ocpp", "connections");
             }
 
         }
@@ -301,14 +348,28 @@ namespace cloud.charging.open.CSMS
             if (WhyNotConnected(Connection) is String why)
                 throw new InvalidOperationException(why);
 
+            // An EMSP, over OCPI: by the networking node of OCPI, which comes back
+            // as the one of OCPP does. Its messages are no OCPP to log.
+            if (Connection.Use == ConnectionUse.OCPI)
+            {
+
+                OCPINetworkingNode.ReconnectPolicy ??= new WebSocketClientReconnectPolicy(
+                                                           InitialDelay:  ReconnectAfterAtFirst,
+                                                           MaxDelay:      ReconnectAfterAtMost
+                                                       );
+
+                return base.ConnectOverWebSocket(Connection, Basic, Validator, Certificates, TOTP, TOTPLogin, CancellationToken);
+
+            }
+
             csms01.ReconnectPolicy ??= new WebSocketClientReconnectPolicy(
-                                           InitialDelay:  RedialAfterAtFirst,
-                                           MaxDelay:      RedialAfterAtMost
+                                           InitialDelay:  ReconnectAfterAtFirst,
+                                           MaxDelay:      ReconnectAfterAtMost
                                        );
 
             var connecting = base.ConnectOverWebSocket(Connection, Basic, Validator, Certificates, TOTP, TOTPLogin, CancellationToken);
 
-            // The client of this dial is made, and among the clients of the
+            // The client of this connection is made, and among the clients of the
             // node, before anything of it is awaited: listened to here, it is
             // listened to before its first message.
             LogTheMessagesOf(Connection);
@@ -323,17 +384,17 @@ namespace cloud.charging.open.CSMS
 
         /// <summary>
         /// The clients whose OCPP messages are logged already: a client is
-        /// made for every dial, and listened to once.
+        /// made for every connection, and listened to once.
         /// </summary>
         private readonly System.Runtime.CompilerServices.ConditionalWeakTable<Object, Object>  loggedClients = new ();
 
         /// <summary>
-        /// The OCPP messages over a connection this CSMS dialled, in the log
-        /// as the ones of a charging station that dialled in are: under the
+        /// The OCPP messages over a connection this CSMS made, in the log
+        /// as the ones of a charging station that connected are: under the
         /// name the connection leads to, and by the same two switches - see
         /// <see cref="LogOCPPMessage"/>.
         /// </summary>
-        /// <param name="Connection">A connection that is being dialled.</param>
+        /// <param name="Connection">A connection that is being made.</param>
         private void LogTheMessagesOf(ConnectionEntry Connection)
         {
 
@@ -363,14 +424,14 @@ namespace cloud.charging.open.CSMS
 
         #endregion
 
-        #region (protected override) WhatItIsDialledOn(Connection)
+        #region (protected override) WhatItIsConnectedOn(Connection)
 
         /// <summary>
-        /// A connection is dialled on what the login of the node it leads to
-        /// says: changed, it is let go of and dialled again - or not connected
+        /// A connection is made on what the login of the node it leads to
+        /// says: changed, it is let go of and made again - or not connected
         /// any more.
         /// </summary>
-        protected override String? WhatItIsDialledOn(ConnectionEntry Connection)
+        protected override String? WhatItIsConnectedOn(ConnectionEntry Connection)
 
             => WhyNotConnected(Connection) ?? "";
 
@@ -399,12 +460,12 @@ namespace cloud.charging.open.CSMS
         public String? WhyNotConnected(ConnectionEntry Connection)
         {
 
-            // A back end of this CSMS, and no login of it: dialled as every
-            // node dials its back end.
+            // A back end of this CSMS, and no login of it: connected to as every
+            // node connects to its back end.
             if (Connection.RemoteNodeId is not String node)
                 return null;
 
-            if (!WebSocketLogins.TryGet(node, out var login))
+            if (!WebSocketLogins.TryGet(WebSocketLogins.LoginOf(node), out var login))
                 return $"'{node}' is no login of this CSMS any more";
 
             if (!login.Enabled)
@@ -434,11 +495,11 @@ namespace cloud.charging.open.CSMS
         /// <summary>
         /// What is to be known of a connection to a local controller or a gateway whose
         /// URL ends with another name than the one this CSMS has in OCPP, or
-        /// null: it is dialled all the same, and warned of.
+        /// null: it is connected to all the same, and warned of.
         /// </summary>
         /// <remarks>
         /// In the overlay network an answer is sent to the node that asked,
-        /// by its name. A local controller that was dialled knows this CSMS
+        /// by its name. A local controller that was connected to knows this CSMS
         /// by the name it came under; one of today learns the name it asks
         /// with as another name of that line, an older one does not - and
         /// then whatever this CSMS asks the controller or a station behind
@@ -466,14 +527,27 @@ namespace cloud.charging.open.CSMS
         #region (protected override) ConnectionIsUp(Connection)
 
         /// <summary>
-        /// A connection this CSMS dialled is up: said, as a charging station
-        /// that dialled in is.
+        /// A connection this CSMS made is up: said, as a charging station
+        /// that connected is - and an EMSP as what it is.
         /// </summary>
         protected override void ConnectionIsUp(ConnectionEntry Connection)
         {
 
+            // An EMSP, over OCPI - one this CSMS connected to; one that connected
+            // to it is said as it came in.
+            if (Connection.Use == ConnectionUse.OCPI)
+            {
+
+                if (!Connection.Inbound && ocppServerSettings.Logging?.Connections != false)
+                    Log.Info($"The {WhatIsAt(Connection)} at {Connection.URL} is reached over {Connection.Protocol}, which this CSMS connected to.",
+                             "ocpi", "connection");
+
+                return;
+
+            }
+
             if (ocppServerSettings.Logging?.Connections != false)
-                Log.Info($"The {WhatIsAt(Connection)} '{Connection.RemoteNodeId}' is reached at {Connection.URL}, which this CSMS dialled.",
+                Log.Info($"The {WhatIsAt(Connection)} '{Connection.RemoteNodeId}' is reached at {Connection.URL}, which this CSMS connected to.",
                          "ocpp", "station", "connection");
 
             // Under another name than its own: connected, and said - on the
@@ -492,13 +566,13 @@ namespace cloud.charging.open.CSMS
 
         #endregion
 
-        #region DialledNodes / IsDialled(Node) / DialledAs(Node)
+        #region NodesConnectedTo / IsConnectedTo(Node) / ConnectedAs(Node)
 
         /// <summary>
-        /// The connection this CSMS dials the given node by, where it dials
+        /// The connection this CSMS connects to the given node by, where it connects to
         /// it and the connection is up.
         /// </summary>
-        public ConnectionEntry? DialledAs(String Node)
+        public ConnectionEntry? ConnectedAs(String Node)
         {
 
             var states = ConnectionStates;
@@ -511,17 +585,17 @@ namespace cloud.charging.open.CSMS
         }
 
         /// <summary>
-        /// Whether the given node is one this CSMS dials, up or not.
+        /// Whether the given node is one this CSMS connects to, up or not.
         /// </summary>
-        public Boolean IsDialled(String Node)
+        public Boolean IsConnectedTo(String Node)
 
             => Connections.Connections.Any(connection => !connection.Inbound && connection.RemoteNodeId == Node);
 
         /// <summary>
-        /// The connections this CSMS dialled that are up, each with the node
+        /// The connections this CSMS made that are up, each with the node
         /// at its other end.
         /// </summary>
-        public IReadOnlyList<ConnectionEntry> DialledNodes
+        public IReadOnlyList<ConnectionEntry> NodesConnectedTo
         {
             get
             {
@@ -545,6 +619,7 @@ namespace cloud.charging.open.CSMS
             => Connection.ConnectionType switch {
                    ConnectionType.LocalController => "local controller",
                    ConnectionType.Gateway         => "gateway",
+                   ConnectionType.EMSP            => "EMSP",
                    _                              => "charging station"
                };
 

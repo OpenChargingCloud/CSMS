@@ -60,7 +60,7 @@ namespace cloud.charging.open.CSMS
     /// Server-Sent Events stream; nothing is rendered on the server.
     ///
     /// A CSMS sits above the charging stations and the local controllers
-    /// that dial into it, and is the thing they are all pointed at. That is
+    /// that connect to it, and is the thing they are all pointed at. That is
     /// what this web interface is for: it is the one place where somebody can
     /// see which of them got in, which were turned away and why, without
     /// reading a log file over somebody else's shoulder.
@@ -277,7 +277,7 @@ namespace cloud.charging.open.CSMS
                     HTTPPath?              HTTPRootPath       = null,
                     HTTPExtAPI?            ExtAPI             = null,
                     String?                AccountsPath       = null,
-                    IIPAddress?            HTTPHostname       = null,
+                    IPAddress?            HTTPHostname       = null,
                     IPPort?                HTTPPort           = null,
                     WWCPConfigFile?        ConfigFile         = null,
                     OCPPConfiguration?     OCPP               = null,
@@ -427,14 +427,15 @@ namespace cloud.charging.open.CSMS
 
             #endregion
 
-            #region The charging stations and local controllers this CSMS dials
+            #region The charging stations and local controllers this CSMS connects to
 
             // After the logins of the charging stations, because a node that
-            // is dialled is one of them. Nothing is dialled yet: OnStarted
+            // is connected to is one of them. Nothing is connected to yet: OnStarted
             // does, once everything else is up.
             BuildConnectionStores();
 
             #endregion
+
 
             #region The OCPI endpoints the roaming partners call
 
@@ -443,9 +444,19 @@ namespace cloud.charging.open.CSMS
             // written there. They share the HTTP server above rather than
             // opening a port of their own: OCPI is plain HTTP, and one
             // operator is one address to point a partner at - and not the
-            // port the charging stations dial into, which is the other
+            // port the charging stations connect to, which is the other
             // protocol entirely.
             BuildOCPI(configuration.OCPI ?? OCPI);
+
+            #endregion
+
+            #region The EMSPs that connect to this CSMS over OCPI
+
+            // After the station server, which hands them their WebSockets,
+            // after the networking node of OCPI of the connection stores, which
+            // they are attached to, and after OCPI, because the versions they
+            // speak are the ones this CSMS speaks. See CSMS.EMSPsThatConnect.cs.
+            BuildTheDoorOfTheEMSPs();
 
             #endregion
 
@@ -483,6 +494,10 @@ namespace cloud.charging.open.CSMS
 
             await StartOCPPServer();
 
+            // The EMSPs that connect over OCPI, at the station port and over SSH
+            // - see CSMS.EMSPsThatConnect.cs.
+            ServeTheEMSPsThatConnect();
+
             // A tool speaking OCPP to this CSMS over its SSH server, where the
             // file says so - see OCPPServingNode.Commissioning.cs.
             StartCommissioning();
@@ -506,9 +521,9 @@ namespace cloud.charging.open.CSMS
                         $"{RemotePartyCount} partner(s), {LocationCount} location(s)).",
                         "ocpi");
 
-            // The charging stations and local controllers that cannot dial
-            // this CSMS: dialled once it is up, and not waited for.
-            return DialTheNodesBelow();
+            // The charging stations and local controllers that cannot connect to
+            // this CSMS: connected to once it is up, and not waited for.
+            return ConnectToTheNodesBelow();
 
         }
 
@@ -540,6 +555,7 @@ namespace cloud.charging.open.CSMS
             {
                 await HangUpOnTheNodesBelow();
                 StopCommissioning("the CSMS is stopping");
+                await StopServingTheEMSPsThatConnect($"The {NodeNoun} is shutting down.");
                 await StopOCPPServer();
             }
 
@@ -732,6 +748,10 @@ namespace cloud.charging.open.CSMS
         {
 
             await ocpiAPI.DisposeAsync();
+
+            // Its timers, and whatever it is still connected to.
+            if (ocpiNetworkingNode is not null)
+                await ocpiNetworkingNode.Stop(Message: "The CSMS is shutting down.");
 
             foreach (var version in ocpiVersions)
                 foreach (var remotePartyId in version.UnsavedRemoteParties)

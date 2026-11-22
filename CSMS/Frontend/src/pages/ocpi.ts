@@ -15,7 +15,7 @@ import { html, render } from '@node/view';
  * nobody is registered with. So they are read from the configuration file at
  * the start, and this page says where that file is.
  *
- * Nothing here is the OCPP side: the charging stations dial into a server of
+ * Nothing here is the OCPP side: the charging stations connect to a server of
  * their own, on a port of its own, and are configured elsewhere.
  *
  * Drawn by view.ts, as every page of this CSMS: Reload changes only what

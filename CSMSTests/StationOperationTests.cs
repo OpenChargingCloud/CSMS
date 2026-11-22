@@ -72,7 +72,7 @@ namespace cloud.charging.open.CSMS.Tests
         /// The command line an account of the given name and role gets over
         /// SSH - made for the purpose, as the CSMS makes its first one.
         /// </summary>
-        private async Task<CSMSCLI> OverSSHAs(String  Name,
+        private async Task<CSMSCLI> OverSSHAs(User_Id Name,
                                               String  Role)
         {
 
@@ -80,8 +80,8 @@ namespace cloud.charging.open.CSMS.Tests
                         organization is Organization, Is.True, "the CSMS's organization is not there");
 
             await CSMS.ExtAPI.CreateUser(
-                      User_Id.Parse(Name),
-                      I18NString.Create(Languages.en, Name),
+                      Name,
+                      I18NString.Create(Languages.en, Name.ToString()),
                       SimpleEMailAddress.Parse($"{Name}@localhost"),
                       User2OrganizationEdgeLabel.IsMember,
                       (Organization) organization!,
@@ -93,7 +93,7 @@ namespace cloud.charging.open.CSMS.Tests
                       IsAuthenticated:           true
                   );
 
-            Assert.That(CSMS.ExtAPI.TryGetUser     (User_Id.     Parse(Name), out var account), Is.True, $"the account '{Name}' was not made");
+            Assert.That(CSMS.ExtAPI.TryGetUser     (User_Id.     Parse(Name.ToString()), out var account), Is.True, $"the account '{Name}' was not made");
             Assert.That(CSMS.ExtAPI.TryGetUserGroup(UserGroup_Id.Parse(Role), out var group),   Is.True, $"the CSMS has no group '{Role}'");
 
             var joined = await CSMS.ExtAPI.AddUserToUserGroup((User) account!, User2UserGroupEdgeLabel.IsMember, (UserGroup) group!);
@@ -233,7 +233,7 @@ namespace cloud.charging.open.CSMS.Tests
 
             ResetAccepted();
 
-            using var cli = await OverSSHAs("vera", "viewer");
+            using var cli = await OverSSHAs(User_Id.Parse("vera"), "viewer");
 
             Assert.That(String.Join(" | ", await Run(cli, "connections")),   Does.Contain("cs001"));
             Assert.That((await Run(cli, "use cs001")).Single(),              Does.Contain("'vera' may not do that here"));
@@ -256,7 +256,7 @@ namespace cloud.charging.open.CSMS.Tests
 
             ResetAccepted();
 
-            using var cli = await OverSSHAs("carl", "cpo");
+            using var cli = await OverSSHAs(User_Id.Parse("carl"), "cpo");
 
             Assert.That((await Run(cli, "use cs001")).Single(),  Does.StartWith("Using the charging station 'cs001'"));
             Assert.That((await Run(cli, "reset immediate")).First(), Does.StartWith("reset immediate => "));

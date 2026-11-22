@@ -18,6 +18,7 @@
 
 #region Usings
 
+using org.GraphDefined.Vanaheimr.Illias;
 using System.Security.Cryptography.X509Certificates;
 
 using Newtonsoft.Json.Linq;
@@ -66,7 +67,7 @@ namespace cloud.charging.open.CSMS
         /// it better than one that shows nothing.
         /// </para>
         /// <para>
-        /// As a local controller moves the keys it dialled its CSMS with - see
+        /// As a local controller moves the keys it connected to its CSMS with - see
         /// its LocalController.Certificates.cs.
         /// </para>
         /// </remarks>
@@ -164,13 +165,13 @@ namespace cloud.charging.open.CSMS
 
         #endregion
 
-        #region (protected override) LetsBackEndsDialIn
+        #region (protected override) LetsBackEndsConnect
 
         /// <summary>
-        /// A CSMS is the back end: nothing above it dials it at the charging
-        /// station port. What it dials itself are the nodes below it.
+        /// A CSMS is the back end: nothing above it connects to it at the charging
+        /// station port. What it connects to itself are the nodes below it.
         /// </summary>
-        protected override Boolean LetsBackEndsDialIn
+        protected override Boolean LetsBackEndsConnect
             => false;
 
         #endregion
@@ -192,13 +193,13 @@ namespace cloud.charging.open.CSMS
         /// Whether what registered under the given name is a charging station,
         /// and not a local controller or a gateway - which register with their
         /// BootNotification as well: by the kind its login is marked as, or the
-        /// connection this CSMS dials it over.
+        /// connection this CSMS connects to it over.
         /// </summary>
         /// <param name="Node">The name it registered under.</param>
         public Boolean IsAStation(String Node)
 
-            => !WebSocketLogins.SpeaksForOthers(Node) &&
-               DialledAs(Node) is not { ConnectionType: cloud.charging.open.protocols.WWCP.Node.Connections.ConnectionType.LocalController or
+            => !(User_Id.TryParse(Node) is User_Id login && WebSocketLogins.SpeaksForOthers(login)) &&
+               ConnectedAs(Node) is not { ConnectionType: cloud.charging.open.protocols.WWCP.Node.Connections.ConnectionType.LocalController or
                                                           cloud.charging.open.protocols.WWCP.Node.Connections.ConnectionType.Gateway };
 
         #endregion
@@ -232,24 +233,24 @@ namespace cloud.charging.open.CSMS
 
         /// <summary>
         /// Beside the state of the charging station server: how many of the
-        /// nodes below it this CSMS dials.
+        /// nodes below it this CSMS connects to.
         /// </summary>
         protected override void OCPPServerStateJSON(JObject State)
 
-            => State.Add(new JProperty("dialled", DialledNodes.Count));
+            => State.Add(new JProperty("connectedTo", NodesConnectedTo.Count));
 
         #endregion
 
-        #region (protected override) StationLoginRemoved(StationId)
+        #region (protected override) StationLoginRemoved(Login)
 
         /// <summary>
         /// A charging station that is gone is not to be asked for new
         /// certificates: what is known of them is forgotten with it.
         /// </summary>
-        protected override String StationLoginRemoved(String StationId)
+        protected override String StationLoginRemoved(User_Id Login)
         {
 
-            var forgotten = StationCertificates.Forget(StationId);
+            var forgotten = StationCertificates.Forget(Login.ToString());
 
             return forgotten > 0
                        ? $", and the {forgotten} certificate(s) known of it"

@@ -17,6 +17,7 @@
 
 #region Usings
 
+using org.GraphDefined.Vanaheimr.Illias;
 using cloud.charging.open.protocols.WWCP.NetworkingNode;
 using cloud.charging.open.protocols.WWCP.Node.Logins;
 
@@ -29,7 +30,7 @@ namespace cloud.charging.open.CSMS
 {
 
     /// <summary>
-    /// A charging station's SSH keys, enrolled by the CSMS (white paper "OCPP over SSH", sections 10.2
+    /// A charging station's SSH keys, enrolled by the CSMS (white paper "OCPP-over-SSH", sections 10.2
     /// and 10.3): a SignSSHKey of a station that signs in to this CSMS over SSH puts its next key beside
     /// the current one in the stations' logins; SSHKeySigned then tells the station, and once it took
     /// the key the old ones go. One that comes through a Local Controller is installed there with
@@ -76,9 +77,11 @@ namespace cloud.charging.open.CSMS
                                      String                      PublicKey)
         {
 
-            var before = WebSocketLogins.Logins.FirstOrDefault(login => login.Id == Station.ToString())?.Keys.Select(key => key.Fingerprint).ToArray() ?? [];
+            // The station signs in under its name: the login it is.
+            var stationLogin  = User_Id.Parse(Station.ToString());
+            var before        = WebSocketLogins.Logins.FirstOrDefault(login => login.Login == stationLogin)?.Keys.Select(key => key.Fingerprint).ToArray() ?? [];
 
-            if (!WebSocketLogins.TryAddSSHKey(Station.ToString(), PublicKey, "Rotated by SignSSHKey", null, null, "OCPP", out var added, out var error))
+            if (!WebSocketLogins.TryAddSSHKey(stationLogin, PublicKey, "Rotated by SignSSHKey", null, null, "OCPP", out var added, out var error))
             {
                 Log.Warning($"The next SSH key of the charging station '{Station}' was not enrolled: {error}", "ocpp", "station", "ssh");
                 return;
@@ -94,7 +97,7 @@ namespace cloud.charging.open.CSMS
             }
 
             foreach (var old in before.Where(fingerprint => fingerprint != added.Fingerprint))
-                WebSocketLogins.TryRemoveSSHKey(Station.ToString(), old, out _);
+                WebSocketLogins.TryRemoveSSHKey(stationLogin, old, out _);
 
             Log.Notice($"The charging station '{Station}' signs in with its next SSH key {added.Fingerprint} from now on; {before.Length} old one(s) taken away.",
                        "ocpp", "station", "ssh");

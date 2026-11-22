@@ -119,7 +119,7 @@ namespace cloud.charging.open.CSMS.CommandLine
                 var typed  = Arguments[^1];
 
                 return cli.CSMS.WebSocketLogins.Logins.
-                           Select (login   => login.Id).
+                           Select (login   => login.Login.ToString()).
                            Where  (cli.CSMS.IsConnected).
                            OrderBy(station => station, StringComparer.Ordinal).
                            Where  (station => station.StartsWith(typed, StringComparison.OrdinalIgnoreCase)).

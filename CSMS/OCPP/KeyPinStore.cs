@@ -101,7 +101,7 @@ namespace cloud.charging.open.CSMS.OCPP
     /// what came of it, and the pin set this CSMS last handed it for that endpoint.
     /// </summary>
     /// <param name="Endpoint">The instance of the controller's TLSClientController that is its endpoint to this CSMS.</param>
-    /// <param name="URL">Where it dials, as its event said it.</param>
+    /// <param name="URL">Where it connects to, as its event said it.</param>
     /// <param name="LearnedKeyPin">The key pin it learned on first use, in hexadecimal.</param>
     /// <param name="Reported">When it last reported on that key pin.</param>
     /// <param name="State">What it last reported: Learned, Confirmed, Rejected, Expired or Mismatch.</param>

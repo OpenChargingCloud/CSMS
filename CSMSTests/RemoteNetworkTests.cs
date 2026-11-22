@@ -25,6 +25,7 @@ using NUnit.Framework;
 
 using cloud.charging.open.CSMS.Configuration;
 using cloud.charging.open.protocols.OCPP.Node.Serving;
+using IPPort = org.GraphDefined.Vanaheimr.Hermod.IPPort;
 
 #endregion
 
@@ -61,7 +62,7 @@ namespace cloud.charging.open.CSMS.Tests
 
         private static Boolean Allows(OCPIConfiguration Section, String Address)
 
-            => Section.RemoteNetworkAcl().Allows(IPAddress.Parse(Address), 443);
+            => Section.RemoteNetworkAcl().Allows(IPAddress.Parse(Address), IPPort.Parse(443));
 
         #endregion
 

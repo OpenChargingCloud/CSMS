@@ -80,7 +80,7 @@ namespace cloud.charging.open.CSMS
                    ExtAPI,
                    Log,
                    // Whoever may read, change or operate the charging
-                   // stations may read, change or test what dials them.
+                   // stations may read, change or test what connects to them.
                    CSMSAccess.Stations,
                    CSMSAccess.Stations,
                    APIPath,

@@ -24,14 +24,14 @@ import { connectionsPage }        from '@ocpp/pages/connections';
 import { commissioningPage }      from '@ocpp/pages/commissioning';
 import { setConnectionsResource, setNodeNoun, setNodeTraits } from '@ocpp/settings';
 
-// The charging stations and local controllers this CSMS dials - the ones that
-// cannot dial it - are connections, drawn by the pages a charging station
+// The charging stations and local controllers this CSMS connects to - the ones that
+// cannot connect to it - are connections, drawn by the pages a charging station
 // draws its own with. Here whoever may read or change the charging stations
 // may read or change them; the pages speak of a CSMS, which is one OCPP node,
-// is dialled itself, by its charging stations, and dials what is below it.
+// is connected to itself, by its charging stations, and connects to what is below it.
 setConnectionsResource('stations');
 setNodeNoun('CSMS');
-setNodeTraits({ oneNodePerOCPPVersion: false, isDialled: true, dialsDown: true });
+setNodeTraits({ oneNodePerOCPPVersion: false, isConnectedTo: true, connectsDown: true });
 
 // What a CSMS has pages for beside what every node has: the server its
 // charging stations connect to, and its side of OCPI - who it is to its
@@ -54,7 +54,7 @@ startNode({
             nodeMenu.serverIdentities,
             { path: '/configuration/ocpp-server',               label: 'Charging stations',   icon: 'fa-charging-station',  permission: [ 'stations:read' ]     },
             { path: '/configuration/ocpp-server/logins',        label: 'WebSocket logins',    icon: 'fa-users-gear',        permission: [ 'stations:read' ]     },
-            // The charging stations and local controllers this CSMS dials
+            // The charging stations and local controllers this CSMS connects to
             // and, on a tab of the same page, what it signs in with there.
             // The keys and certificates it holds up have no page here: they
             // are TLS identities of the certificate store, on Identities.

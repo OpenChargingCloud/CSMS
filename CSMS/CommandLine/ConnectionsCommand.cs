@@ -101,8 +101,8 @@ namespace cloud.charging.open.CSMS.CommandLine
                 .. connections.Select(connection => $"  {connection.Station.PadRight(width)}  " + (
                        connection.OverSSH
                            ? "over SSH"
-                           : connection.Dialled
-                           ? $"dialled by this CSMS at {connection.From}"
+                           : connection.Outbound
+                           ? $"connected to by this CSMS at {connection.From}"
                            : $"from {connection.From}, frames in/out {connection.FramesIn}/{connection.FramesOut}, " +
                              $"last in {Ago(now, connection.LastIn)}, last out {Ago(now, connection.LastOut)}"
                    ))

@@ -34,6 +34,7 @@ using cloud.charging.open.protocols.WWCP.Node.TestKit;
 
 using cloud.charging.open.protocols.WWCP.Node.Connections;
 using cloud.charging.open.protocols.WWCP.Node.Logins;
+using IPPort = org.GraphDefined.Vanaheimr.Hermod.IPPort;
 
 #endregion
 
@@ -41,18 +42,18 @@ namespace cloud.charging.open.CSMS.Tests
 {
 
     /// <summary>
-    /// The charging stations and local controllers this CSMS dials: the ones
-    /// that cannot dial it, and serve OCPP themselves for it.
+    /// The charging stations and local controllers this CSMS connects to: the ones
+    /// that cannot connect to it, and serve OCPP themselves for it.
     /// </summary>
     /// <remarks>
     /// What is at the other end here is a WebSocket server written by hand,
-    /// which sees exactly what the CSMS sent it - the path it dialled, what
+    /// which sees exactly what the CSMS sent it - the path it connected to, what
     /// it signed in with, what it said of its networking mode - and says in
     /// OCPP what a charging station says. OCPP is as it always is: the
     /// station tells the CSMS that it started, and the CSMS asks.
     /// </remarks>
     [TestFixture]
-    public class DiallingTests : ACSMSTests
+    public class ConnectingTests : ACSMSTests
     {
 
         #region Data
@@ -65,17 +66,17 @@ namespace cloud.charging.open.CSMS.Tests
         private String                             comesUnder = "csms-01";
 
         private HttpListener?                      listener;
-        private Int32                              port;
+        private IPPort                              port;
         private CancellationTokenSource            stop       = new ();
         private Task?                              accepting;
 
         /// <summary>
         /// The requests for a WebSocket the far end got, as they came.
         /// </summary>
-        private readonly ConcurrentQueue<HttpListenerRequest>  dials   = new ();
+        private readonly ConcurrentQueue<HttpListenerRequest>  upgrades = new ();
 
         /// <summary>
-        /// The frames the CSMS sent over the WebSocket it dialled.
+        /// The frames the CSMS sent over the WebSocket it opened.
         /// </summary>
         private readonly ConcurrentQueue<JArray>               frames  = new ();
 
@@ -88,17 +89,17 @@ namespace cloud.charging.open.CSMS.Tests
         protected override JObject Configuration
             => new (
                    new JProperty("nts",  new JObject(new JProperty("groups", new JObject(new JProperty("legal", new JObject(new JProperty("enabled", false))))))),
-                   // The name this CSMS comes under at what it dials: a local
+                   // The name this CSMS comes under at what it connects to: a local
                    // controller answers the node that asked, by that name.
                    new JProperty("ocpp", new JObject(new JProperty("nodeId", "csms-01"))),
                    new JProperty("webSocketServer", new JObject(
                        new JProperty("enabled",           true),
                        new JProperty("address",           "127.0.0.1"),
-                       new JProperty("port",              TestPorts.Free()),
+                       new JProperty("port",              TestPorts.Free().ToUInt16()),
                        new JProperty("clientAuthentication",  new JArray("httpAuthWithoutTLS")),
                        new JProperty("subprotocols",      new JArray("ocpp2.1")),
-                       // What is said over a line this CSMS dialled is logged
-                       // by the switch of the lines that dialled in.
+                       // What is said over a line this CSMS made is logged
+                       // by the switch of the lines that came in.
                        new JProperty("logging",           new JObject(new JProperty("messages", true)))
                    ))
                );
@@ -117,7 +118,7 @@ namespace cloud.charging.open.CSMS.Tests
             listener.Prefixes.Add($"http://127.0.0.1:{port}/");
             listener.Start();
 
-            dials. Clear();
+            upgrades.Clear();
             frames.Clear();
             line       = null;
             comesUnder = "csms-01";
@@ -166,7 +167,7 @@ namespace cloud.charging.open.CSMS.Tests
                     return;
                 }
 
-                dials.Enqueue(context.Request);
+                upgrades.Enqueue(context.Request);
 
                 var expected = "Basic " + Convert.ToBase64String(Encoding.UTF8.GetBytes($"{comesUnder}:{ThePassword}"));
 
@@ -234,7 +235,7 @@ namespace cloud.charging.open.CSMS.Tests
 
         #region (private) ALogin(Node, LocalController, Gateway) / ItsCredentials() / AConnection(...) / Until(Condition)
 
-        private void ALogin(String Node, Boolean LocalController = false, Boolean Gateway = false)
+        private void ALogin(User_Id Node, Boolean LocalController = false, Boolean Gateway = false)
         {
 
             Assert.That(CSMS.WebSocketLogins.TrySetPasswordAuthentication(Node, "a-password-long-enough-for-ocpp", null, null, out var error), Is.True, error);
@@ -250,7 +251,7 @@ namespace cloud.charging.open.CSMS.Tests
         private String ItsCredentials(String Password = ThePassword)
         {
 
-            Assert.That(CSMS.Connections.TryAddPasswordAuthentication("csms-01", Password, I18NString.Create("What this CSMS signs in with"), out var id, out var error),
+            Assert.That(CSMS.Connections.TryAddPasswordAuthentication(User_Id.Parse("csms-01"), Password, I18NString.Create("What this CSMS signs in with"), out var id, out var error),
                         Is.True, error);
 
             return id!;
@@ -298,7 +299,8 @@ namespace cloud.charging.open.CSMS.Tests
 
             Assert.Multiple(() => {
                 Assert.That(json["connectionTypes"]!.Select(type => type.Value<String>()),
-                            Is.EqualTo(new[] { "CSMS", "CSMSBackup", "LocalController", "Gateway", "ChargingStation" }));
+                            Is.EqualTo(new[] { "CSMS", "CSMSBackup", "LocalController", "Gateway", "ChargingStation", "EMSP" }),
+                            "every kind of node of OCPP, and an EMSP, which a CSMS speaks OCPI to");
                 Assert.That(json["ocppVersions"]!.Select(version => version.Value<String>()),
                             Is.EqualTo(new[] { "OCPP2.1" }));
                 Assert.That(json["rules"]!.Value<Boolean>("inbound"),                Is.True);
@@ -309,7 +311,7 @@ namespace cloud.charging.open.CSMS.Tests
         }
 
         [Test]
-        public void ANodeThatIsDialledIsALoginOfThisCSMS()
+        public void ANodeThatIsConnectedIsALoginOfThisCSMS()
         {
 
             Assert.That(CSMS.Connections.TryAddConnection(I18NString.Create("A stranger"), URL.Parse($"ws://127.0.0.1:{port}/csms-01"), "ChargingStation", true, null, null,
@@ -325,7 +327,7 @@ namespace cloud.charging.open.CSMS.Tests
         public async Task AConnectionIsWrittenDownOverTheAPI()
         {
 
-            ALogin("cs007");
+            ALogin(User_Id.Parse("cs007"));
 
             using var http = await SignedIn();
 
@@ -341,7 +343,7 @@ namespace cloud.charging.open.CSMS.Tests
 
             Assert.That(CSMS.Connections.Connections.Single().RemoteNodeId, Is.EqualTo("cs007"));
 
-            // And none in OCPP 1.6: a CSMS has no node of it that dials.
+            // And none in OCPP 1.6: a CSMS has no node of it that connects.
             var inOCPP16 = await http.PostAsync("api/v1/configuration/connections",
                                                 JSONBody(new JProperty("description",     new JObject(new JProperty("en", "Station 7, in OCPP 1.6"))),
                                                          new JProperty("url",             $"ws://127.0.0.1:{port}/csms-01"),
@@ -355,31 +357,31 @@ namespace cloud.charging.open.CSMS.Tests
 
         #endregion
 
-        #region What a CSMS dials
+        #region What a CSMS connects to
 
         [Test]
-        public async Task ACSMSDialsAChargingStationAndSpeaksOCPPWithIt()
+        public async Task ACSMSConnectsToAChargingStationAndSpeaksOCPPWithIt()
         {
 
-            ALogin("cs007");
+            ALogin(User_Id.Parse("cs007"));
             AConnection("cs007");
 
             Assert.That(await Until(() => CSMS.IsConnected("cs007")), Is.True, "the station never counted as connected");
 
-            // What the station saw of the dial: the name this CSMS comes
+            // What the station saw of the connection: the name this CSMS comes
             // under, what it signed in with, OCPP 2.1 - and the plain frame.
-            Assert.That(dials.TryPeek(out var dial), Is.True);
+            Assert.That(upgrades.TryPeek(out var upgrade), Is.True);
 
             Assert.Multiple(() => {
-                Assert.That(dial!.Url!.AbsolutePath,                          Is.EqualTo("/csms-01"));
-                Assert.That(dial.Headers["Sec-WebSocket-Protocol"],           Does.Contain("ocpp2.1"));
-                Assert.That(dial.Headers["X-OCPP-NetworkingMode"] ?? "",      Does.Not.Contain("Overlay"));
+                Assert.That(upgrade!.Url!.AbsolutePath,                          Is.EqualTo("/csms-01"));
+                Assert.That(upgrade.Headers["Sec-WebSocket-Protocol"],           Does.Contain("ocpp2.1"));
+                Assert.That(upgrade.Headers["X-OCPP-NetworkingMode"] ?? "",      Does.Not.Contain("Overlay"));
                 Assert.That(CSMS.ConnectedStations,                           Does.Contain("cs007"));
-                Assert.That(CSMS.StationConnections.Single().Dialled,         Is.True);
+                Assert.That(CSMS.StationConnections.Single().Outbound,         Is.True);
             });
 
             // The station says that it started, as it says to a CSMS it
-            // dialled - and is answered as the station 'cs007'.
+            // connected to - and is answered as the station 'cs007'.
             await Say(new JArray(2, "boot-1", "BootNotification", new JObject(
                           new JProperty("reason",           "PowerUp"),
                           new JProperty("chargingStation",  new JObject(
@@ -404,7 +406,7 @@ namespace cloud.charging.open.CSMS.Tests
             Assert.That((await asking).Asked, Is.True);
 
             // All of it in the log, under the name of the station, as what a
-            // station that dialled in says is - and by name only: what the
+            // station that connected says is - and by name only: what the
             // messages carry is another switch.
             var said = CSMS.Log.Recent(500).Select(entry => entry.Message).ToArray();
 
@@ -417,36 +419,36 @@ namespace cloud.charging.open.CSMS.Tests
         }
 
         [Test]
-        public async Task ALocalControllerIsDialledInTheOverlayNetwork()
+        public async Task ALocalControllerIsConnectedInTheOverlayNetwork()
         {
 
-            ALogin("lc01", LocalController: true);
+            ALogin(User_Id.Parse("lc01"), LocalController: true);
             AConnection("lc01", Type: "LocalController");
 
             Assert.That(await Until(() => CSMS.IsConnected("lc01")), Is.True, "the local controller never counted as connected");
 
-            Assert.That(dials.TryPeek(out var dial), Is.True);
+            Assert.That(upgrades.TryPeek(out var upgrade), Is.True);
 
             Assert.Multiple(() => {
-                Assert.That(dial!.Headers["X-OCPP-NetworkingMode"],  Is.EqualTo("OverlayNetwork"));
+                Assert.That(upgrade!.Headers["X-OCPP-NetworkingMode"],  Is.EqualTo("OverlayNetwork"));
                 Assert.That(CSMS.InOverlayNetwork("lc01"),           Is.True);
             });
 
         }
 
         [Test]
-        public async Task AGatewayIsDialledInTheOverlayNetwork()
+        public async Task AGatewayIsConnectedInTheOverlayNetwork()
         {
 
-            ALogin("gw01", Gateway: true);
+            ALogin(User_Id.Parse("gw01"), Gateway: true);
             AConnection("gw01", Type: "Gateway");
 
             Assert.That(await Until(() => CSMS.IsConnected("gw01")), Is.True, "the gateway never counted as connected");
 
-            Assert.That(dials.TryPeek(out var dial), Is.True);
+            Assert.That(upgrades.TryPeek(out var upgrade), Is.True);
 
             Assert.Multiple(() => {
-                Assert.That(dial!.Headers["X-OCPP-NetworkingMode"],  Is.EqualTo("OverlayNetwork"));
+                Assert.That(upgrade!.Headers["X-OCPP-NetworkingMode"],  Is.EqualTo("OverlayNetwork"));
                 Assert.That(CSMS.InOverlayNetwork("gw01"),           Is.True);
                 Assert.That(CSMS.Log.Recent(500).Select(entry => entry.Message),
                             Has.Some.StartsWith("The gateway 'gw01' is reached at"));
@@ -455,19 +457,19 @@ namespace cloud.charging.open.CSMS.Tests
         }
 
         [Test]
-        public async Task ALocalControllerDialledUnderAnotherNameThanThisCSMSHasInOCPP_IsDialledAndWarnedOf()
+        public async Task ALocalControllerConnectedUnderAnotherNameThanThisCSMSHasInOCPP_IsConnectedAndWarnedOf()
         {
 
             comesUnder = "csms-02";
 
-            ALogin("lc01", LocalController: true);
+            ALogin(User_Id.Parse("lc01"), LocalController: true);
 
-            Assert.That(CSMS.Connections.TryAddPasswordAuthentication("csms-02", ThePassword, I18NString.Create("What this CSMS signs in with, as another"), out var login, out var error),
+            Assert.That(CSMS.Connections.TryAddPasswordAuthentication(User_Id.Parse("csms-02"), ThePassword, I18NString.Create("What this CSMS signs in with, as another"), out var login, out var error),
                         Is.True, error);
 
             // Under another name than its own: a controller of today finds
             // the way back for its answers, an older one does not - so it is
-            // dialled, and said.
+            // connected to, and said.
             Assert.That(CSMS.Connections.TryAddConnection(I18NString.Create("The controller"), URL.Parse($"ws://127.0.0.1:{port}/csms-02"), "LocalController", true, login, null,
                                                           out var id, out error,
                                                           RemoteNodeId: "lc01"),
@@ -492,10 +494,10 @@ namespace cloud.charging.open.CSMS.Tests
         }
 
         [Test]
-        public async Task ALocalControllerDialledUnderTheNameThisCSMSHasInOCPP_IsNotWarnedOf()
+        public async Task ALocalControllerConnectedUnderTheNameThisCSMSHasInOCPP_IsNotWarnedOf()
         {
 
-            ALogin("lc01", LocalController: true);
+            ALogin(User_Id.Parse("lc01"), LocalController: true);
             var id = AConnection("lc01", "LocalController");
 
             Assert.That(await Until(() => CSMS.IsConnected("lc01")), Is.True, "the local controller never counted as connected");
@@ -508,12 +510,12 @@ namespace cloud.charging.open.CSMS.Tests
         }
 
         [Test]
-        public async Task ALoginThatIsSwitchedOffIsNotDialled()
+        public async Task ALoginThatIsSwitchedOffIsNotConnected()
         {
 
-            ALogin("cs007");
+            ALogin(User_Id.Parse("cs007"));
 
-            Assert.That(CSMS.WebSocketLogins.TrySetEnabled("cs007", false, out var error), Is.True, error);
+            Assert.That(CSMS.WebSocketLogins.TrySetEnabled(User_Id.Parse("cs007"), false, out var error), Is.True, error);
 
             var id = AConnection("cs007");
 
@@ -522,7 +524,7 @@ namespace cloud.charging.open.CSMS.Tests
             await Task.Delay(500);
 
             Assert.Multiple(() => {
-                Assert.That(dials,                           Is.Empty);
+                Assert.That(upgrades,                           Is.Empty);
                 Assert.That(CSMS.IsConnected("cs007"),       Is.False);
                 Assert.That(CSMS.ConnectionStates[id].Said,  Does.Contain("is switched off"));
             });
@@ -530,24 +532,24 @@ namespace cloud.charging.open.CSMS.Tests
         }
 
         [Test]
-        public async Task ALoginSwitchedOffWhileItIsDialledIsLetGoOfAndDialledAgainOnceItIsOn()
+        public async Task ALoginSwitchedOffWhileItIsConnectedIsLetGoOfAndConnectedAgainOnceItIsOn()
         {
 
-            ALogin("cs007");
+            ALogin(User_Id.Parse("cs007"));
             AConnection("cs007");
 
             Assert.That(await Until(() => CSMS.IsConnected("cs007")), Is.True, "the station never counted as connected");
 
-            Assert.That(CSMS.WebSocketLogins.TrySetEnabled("cs007", false, out var error), Is.True, error);
+            Assert.That(CSMS.WebSocketLogins.TrySetEnabled(User_Id.Parse("cs007"), false, out var error), Is.True, error);
 
             Assert.That(await Until(() => !CSMS.IsConnected("cs007")), Is.True, "a station whose login is switched off stayed connected");
 
-            var dialledSoFar = dials.Count;
+            var connectedSoFar = upgrades.Count;
 
-            Assert.That(CSMS.WebSocketLogins.TrySetEnabled("cs007", true, out error), Is.True, error);
+            Assert.That(CSMS.WebSocketLogins.TrySetEnabled(User_Id.Parse("cs007"), true, out error), Is.True, error);
 
-            Assert.That(await Until(() => CSMS.IsConnected("cs007")), Is.True, "a station whose login is on again was not dialled again");
-            Assert.That(dials.Count, Is.GreaterThan(dialledSoFar));
+            Assert.That(await Until(() => CSMS.IsConnected("cs007")), Is.True, "a station whose login is on again was not connected to again");
+            Assert.That(upgrades.Count, Is.GreaterThan(connectedSoFar));
 
         }
 
@@ -557,7 +559,7 @@ namespace cloud.charging.open.CSMS.Tests
 
             // A charging station, by its login - and a local controller, by
             // the connection.
-            ALogin("cs007");
+            ALogin(User_Id.Parse("cs007"));
 
             var id = AConnection("cs007", Type: "LocalController");
 
@@ -566,7 +568,7 @@ namespace cloud.charging.open.CSMS.Tests
             await Task.Delay(500);
 
             Assert.Multiple(() => {
-                Assert.That(dials,                           Is.Empty);
+                Assert.That(upgrades,                           Is.Empty);
                 Assert.That(CSMS.ConnectionStates[id].Status, Is.EqualTo(ConnectionStatus.NotConnected));
                 Assert.That(CSMS.ConnectionStates[id].Said,  Does.StartWith("Not connected: "));
                 Assert.That(CSMS.ConnectionStates[id].Said,  Does.Contain("is not marked as one"));
@@ -575,12 +577,12 @@ namespace cloud.charging.open.CSMS.Tests
         }
 
         [Test]
-        public async Task AGatewayIsNoLocalControllerToTheConnectionThatDialsIt()
+        public async Task AGatewayIsNoLocalControllerToTheConnectionThatConnectsToIt()
         {
 
             // A local controller, by its login - and a gateway, by the
             // connection.
-            ALogin("lc07", LocalController: true);
+            ALogin(User_Id.Parse("lc07"), LocalController: true);
 
             var id = AConnection("lc07", Type: "Gateway");
 
@@ -589,7 +591,7 @@ namespace cloud.charging.open.CSMS.Tests
             await Task.Delay(500);
 
             Assert.Multiple(() => {
-                Assert.That(dials,                           Is.Empty);
+                Assert.That(upgrades,                           Is.Empty);
                 Assert.That(CSMS.ConnectionStates[id].Status, Is.EqualTo(ConnectionStatus.NotConnected));
                 Assert.That(CSMS.ConnectionStates[id].Said,  Does.Contain("is marked as a local controller"));
                 Assert.That(CSMS.ConnectionStates[id].Said,  Does.Contain("'gateways lc07 on'"));
@@ -601,11 +603,11 @@ namespace cloud.charging.open.CSMS.Tests
         public async Task AWrongPasswordIsRefusedAndSaid()
         {
 
-            ALogin("cs007");
+            ALogin(User_Id.Parse("cs007"));
 
             var id = AConnection("cs007", Credentials: ItsCredentials("not-the-password-of-this-station"));
 
-            Assert.That(await Until(() => !dials.IsEmpty), Is.True, "nothing was dialled");
+            Assert.That(await Until(() => !upgrades.IsEmpty), Is.True, "nothing was connected to");
 
             Assert.That(await Until(() => CSMS.ConnectionStates.TryGetValue(id, out var state) &&
                                           state.Status != ConnectionStatus.Connected &&
@@ -621,10 +623,10 @@ namespace cloud.charging.open.CSMS.Tests
         #region Who may send in whose name
 
         [Test]
-        public async Task ALocalControllerThatIsDialledSpeaksForTheStationsBehindIt()
+        public async Task ALocalControllerThatIsConnectedSpeaksForTheStationsBehindIt()
         {
 
-            ALogin("lc01", LocalController: true);
+            ALogin(User_Id.Parse("lc01"), LocalController: true);
             AConnection("lc01", Type: "LocalController");
 
             Assert.That(await Until(() => CSMS.IsConnected("lc01")), Is.True);
@@ -649,7 +651,7 @@ namespace cloud.charging.open.CSMS.Tests
                         Is.True, "the station behind the controller is not reached through it");
 
             // And what names another node as its last hop is dropped, over a
-            // line this CSMS dialled as over one that was dialled in.
+            // line this CSMS made as over one that came in.
             await Say(new JArray(2, "CSMS", new JArray("cs009", "cs010"), "boot-3", "BootNotification", new JObject(
                           new JProperty("reason",           "PowerUp"),
                           new JProperty("chargingStation",  new JObject(

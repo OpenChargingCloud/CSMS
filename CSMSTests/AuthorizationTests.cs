@@ -17,6 +17,7 @@
 
 #region Usings
 
+using org.GraphDefined.Vanaheimr.Illias;
 using System.Net.Http.Headers;
 using System.Net.WebSockets;
 using System.Text;
@@ -72,7 +73,7 @@ namespace cloud.charging.open.CSMS.Tests
                 configuration.Add(new JProperty("webSocketServer", new JObject(
                     new JProperty("enabled",           true),
                     new JProperty("address",           "127.0.0.1"),
-                    new JProperty("port",              TestPorts.Free()),
+                    new JProperty("port",              TestPorts.Free().ToUInt16()),
                     new JProperty("clientAuthentication",  new JArray("httpAuthWithoutTLS")),
                     new JProperty("subprotocols",      new JArray("ocpp2.1"))
                 )));
@@ -150,7 +151,7 @@ namespace cloud.charging.open.CSMS.Tests
         private async Task<JObject> AStationAsksAbout(String UID)
         {
 
-            Assert.That(CSMS.WebSocketLogins.TrySetPasswordAuthentication("cs001", ThePassword, null, null, out var error), Is.True, error);
+            Assert.That(CSMS.WebSocketLogins.TrySetPasswordAuthentication(User_Id.Parse("cs001"), ThePassword, null, null, out var error), Is.True, error);
 
             using var station = new ClientWebSocket();
 

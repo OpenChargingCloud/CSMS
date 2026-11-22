@@ -151,7 +151,7 @@ namespace cloud.charging.open.CSMS.CommandLine
 
             if (lines.Count == 0)
                 lines.Add("No charging station is known behind a local controller. A station is, once its BootNotification came through " +
-                          "its controller, with the controller dialling this CSMS in the overlay network.");
+                          "its controller, with the controller connecting to this CSMS in the overlay network.");
 
             lines.Add(cli.CSMS.ServerKeyPins() is { Count: > 0 } own
                           ? $"This CSMS presents the key pin {String.Join(", ", own.Select(pin => pin.ToHex()))} at its charging station port."

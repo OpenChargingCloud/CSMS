@@ -17,6 +17,7 @@
 
 #region Usings
 
+using org.GraphDefined.Vanaheimr.Illias;
 using System.Collections.Concurrent;
 using System.Net;
 using System.Net.WebSockets;
@@ -65,7 +66,7 @@ namespace cloud.charging.open.CSMS.Tests
                    new JProperty("webSocketServer", new JObject(
                        new JProperty("enabled",           true),
                        new JProperty("address",           "127.0.0.1"),
-                       new JProperty("port",              TestPorts.Free()),
+                       new JProperty("port",              TestPorts.Free().ToUInt16()),
                        new JProperty("clientAuthentication",  new JArray("httpAuthWithoutTLS")),
                        new JProperty("subprotocols",      new JArray("ocpp2.1", "ocpp2.0.1"))
                    ))
@@ -158,7 +159,7 @@ namespace cloud.charging.open.CSMS.Tests
         public async Task ARootIsInstalledLookedAtAndDeleted()
         {
 
-            using var station = await FakeStation.Connect(CSMS, "cs001", ThePassword);
+            using var station = await FakeStation.Connect(CSMS, User_Id.Parse("cs001"), ThePassword);
             using var browser = await SignedIn();
 
             var pem           = ARoot("V2G Root B");
@@ -213,7 +214,7 @@ namespace cloud.charging.open.CSMS.Tests
         public async Task ARootForEveryStationIsInstalledWhereItIsMissing()
         {
 
-            using var station = await FakeStation.Connect(CSMS, "cs001", ThePassword);
+            using var station = await FakeStation.Connect(CSMS, User_Id.Parse("cs001"), ThePassword);
 
             Assert.That(CSMS.StationRoots.TryAdd(ARoot("CSMS Root C"), "CSMSRootCertificate", true,  DateTimeOffset.UtcNow, out _, out var error), Is.True, error);
             Assert.That(CSMS.StationRoots.TryAdd(ARoot("MO Root D"),   "MORootCertificate",   false, DateTimeOffset.UtcNow, out _, out error),     Is.True, error);
@@ -303,7 +304,7 @@ namespace cloud.charging.open.CSMS.Tests
                 _      = Task.Run(Serve);
             }
 
-            public static async Task<FakeStation> Connect(CSMS CSMS, String Id, String Password)
+            public static async Task<FakeStation> Connect(CSMS CSMS, User_Id Id, String Password)
             {
 
                 Assert.That(CSMS.WebSocketLogins.TrySetPasswordAuthentication(Id, Password, null, null, out var error), Is.True, error);

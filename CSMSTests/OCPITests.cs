@@ -1380,11 +1380,74 @@ namespace cloud.charging.open.CSMS.Tests
 
         #endregion
 
+        #region TheLocationsOfThisOperatorAreSentToItsPartners(Version)
+
+        /// <summary>
+        /// An EMSP has to know a place before its drivers can find it: what
+        /// this operator published before it registered with a partner is
+        /// sent at the registration, and what it publishes after is sent as it
+        /// is published.
+        /// </summary>
+        /// <remarks>
+        /// Locations were published here, and no partner ever heard of them:
+        /// the PUT of the OCPI locations module was in the library, and
+        /// nothing called it. On OCPI 2.1.1, whose locations do not say whose
+        /// they are, the URL does.
+        ///
+        /// The versions this operator offers by default; 2.3.0 is pushed the
+        /// same way, and the test environment's CSMS_2_EMSP has it reach a
+        /// real EMSP.
+        /// </remarks>
+        [TestCase("2.1.1")]
+        [TestCase("2.2.1")]
+        public async Task TheLocationsOfThisOperatorAreSentToItsPartners(String Version)
+        {
+
+            using var admin = await SignedIn();
+
+            await using var emsp = await StubEMSP.Start(Version);
+
+            (String Id, JObject JSON)[] Sent()
+            {
+                lock (emsp.Locations)
+                    return [.. emsp.Locations];
+            }
+
+            // Published while there is nobody to tell.
+            await PublishLocation(admin, "LOC0001", Version);
+
+            var (id, _, _) = await AddPartner(admin, Version: Version, TheirToken: StubEMSP.TokenA, VersionsURL: emsp.VersionsURL);
+
+            var register   = await admin.PostAsync($"/api/v1/ocpi/partners/{Version}/{id}/register", JSONBody());
+            var text       = await register.Content.ReadAsStringAsync();
+
+            Assert.That(register.StatusCode, Is.EqualTo(HttpStatusCode.OK), $"The registration answered {(Int32) register.StatusCode}: {text}");
+
+            Assert.That(Sent().Select(location => location.Id), Is.EqualTo(new[] { "LOC0001" }),
+                        "The location published before the registration was not sent with it.");
+
+            // Published once the partner is there.
+            await PublishLocation(admin, "LOC0002", Version);
+
+            Assert.Multiple(() => {
+                Assert.That(Sent().Length,                         Is.EqualTo(2), "The location published after the registration was not sent.");
+                Assert.That(Sent()[^1].Id,                         Is.EqualTo("LOC0002"));
+                Assert.That(Sent()[^1].JSON.Value<String>("id"),   Is.EqualTo("LOC0002"));
+                Assert.That(CSMS.Log.Recent(500).Select(entry => entry.Message).Where(message => message.Contains("'LOC", StringComparison.Ordinal)),
+                            Has.Some.Contains("The location 'LOC0002' was sent to"));
+            });
+
+        }
+
+        #endregion
+
         #region (private) StubEMSP
 
         /// <summary>
         /// The three routes of an EMSP that the credentials handshake touches:
-        /// the versions, the details of one, and the credentials endpoint.
+        /// the versions, the details of one, and the credentials endpoint -
+        /// and the locations endpoint, where this operator pushes its
+        /// locations.
         /// </summary>
         /// <remarks>
         /// Both directions need it. With the CPO as the initiator all three
@@ -1415,6 +1478,9 @@ namespace cloud.charging.open.CSMS.Tests
             public JObject?  ReceivedCredentials  { get; private set; }
 
             public List<String> TokensSeen        { get; } = [];
+
+            /// <summary>The locations this operator sent it, as they came: the id of the URL, and the location.</summary>
+            public List<(String Id, JObject JSON)> Locations  { get; } = [];
 
 
             private StubEMSP(HTTPServer Server, ClosedPort Port, String VersionsURL)
@@ -1462,8 +1528,16 @@ namespace cloud.charging.open.CSMS.Tests
                                               new JProperty("url",         $"{origin}/{Version}/credentials")
                                           );
 
+                var locationsEndpoint   = new JObject(
+                                              new JProperty("identifier",  "locations"),
+                                              new JProperty("url",         $"{origin}/{Version}/locations/")
+                                          );
+
                 if (!is211)
+                {
                     credentialsEndpoint.Add("role", "RECEIVER");
+                    locationsEndpoint.  Add("role", "RECEIVER");
+                }
 
                 api.AddHandler(
                     HTTPPath.Parse($"/versions/{Version}"),
@@ -1471,7 +1545,7 @@ namespace cloud.charging.open.CSMS.Tests
                         stub.Remember(request);
                         return Task.FromResult(JSON(request, new JObject(
                             new JProperty("version",    Version),
-                            new JProperty("endpoints",  new JArray(credentialsEndpoint))
+                            new JProperty("endpoints",  new JArray(credentialsEndpoint, locationsEndpoint))
                         )));
                     },
                     HTTPMethod.GET
@@ -1485,6 +1559,20 @@ namespace cloud.charging.open.CSMS.Tests
                         return Task.FromResult(JSON(request, Credentials(Version, TokenC, stub.VersionsURL, "Stub EMSP")));
                     },
                     HTTPMethod.POST
+                );
+
+                // A location this operator pushes: kept, and answered as taken.
+                api.AddHandler(
+                    HTTPPath.Parse($"/{Version}/locations/{{CountryCode}}/{{PartyId}}/{{LocationId}}"),
+                    request => {
+                        stub.Remember(request);
+                        request.TryGetURLParameter("LocationId", out var locationId);
+                        var location = JObject.Parse(request.HTTPBodyAsUTF8String ?? "{}");
+                        lock (stub.Locations)
+                            stub.Locations.Add((locationId ?? "", location));
+                        return Task.FromResult(JSON(request, location));
+                    },
+                    HTTPMethod.PUT
                 );
 
                 await server.Start();

@@ -22,8 +22,8 @@ function aGroup(id: string, builtIn = false): LoginGroup {
              authMethods: [ 'basic', 'totp', 'certificate' ], clientAuthentication: [ 'httpAuthWithoutTLS', 'httpAuthOverTLS', 'tlsClientCertificate' ], members: 0 };
 }
 
-function aStation(id: string, group = 'default'): WebSocketLogin {
-    return { id, group, enabled: true, addedAt: '2026-10-01T00:00:00Z', hasPassword: true, hasTOTP: false };
+function aStation(login: string, group = 'default'): WebSocketLogin {
+    return { login, group, enabled: true, addedAt: '2026-10-01T00:00:00Z', hasPassword: true, hasTOTP: false };
 }
 
 let held: WebSocketLogins;
@@ -37,9 +37,9 @@ function csms({ method, path, body }: Asked): unknown {
         return held;
 
     if (path === '/configuration/ocpp-server/logins' && method === 'POST') {
-        const added = body as { id: string; group: string; description?: I18NString };
-        held = { ...held, logins: [ ...held.logins, { ...aStation(added.id, added.group), description: added.description } ] };
-        return { id: added.id, password: 'made up, shown once', logins: held };
+        const added = body as { login: string; group: string; description?: I18NString };
+        held = { ...held, logins: [ ...held.logins, { ...aStation(added.login, added.group), description: added.description } ] };
+        return { login: added.login, password: 'made up, shown once', logins: held };
     }
 
     const keys = /^\/configuration\/ocpp-server\/logins\/([^/]+)\/sshKeys(?:\/([^/]+))?$/.exec(path);
@@ -47,14 +47,14 @@ function csms({ method, path, body }: Asked): unknown {
     if (keys && method === 'POST') {
         const given = body as { line: string; label: string };
         const key   = { fingerprint: 'SHA256:ab+cd/ef', line: given.line, label: given.label, created: '2026-11-07T00:00:00Z' };
-        held = { ...held, logins: held.logins.some(station => station.id === keys[1])
-                                        ? held.logins.map(station => station.id === keys[1] ? { ...station, hasSSHKey: true, sshKeys: [ key ] } : station)
+        held = { ...held, logins: held.logins.some(station => station.login === keys[1])
+                                        ? held.logins.map(station => station.login === keys[1] ? { ...station, hasSSHKey: true, sshKeys: [ key ] } : station)
                                         : [ ...held.logins, { ...aStation(keys[1]!), hasPassword: false, hasSSHKey: true, sshKeys: [ key ] } ] };
         return { id: keys[1], fingerprint: key.fingerprint, logins: held };
     }
 
     if (keys && method === 'DELETE') {
-        held = { ...held, logins: held.logins.map(station => station.id === keys[1] ? { ...station, hasSSHKey: false, sshKeys: [] } : station) };
+        held = { ...held, logins: held.logins.map(station => station.login === keys[1] ? { ...station, hasSSHKey: false, sshKeys: [] } : station) };
         return held;
     }
 
@@ -62,7 +62,7 @@ function csms({ method, path, body }: Asked): unknown {
 
     if (binding && method === 'PUT') {
         const bound = (body as { tlsChannelBinding: boolean }).tlsChannelBinding;
-        held = { ...held, logins: held.logins.map(station => station.id === binding[1]
+        held = { ...held, logins: held.logins.map(station => station.login === binding[1]
                                                                      ? { ...station, totp: { ...station.totp!, tlsChannelBinding: bound } }
                                                                      : station) };
         return held;
@@ -75,7 +75,7 @@ function csms({ method, path, body }: Asked): unknown {
             return refused(409, 'the group is full');
         // As the CSMS does: a login is a local controller's or a gateway's.
         const marks = body as { localController?: boolean; gateway?: boolean };
-        held = { ...held, logins: held.logins.map(station => station.id !== one[1]
+        held = { ...held, logins: held.logins.map(station => station.login !== one[1]
                                                                      ? station
                                                                      : { ...station, ...marks,
                                                                          ...(marks.gateway         === true ? { localController: false } : {}),
@@ -216,7 +216,7 @@ describe('the logins and groups', () => {
         submit(root, '#station-form');
         await until(() => root.querySelector('.station-enabled[data-id="cs003"]') !== null, 'the station added was not drawn');
 
-        assert.deepEqual(asked.find(one => one.method === 'POST')?.body, { id: 'cs003', password: '', group: 'field-test', description: { en: 'Ladepunkt 3' } });
+        assert.deepEqual(asked.find(one => one.method === 'POST')?.body, { login: 'cs003', password: '', group: 'field-test', description: { en: 'Ladepunkt 3' } });
         assert.equal(root.querySelector('code.password')?.textContent, 'made up, shown once');
         assert.equal(field(root, '#station-form', 'id').value,                          '', 'the station added is still in the form');
         assert.equal(field(root, '#station-form', 'description').value,                 '');
@@ -230,7 +230,7 @@ describe('the logins and groups', () => {
 
         assert.equal(root.querySelector('.station-totp-binding[data-id="cs001"]'), null, 'a station without a token is offered its binding');
 
-        held = { ...held, logins: held.logins.map(station => station.id === 'cs002'
+        held = { ...held, logins: held.logins.map(station => station.login === 'cs002'
                                                                      ? { ...station, hasTOTP: true,
                                                                          totp: { validitySeconds: 30, length: 12, alphabet: 'ab', hashAlgorithm: 'SHA256' as const } }
                                                                      : station) };

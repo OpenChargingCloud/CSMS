@@ -19,6 +19,7 @@
 
 using System.Text.RegularExpressions;
 
+using org.GraphDefined.Vanaheimr.Illias;
 using org.GraphDefined.Vanaheimr.Hermod;
 
 using cloud.charging.open.protocols.WWCP.Node.Logging;
@@ -127,7 +128,7 @@ namespace cloud.charging.open.CSMS
                                             String  TechInfo)
         {
 
-            if (!WebSocketLogins.IsLocalController(LocalController))
+            if (!WebSocketLogins.IsLocalController(WebSocketLogins.LoginOf(LocalController)))
                 return false;
 
             var now = TimeProvider.GetUtcNow();
@@ -272,7 +273,7 @@ namespace cloud.charging.open.CSMS
         /// Without pins given, this CSMS's own - and only where the key pin the controller learned is among
         /// them, or it learned none: what it learned of somebody else is not answered with a pin set nobody
         /// looked at. With pins given, those, whatever the controller learned: a controller whose learned key
-        /// pin is not among them refuses the server it learned it of, and dials again.
+        /// pin is not among them refuses the server it learned it of, and connects again.
         /// </remarks>
         /// <param name="LocalController">A login marked as a local controller's.</param>
         /// <param name="Pins">The key pins the controller is to hold; this CSMS's own where null.</param>
@@ -286,7 +287,7 @@ namespace cloud.charging.open.CSMS
 
             var controller = LocalController.Trim();
 
-            if (!WebSocketLogins.IsLocalController(controller))
+            if (!WebSocketLogins.IsLocalController(WebSocketLogins.LoginOf(controller)))
                 return Refused($"'{controller}' is no login marked as a local controller's: 'localControllers {controller} on' marks it.");
 
             if (!PinSetSigner.Exists)
@@ -347,7 +348,7 @@ namespace cloud.charging.open.CSMS
 
                 if (endpoint.Learned is KeyPin onProbation && !pins.Contains(onProbation))
                     said.Add($"The pins do not have the key pin {onProbation} that '{controller}' learned on first use: it will refuse the server it " +
-                              "learned it of, and dial again.");
+                              "learned it of, and connect again.");
 
                 var outcome = await SendPinSet(controller, endpoint.Connection, pins, endpoint.Version + 1, "local controller");
 

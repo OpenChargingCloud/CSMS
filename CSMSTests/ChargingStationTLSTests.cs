@@ -17,6 +17,8 @@
 
 #region Usings
 
+using org.GraphDefined.Vanaheimr.Illias;
+using org.GraphDefined.Vanaheimr.Hermod;
 using System.Net.Security;
 using System.Net.WebSockets;
 using System.Security.Cryptography.X509Certificates;
@@ -63,7 +65,7 @@ namespace cloud.charging.open.CSMS.Tests
         private String           directory   = default!;
         private TestCA           ca          = default!;
         private CSMS  CSMS  = default!;
-        private UInt16           port;
+        private IPPort           port;
 
         #endregion
 
@@ -103,7 +105,7 @@ namespace cloud.charging.open.CSMS.Tests
 
             // Made again, on fresh ports, where another test run on this
             // machine took one before the CSMS could bind it - the stations'
-            // port among them, so the one the tests below dial is the port of
+            // port among them, so the one the tests below connect to is the port of
             // the CSMS that did start.
             CSMS = await TestPorts.StartedOnFreshPorts(() => {
 
@@ -118,7 +120,7 @@ namespace cloud.charging.open.CSMS.Tests
                                           new JProperty("webSocketServer", new JObject(
                                               new JProperty("enabled",           true),
                                               new JProperty("address",           "127.0.0.1"),
-                                              new JProperty("port",              port),
+                                              new JProperty("port",              port.ToUInt16()),
                                               new JProperty("clientAuthentication",  new JArray("httpAuthOverTLS")),
                                               new JProperty("reachableAs",       new JArray("127.0.0.1"))
                                           ))
@@ -126,7 +128,7 @@ namespace cloud.charging.open.CSMS.Tests
                                       )
                                   );
 
-                       csms.WebSocketLogins.TrySetPasswordAuthentication("cs001", ThePassword, null, null, out _);
+                       csms.WebSocketLogins.TrySetPasswordAuthentication(User_Id.Parse("cs001"), ThePassword, null, null, out _);
 
                        return csms;
 

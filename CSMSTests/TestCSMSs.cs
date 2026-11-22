@@ -128,7 +128,7 @@ namespace cloud.charging.open.CSMS.Tests
                 File.WriteAllText(configFile, Configuration.ToString());
 
             return new CSMS(
-                       HTTPPort:         IPPort.Parse(TestPorts.Free()),
+                       HTTPPort:         TestPorts.Free(),
                        AccountsPath:     Path.Combine(Directory, "accounts"),
                        ConfigFile:       new WWCPConfigFile(configFile),
                        LogToConsole:     LogToConsole,

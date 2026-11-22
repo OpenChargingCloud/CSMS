@@ -117,7 +117,7 @@ namespace cloud.charging.open.CSMS.Tests
         /// none - made the way the CSMS makes its first one, so that it
         /// may sign in.
         /// </summary>
-        private async Task<HttpClient> SignedInAs(String   Name,
+        private async Task<HttpClient> SignedInAs(User_Id  Name,
                                                   String?  Role)
         {
 
@@ -127,8 +127,8 @@ namespace cloud.charging.open.CSMS.Tests
                         organization is Organization, Is.True, "the CSMS's organization is not there");
 
             var account = await csms.ExtAPI.CreateUser(
-                                    User_Id.Parse(Name),
-                                    I18NString.Create(Languages.en, Name),
+                                    Name,
+                                    I18NString.Create(Languages.en, Name.ToString()),
                                     SimpleEMailAddress.Parse($"{Name}@localhost"),
                                     User2OrganizationEdgeLabel.IsMember,
                                     (Organization) organization!,
@@ -141,7 +141,7 @@ namespace cloud.charging.open.CSMS.Tests
                                 );
 
             Assert.That(account,                                                          Is.Not.Null, $"the account '{Name}' was not made");
-            Assert.That(csms.ExtAPI.TryGetUser(User_Id.Parse(Name), out var stored),  Is.True);
+            Assert.That(csms.ExtAPI.TryGetUser(Name, out var stored),  Is.True);
 
             if (Role is not null)
             {
@@ -165,7 +165,7 @@ namespace cloud.charging.open.CSMS.Tests
 
             var signedIn = await client.PostAsync($"{CSMS.ExtAPIPath.ToString().TrimEnd('/')}/login",
                                                   new FormUrlEncodedContent([
-                                                      new KeyValuePair<String, String>("login",     Name),
+                                                      new KeyValuePair<String, String>("login",     Name.ToString()),
                                                       new KeyValuePair<String, String>("password",  password)
                                                   ]));
 
@@ -221,7 +221,7 @@ namespace cloud.charging.open.CSMS.Tests
             var cs = ACSMS();
 
             Assert.Multiple(() => {
-                Assert.That(cs.Roles,             Is.EqualTo(new[] { "viewer", "support", "cpo", WWCPNode.AdminRole }));
+                Assert.That(cs.Roles,             Is.EqualTo(new[] { "viewer", "support", "cpo", WWCPNode.AdminRole.ToString() }));
                 Assert.That(cs.Access.Resources,  Is.SupersetOf(new[] { "configuration", "dns", "nts", "certificates", "ssh", "log", "state" }), "the node's resources are not all there");
                 Assert.That(cs.Access.Resources.TakeLast(4), Is.EqualTo(new[] { "stations", "locations", "roaming", "commissioning" }), "the CSMS's own do not come after the node's");
             });
@@ -297,7 +297,7 @@ namespace cloud.charging.open.CSMS.Tests
 
             await AStartedCSMS();
 
-            using var cpo    = await SignedInAs("cpo1", "cpo");
+            using var cpo    = await SignedInAs(User_Id.Parse("cpo1"), "cpo");
 
             var looked       = await cpo.GetAsync("api/v1/configuration/ocpp-server/trust");
             var requested    = await Post(cpo, "api/v1/configuration/ocpp-server/trust", "{}");
@@ -340,7 +340,7 @@ namespace cloud.charging.open.CSMS.Tests
                                    ))
                                ));
 
-            using var support  = await SignedInAs("supporter", "helpdesk");
+            using var support  = await SignedInAs(User_Id.Parse("supporter"), "helpdesk");
 
             var dns            = await support.GetAsync("api/v1/configuration/dns");
             var stations       = await support.GetAsync("api/v1/configuration/ocpp-server/logins");
@@ -348,7 +348,7 @@ namespace cloud.charging.open.CSMS.Tests
             var refusal        = await partners.Content.ReadAsStringAsync();
 
             Assert.Multiple(() => {
-                Assert.That(csms!.Roles,          Is.EqualTo(new[] { "viewer", "support", "cpo", "helpdesk", WWCPNode.AdminRole }));
+                Assert.That(csms!.Roles,          Is.EqualTo(new[] { "viewer", "support", "cpo", "helpdesk", WWCPNode.AdminRole.ToString() }));
                 Assert.That(dns.StatusCode,       Is.EqualTo(HttpStatusCode.OK));
                 Assert.That(stations.StatusCode,  Is.EqualTo(HttpStatusCode.OK));
                 Assert.That(partners.StatusCode,  Is.EqualTo(HttpStatusCode.Forbidden));
@@ -468,7 +468,7 @@ namespace cloud.charging.open.CSMS.Tests
                                    new JProperty("roles",  roles)
                                ));
 
-            using var nobody  = await SignedInAs("nobody1", null);
+            using var nobody  = await SignedInAs(User_Id.Parse("nobody1"), null);
 
             var response      = await nobody.SendAsync(new HttpRequestMessage(new HttpMethod(Method), Path) {
                                                            Content = Method == "GET"
@@ -508,7 +508,7 @@ namespace cloud.charging.open.CSMS.Tests
 
             await AStartedCSMS();
 
-            using var nobody   = await SignedInAs("nobody1", null);
+            using var nobody   = await SignedInAs(User_Id.Parse("nobody1"), null);
 
             var clock          = await nobody.GetAsync("api/v1/clock");
             var configuration  = await nobody.GetAsync("api/v1/configuration");

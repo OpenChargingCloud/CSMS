@@ -167,7 +167,7 @@ namespace cloud.charging.open.CSMS.Tests
         /// </remarks>
         protected async Task<HttpClient> SignedIn()
 
-            => await SignedInAs(CSMS.DefaultAdminUser, Password);
+            => await SignedInAs(CSMS.DefaultAdminUser.ToString(), Password);
 
         #endregion
 

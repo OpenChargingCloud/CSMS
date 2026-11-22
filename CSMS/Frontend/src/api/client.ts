@@ -76,14 +76,14 @@ export interface OCPPServerConfiguration {
     /** How a client may authenticate: what OCPP calls its security profiles 1, 2 and 3. */
     clientAuthentication:        ClientAuthentication[];
     subprotocols:                string[];
-    /** The names and addresses the stations dial; what a certificate must cover. */
+    /** The names and addresses the stations connect to; what a certificate must cover. */
     reachableAs:                 string[];
     minTLSVersion:               string;
     checkCertificateRevocation:  boolean;
     maxConnections:              number;
     pingEverySeconds:            number;
     logging:                     OCPPServerLogging;
-    /** OCPP over SSH, on this CSMS's SSH server, beside the WebSocket port. */
+    /** OCPP-over-SSH, on this CSMS's SSH server, beside the WebSocket port. */
     ssh:                         OCPPServerSSH;
     state: {
         running:            boolean;
@@ -113,7 +113,7 @@ export interface OCPPServerConfiguration {
     file:  string;
 }
 
-/** OCPP over SSH: the subsystem the stations ask for on this CSMS's SSH server. */
+/** OCPP-over-SSH: the subsystem the stations ask for on this CSMS's SSH server. */
 export interface OCPPServerSSH {
     enabled:           boolean;
     /** Null where the WebSocket port's are offered. */
@@ -191,7 +191,7 @@ export interface ClientTrust {
 /** A way a charging station can prove who it is. */
 export type AuthMethod = 'basic' | 'totp' | 'certificate' | 'sshkey';
 
-/** An SSH public key a charging station signs in with for OCPP over SSH. Nothing about it is secret. */
+/** An SSH public key a charging station signs in with for OCPP-over-SSH. Nothing about it is secret. */
 export interface StationSSHKey {
     /** "SHA256:...", as OpenSSH writes it: what the key is known by. */
     fingerprint:  string;
@@ -223,7 +223,7 @@ export { inEnglish, textOf, type I18NString } from '@ocpp/api/i18n';
 
 /** One charging station that may sign in. */
 export interface WebSocketLogin {
-    id:           string;
+    login:        string;
     group:        string;
     enabled:      boolean;
     addedAt:      string;
@@ -596,71 +596,71 @@ export const api = {
              * "make one up", and the made-up one comes back here and nowhere
              * else: it is kept only as a hash.
              */
-            save:     (id: string, password: string, group: string, description?: I18NString) =>
-                          request<{ id: string; password?: string; logins: WebSocketLogins }>(
-                              'POST', '/configuration/ocpp-server/logins', { id, password, group, description }),
+            save:     (login: string, password: string, group: string, description?: I18NString) =>
+                          request<{ login: string; password?: string; logins: WebSocketLogins }>(
+                              'POST', '/configuration/ocpp-server/logins', { login, password, group, description }),
 
-            enable:   (id: string, enabled: boolean) =>
-                          request<WebSocketLogins>('PUT', `/configuration/ocpp-server/logins/${encodeURIComponent(id)}`, { enabled }),
+            enable:   (login: string, enabled: boolean) =>
+                          request<WebSocketLogins>('PUT', `/configuration/ocpp-server/logins/${encodeURIComponent(login)}`, { enabled }),
 
-            move:     (id: string, group: string) =>
-                          request<WebSocketLogins>('PUT', `/configuration/ocpp-server/logins/${encodeURIComponent(id)}`, { group }),
+            move:     (login: string, group: string) =>
+                          request<WebSocketLogins>('PUT', `/configuration/ocpp-server/logins/${encodeURIComponent(login)}`, { group }),
 
             /**
              * Mark a login as a local controller's, which may send in the
              * name of the stations behind it - or no longer.
              */
-            markLocalController: (id: string, localController: boolean) =>
-                          request<WebSocketLogins>('PUT', `/configuration/ocpp-server/logins/${encodeURIComponent(id)}`, { localController }),
+            markLocalController: (login: string, localController: boolean) =>
+                          request<WebSocketLogins>('PUT', `/configuration/ocpp-server/logins/${encodeURIComponent(login)}`, { localController }),
 
             /**
              * Mark a login as a gateway's, which may send in the name of the
              * stations behind it - or no longer. Marked as the one, a login is
              * no longer the other.
              */
-            markGateway: (id: string, gateway: boolean) =>
-                          request<WebSocketLogins>('PUT', `/configuration/ocpp-server/logins/${encodeURIComponent(id)}`, { gateway }),
+            markGateway: (login: string, gateway: boolean) =>
+                          request<WebSocketLogins>('PUT', `/configuration/ocpp-server/logins/${encodeURIComponent(login)}`, { gateway }),
 
-            remove:   (id: string) =>
-                          request<WebSocketLogins>('DELETE', `/configuration/ocpp-server/logins/${encodeURIComponent(id)}`),
+            remove:   (login: string) =>
+                          request<WebSocketLogins>('DELETE', `/configuration/ocpp-server/logins/${encodeURIComponent(login)}`),
 
             /**
              * Give a station what it needs to be let in with a one-time token.
              * An empty shared secret means "make one up", and it comes back
              * here - the only place it is ever handed out.
              */
-            saveTOTP: (id: string, update: TOTPUpdate) =>
-                          request<{ id: string; sharedSecret?: string; logins: WebSocketLogins }>(
-                              'PUT', `/configuration/ocpp-server/logins/${encodeURIComponent(id)}/totp`, update),
+            saveTOTP: (login: string, update: TOTPUpdate) =>
+                          request<{ login: string; sharedSecret?: string; logins: WebSocketLogins }>(
+                              'PUT', `/configuration/ocpp-server/logins/${encodeURIComponent(login)}/totp`, update),
 
             /**
              * Whether a station's token has to be bound to the TLS session of
              * its connection. Its secret stays as it is.
              */
-            bindTOTP:       (id: string, bound: boolean) =>
+            bindTOTP:       (login: string, bound: boolean) =>
                           request<WebSocketLogins>(
-                              'PUT', `/configuration/ocpp-server/logins/${encodeURIComponent(id)}/totp/binding`,
+                              'PUT', `/configuration/ocpp-server/logins/${encodeURIComponent(login)}/totp/binding`,
                               { tlsChannelBinding: bound }),
 
-            removeTOTP:     (id: string) =>
-                          request<WebSocketLogins>('DELETE', `/configuration/ocpp-server/logins/${encodeURIComponent(id)}/totp`),
+            removeTOTP:     (login: string) =>
+                          request<WebSocketLogins>('DELETE', `/configuration/ocpp-server/logins/${encodeURIComponent(login)}/totp`),
 
-            removePassword: (id: string) =>
-                          request<WebSocketLogins>('DELETE', `/configuration/ocpp-server/logins/${encodeURIComponent(id)}/password`),
+            removePassword: (login: string) =>
+                          request<WebSocketLogins>('DELETE', `/configuration/ocpp-server/logins/${encodeURIComponent(login)}/password`),
 
             /**
-             * Give a station an SSH key for OCPP over SSH - one line of an
+             * Give a station an SSH key for OCPP-over-SSH - one line of an
              * authorized_keys file - adding the station where it is not listed
              * yet. A public key: nothing secret goes either way.
              */
-            addSSHKey: (id: string, line: string, label: string, group: string, description?: I18NString) =>
-                          request<{ id: string; fingerprint: string; logins: WebSocketLogins }>(
-                              'POST', `/configuration/ocpp-server/logins/${encodeURIComponent(id)}/sshKeys`, { line, label, group, description }),
+            addSSHKey: (login: string, line: string, label: string, group: string, description?: I18NString) =>
+                          request<{ login: string; fingerprint: string; logins: WebSocketLogins }>(
+                              'POST', `/configuration/ocpp-server/logins/${encodeURIComponent(login)}/sshKeys`, { line, label, group, description }),
 
             /** Take a key away; a session it opened ends. */
-            removeSSHKey: (id: string, fingerprint: string) =>
+            removeSSHKey: (login: string, fingerprint: string) =>
                           request<WebSocketLogins>('DELETE',
-                              `/configuration/ocpp-server/logins/${encodeURIComponent(id)}/sshKeys/${fingerprintInURL(fingerprint)}`)
+                              `/configuration/ocpp-server/logins/${encodeURIComponent(login)}/sshKeys/${fingerprintInURL(fingerprint)}`)
 
         },
 

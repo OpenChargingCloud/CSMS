@@ -46,7 +46,7 @@ namespace cloud.charging.open.CSMS
     /// <remarks>
     /// <para>
     /// <b>Two protocols, one box.</b> Below this CSMS is OCPP and the charging
-    /// stations that dial in; beside it is OCPI and the e-mobility service
+    /// stations that connect to it; beside it is OCPI and the e-mobility service
     /// providers whose customers charge at those stations. They are separate
     /// all the way down - separate ports, separate identities, separate stores
     /// - and this file is only the second of the two. What ties them together

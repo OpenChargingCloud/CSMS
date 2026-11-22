@@ -106,7 +106,7 @@ namespace cloud.charging.open.CSMS.CommandLine
             // name servers, which only the station knows.
             return Arguments.Length switch {
                        2                             => Offered(cli.CSMS.WebSocketLogins.Logins.
-                                                                    Select (login   => login.Id).
+                                                                    Select (login   => login.Login.ToString()).
                                                                     Where  (cli.CSMS.IsConnected).
                                                                     OrderBy(station => station, StringComparer.Ordinal),
                                                                 typed,

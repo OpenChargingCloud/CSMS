@@ -183,7 +183,7 @@ namespace cloud.charging.open.CSMS
         public Boolean IsConnected(String Station)
 
             => (ocppWebSocketServer?.WebSocketConnections.Any(connection => StationOn(connection) == Station) ?? false) ||
-               DialledAs(Station) is not null ||
+               ConnectedAs(Station) is not null ||
                (ocppOverSSHServed &&
                 NetworkingNode_Id.TryParse(Station, out var id) &&
                 (ocppSshServer?.ConnectedNetworkingNodeIds.Contains(id) ?? false));

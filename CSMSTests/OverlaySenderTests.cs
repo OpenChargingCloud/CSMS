@@ -40,6 +40,7 @@ using cloud.charging.open.protocols.OCPP.Node.Serving;
 using cloud.charging.open.protocols.WWCP.Node.Logins;
 
 using Node = cloud.charging.open.CSMS.Tests.KeyPinsOverOCPPTests.Controller;
+using IPPort = org.GraphDefined.Vanaheimr.Hermod.IPPort;
 
 #endregion
 
@@ -56,7 +57,7 @@ namespace cloud.charging.open.CSMS.Tests
     /// What the CSMS does with a request in another station's name is what it does for that station: it
     /// enrols the SSH key a SignSSHKey brings as that station's - adding a login for a name it does not know -,
     /// and routes that station through whatever node a BootNotification names as its last hop. Each test
-    /// sends as a node that dials the CSMS with a password of its own and says so, and looks at what came of
+    /// sends as a node that connects to the CSMS with a password of its own and says so, and looks at what came of
     /// it - not at an answer, which goes to the station named, by the CSMS's route to it.
     /// </remarks>
     public class OverlaySenderTests : ACSMSTests
@@ -81,7 +82,7 @@ namespace cloud.charging.open.CSMS.Tests
                    new JProperty("webSocketServer", new JObject(
                        new JProperty("enabled",           true),
                        new JProperty("address",           "127.0.0.1"),
-                       new JProperty("port",              TestPorts.Free()),
+                       new JProperty("port",              TestPorts.Free().ToUInt16()),
                        new JProperty("clientAuthentication",  new JArray("httpAuthWithoutTLS")),
                        new JProperty("subprotocols",      new JArray("ocpp2.1"))
                    ))
@@ -115,19 +116,19 @@ namespace cloud.charging.open.CSMS.Tests
         #region (private) Helpers
 
         /// <summary>
-        /// A node that dials the CSMS under its own login, with its password, in the overlay network or not.
+        /// A node that connects to the CSMS under its own login, with its password, in the overlay network or not.
         /// </summary>
-        private async Task<Node> Dialling(String   Id,
+        private async Task<Node> Connecting(User_Id  Id,
                                           Boolean  Overlay   = true)
         {
 
             Assert.That(CSMS.WebSocketLogins.TrySetPasswordAuthentication(Id, ThePassword, null, null, out var error), Is.True, error);
 
-            var node = await Node.Connect(CSMS.OCPPServerSettings.TCPPort!.Value.ToUInt16(), ThePassword, Id, Overlay);
+            var node = await Node.Connect(CSMS.OCPPServerSettings.TCPPort!.Value, ThePassword, Id.ToString(), Overlay);
 
             nodes.Add(node);
 
-            await Until(() => CSMS.IsConnected(Id), $"'{Id}' counting as connected");
+            await Until(() => CSMS.IsConnected(Id.ToString()), $"'{Id}' counting as connected");
 
             return node;
 
@@ -156,12 +157,12 @@ namespace cloud.charging.open.CSMS.Tests
         /// <summary>
         /// How many SSH keys the CSMS lets the given station sign in with; none where it has no such login.
         /// </summary>
-        private Int32 KeysOf(String Station)
+        private Int32 KeysOf(User_Id Login)
 
-            => CSMS.WebSocketLogins.Logins.FirstOrDefault(login => login.Id == Station)?.Keys.Count ?? 0;
+            => CSMS.WebSocketLogins.Logins.FirstOrDefault(login => login.Login == Login)?.Keys.Count ?? 0;
 
-        private Boolean HasALogin(String Station)
-            => CSMS.WebSocketLogins.Logins.Any(login => login.Id == Station);
+        private Boolean HasALogin(User_Id Login)
+            => CSMS.WebSocketLogins.Logins.Any(login => login.Login == Login);
 
         /// <summary>
         /// The node the CSMS routes the given station through, where it has a route.
@@ -203,19 +204,19 @@ namespace cloud.charging.open.CSMS.Tests
         public async Task AStation_CannotHaveAnSSHKeyEnrolled_InAnotherStationsName()
         {
 
-            Assert.That(CSMS.WebSocketLogins.TrySetPasswordAuthentication("cs001", ThePassword, null, null, out var error), Is.True, error);
+            Assert.That(CSMS.WebSocketLogins.TrySetPasswordAuthentication(User_Id.Parse("cs001"), ThePassword, null, null, out var error), Is.True, error);
 
-            var impostor  = await Dialling("cs009");
+            var impostor  = await Connecting(User_Id.Parse("cs009"));
             var key       = AnSSHKey();
 
             await impostor.TellAs(new JArray("cs001"), "SignSSHKey", SignSSHKey(key));
 
-            await Until(() => KeysOf("cs001") > 0 || Said("in the name of 'cs001'"), "the key enrolled, or the CSMS saying it is not");
+            await Until(() => KeysOf(User_Id.Parse("cs001")) > 0 || Said("in the name of 'cs001'"), "the key enrolled, or the CSMS saying it is not");
 
             // Whatever was under way, given its time.
             await Task.Delay(300);
 
-            Assert.That(KeysOf("cs001"), Is.Zero, $"the impostor's key lets it in as 'cs001'.{Environment.NewLine}{Log}");
+            Assert.That(KeysOf(User_Id.Parse("cs001")), Is.Zero, $"the impostor's key lets it in as 'cs001'.{Environment.NewLine}{Log}");
 
         }
 
@@ -230,15 +231,15 @@ namespace cloud.charging.open.CSMS.Tests
         public async Task AStation_CannotHaveALoginMade_InANameNobodyHas()
         {
 
-            var impostor = await Dialling("cs009");
+            var impostor = await Connecting(User_Id.Parse("cs009"));
 
             await impostor.TellAs(new JArray("cs777"), "SignSSHKey", SignSSHKey(AnSSHKey()));
 
-            await Until(() => HasALogin("cs777") || Said("in the name of 'cs777'"), "a login made, or the CSMS saying it is not");
+            await Until(() => HasALogin(User_Id.Parse("cs777")) || Said("in the name of 'cs777'"), "a login made, or the CSMS saying it is not");
 
             await Task.Delay(300);
 
-            Assert.That(HasALogin("cs777"), Is.False, $"a login was made for the impostor's key.{Environment.NewLine}{Log}");
+            Assert.That(HasALogin(User_Id.Parse("cs777")), Is.False, $"a login was made for the impostor's key.{Environment.NewLine}{Log}");
 
         }
 
@@ -255,7 +256,7 @@ namespace cloud.charging.open.CSMS.Tests
         public async Task AStation_CannotNameItselfTheWayToAnotherStation()
         {
 
-            var impostor = await Dialling("cs009");
+            var impostor = await Connecting(User_Id.Parse("cs009"));
 
             await impostor.TellAs(new JArray("cs001", "cs009"), "BootNotification", ABootNotification());
 
@@ -282,7 +283,7 @@ namespace cloud.charging.open.CSMS.Tests
         public async Task ANode_CannotNameAnotherAsTheLastHop()
         {
 
-            var impostor = await Dialling("cs009");
+            var impostor = await Connecting(User_Id.Parse("cs009"));
 
             await impostor.TellAs(new JArray("cs001", "lc001"), "BootNotification", ABootNotification());
 
@@ -309,7 +310,7 @@ namespace cloud.charging.open.CSMS.Tests
         public async Task AStation_StillSpeaksForItself_InTheOverlayNetwork()
         {
 
-            var station  = await Dialling("cs009");
+            var station  = await Connecting(User_Id.Parse("cs009"));
 
             var boot     = await station.AskAs(new JArray("cs009"), "BootNotification", ABootNotification(), Patience);
 
@@ -325,10 +326,10 @@ namespace cloud.charging.open.CSMS.Tests
         /// <summary>
         /// A local controller in the overlay network, its login marked as one.
         /// </summary>
-        private async Task<Node> AController(String Id)
+        private async Task<Node> AController(User_Id Id)
         {
 
-            var controller = await Dialling(Id);
+            var controller = await Connecting(Id);
 
             Assert.That(CSMS.WebSocketLogins.TrySetLocalController(Id, true, out var error), Is.True, error);
 
@@ -339,7 +340,7 @@ namespace cloud.charging.open.CSMS.Tests
         /// <summary>
         /// An account of the given name in the group of the given role, and its password.
         /// </summary>
-        private async Task<(IUser Account, String Password)> AnAccount(String  Name,
+        private async Task<(IUser Account, String Password)> AnAccount(User_Id Name,
                                                                        String  Role)
         {
 
@@ -349,8 +350,8 @@ namespace cloud.charging.open.CSMS.Tests
                         organization is Organization, Is.True, "the CSMS's organization is not there");
 
             await CSMS.ExtAPI.CreateUser(
-                      User_Id.Parse(Name),
-                      I18NString.Create(Languages.en, Name),
+                      Name,
+                      I18NString.Create(Languages.en, Name.ToString()),
                       SimpleEMailAddress.Parse($"{Name}@localhost"),
                       User2OrganizationEdgeLabel.IsMember,
                       (Organization) organization!,
@@ -362,7 +363,7 @@ namespace cloud.charging.open.CSMS.Tests
                       IsAuthenticated:           true
                   );
 
-            Assert.That(CSMS.ExtAPI.TryGetUser     (User_Id.     Parse(Name), out var account), Is.True);
+            Assert.That(CSMS.ExtAPI.TryGetUser     (User_Id.     Parse(Name.ToString()), out var account), Is.True);
             Assert.That(CSMS.ExtAPI.TryGetUserGroup(UserGroup_Id.Parse(Role), out var group),   Is.True);
 
             var joined = await CSMS.ExtAPI.AddUserToUserGroup((User) account!, User2UserGroupEdgeLabel.IsMember, (UserGroup) group!);
@@ -405,7 +406,7 @@ namespace cloud.charging.open.CSMS.Tests
         public async Task ALocalController_SpeaksForTheStationsBehindIt()
         {
 
-            var controller  = await AController("lc001");
+            var controller  = await AController(User_Id.Parse("lc001"));
 
             var boot        = await controller.AskAs(new JArray("cs001", "lc001"), "BootNotification", ABootNotification(), Patience);
 
@@ -429,7 +430,7 @@ namespace cloud.charging.open.CSMS.Tests
         public async Task ALocalController_TooIsTheLastHopOfWhatItSends()
         {
 
-            var controller = await AController("lc001");
+            var controller = await AController(User_Id.Parse("lc001"));
 
             await controller.TellAs(new JArray("cs001", "lc002"), "BootNotification", ABootNotification());
 
@@ -456,7 +457,7 @@ namespace cloud.charging.open.CSMS.Tests
         public async Task AnUnmarkedController_IsDropped_AndTheLogSaysHowToMarkIt()
         {
 
-            var controller = await Dialling("lc001");
+            var controller = await Connecting(User_Id.Parse("lc001"));
 
             await controller.TellAs(new JArray("cs001", "lc001"), "BootNotification", ABootNotification());
 
@@ -482,9 +483,9 @@ namespace cloud.charging.open.CSMS.Tests
         public async Task AGateway_SpeaksForTheStationsBehindIt()
         {
 
-            var gateway  = await Dialling("gw001");
+            var gateway  = await Connecting(User_Id.Parse("gw001"));
 
-            Assert.That(CSMS.WebSocketLogins.TrySetGateway("gw001", true, out var error), Is.True, error);
+            Assert.That(CSMS.WebSocketLogins.TrySetGateway(User_Id.Parse("gw001"), true, out var error), Is.True, error);
 
             var boot     = await gateway.AskAs(new JArray("cs001", "gw001"), "BootNotification", ABootNotification(), Patience);
 
@@ -509,29 +510,29 @@ namespace cloud.charging.open.CSMS.Tests
         public async Task TheGatewaysMark_IsSetAtTheConsole_AndByTheAPI_AndTakesTheControllersAway()
         {
 
-            Assert.That(CSMS.WebSocketLogins.TrySetPasswordAuthentication("gw001", ThePassword, null, null, out var error), Is.True, error);
+            Assert.That(CSMS.WebSocketLogins.TrySetPasswordAuthentication(User_Id.Parse("gw001"), ThePassword, null, null, out var error), Is.True, error);
 
             using var console   = new CSMSCLI(CSMS);
 
             var asAController   = await Run(console, "localControllers gw001 on");
             var marked          = await Run(console, "gateways gw001 on");
-            var stillController = CSMS.WebSocketLogins.IsLocalController("gw001");
+            var stillController = CSMS.WebSocketLogins.IsLocalController(User_Id.Parse("gw001"));
             var listed          = await Run(console, "gateways");
             var controllers     = await Run(console, "localControllers");
-            var written         = WebSocketLogin.TryParse(CSMS.WebSocketLogins.Logins.Single(login => login.Id == "gw001").ToJSON(WithSecrets: true), out var reread, out var parseError);
+            var written         = WebSocketLogin.TryParse(CSMS.WebSocketLogins.Logins.Single(login => login.Login == User_Id.Parse("gw001")).ToJSON(WithSecrets: true), out var reread, out var parseError);
             var unmarking       = await Run(console, "gateways gw001 off");
-            var afterConsole    = CSMS.WebSocketLogins.IsGateway("gw001");
+            var afterConsole    = CSMS.WebSocketLogins.IsGateway(User_Id.Parse("gw001"));
 
             var admin           = await SignedIn();
 
             var notABoolean     = await admin.PutAsync("api/v1/configuration/ocpp-server/logins/gw001", JSONBody(new JProperty("gateway", "yes")));
             var both            = await admin.PutAsync("api/v1/configuration/ocpp-server/logins/gw001", JSONBody(new JProperty("gateway", true), new JProperty("localController", true)));
-            var afterBoth       = CSMS.WebSocketLogins.SpeaksForOthers("gw001");
+            var afterBoth       = CSMS.WebSocketLogins.SpeaksForOthers(User_Id.Parse("gw001"));
             var adminPut        = await admin.PutAsync("api/v1/configuration/ocpp-server/logins/gw001", JSONBody(new JProperty("gateway", true)));
             var listing         = await GetJSON(admin, "api/v1/configuration/ocpp-server/logins");
             var controllerAgain = await admin.PutAsync("api/v1/configuration/ocpp-server/logins/gw001", JSONBody(new JProperty("localController", true)));
 
-            var gw001           = (listing["logins"] as JArray)?.OfType<JObject>().Single(station => station.Value<String>("id") == "gw001");
+            var gw001           = (listing["logins"] as JArray)?.OfType<JObject>().Single(station => station.Value<String>("login") == "gw001");
 
             Assert.Multiple(() => {
 
@@ -554,8 +555,8 @@ namespace cloud.charging.open.CSMS.Tests
                 Assert.That(gw001?.Value<Boolean>("gateway"),         Is.True,  listing.ToString());
                 Assert.That(gw001?.Value<Boolean>("localController"), Is.False, listing.ToString());
                 Assert.That(controllerAgain.StatusCode,      Is.EqualTo(HttpStatusCode.OK));
-                Assert.That(CSMS.WebSocketLogins.IsGateway        ("gw001"), Is.False);
-                Assert.That(CSMS.WebSocketLogins.IsLocalController("gw001"), Is.True);
+                Assert.That(CSMS.WebSocketLogins.IsGateway        (User_Id.Parse("gw001")), Is.False);
+                Assert.That(CSMS.WebSocketLogins.IsLocalController(User_Id.Parse("gw001")), Is.True);
 
             });
 
@@ -573,21 +574,21 @@ namespace cloud.charging.open.CSMS.Tests
         public async Task TheMark_IsSetAtTheConsole_AndByTheAPI_AtTheStationsEditing()
         {
 
-            Assert.That(CSMS.WebSocketLogins.TrySetPasswordAuthentication("lc001", ThePassword, null, null, out var error), Is.True, error);
+            Assert.That(CSMS.WebSocketLogins.TrySetPasswordAuthentication(User_Id.Parse("lc001"), ThePassword, null, null, out var error), Is.True, error);
 
-            var (vera, veraPassword) = await AnAccount("vera", "viewer");
+            var (vera, veraPassword) = await AnAccount(User_Id.Parse("vera"), "viewer");
 
             using var console   = new CSMSCLI(CSMS);
             using var viewer    = OverSSHAs(vera);
 
             var viewerMarks     = await Run(viewer,  "localControllers lc001 on");
-            var unmarked        = CSMS.WebSocketLogins.IsLocalController("lc001");
+            var unmarked        = CSMS.WebSocketLogins.IsLocalController(User_Id.Parse("lc001"));
             var marked          = await Run(console, "localControllers lc001 on");
             var listed          = await Run(console, "localControllers");
             var nobody          = await Run(console, "localControllers cs404 on");
-            var written         = WebSocketLogin.TryParse(CSMS.WebSocketLogins.Logins.Single(login => login.Id == "lc001").ToJSON(WithSecrets: true), out var reread, out var parseError);
+            var written         = WebSocketLogin.TryParse(CSMS.WebSocketLogins.Logins.Single(login => login.Login == User_Id.Parse("lc001")).ToJSON(WithSecrets: true), out var reread, out var parseError);
             var unmarking       = await Run(console, "localControllers lc001 off");
-            var afterConsole    = CSMS.WebSocketLogins.IsLocalController("lc001");
+            var afterConsole    = CSMS.WebSocketLogins.IsLocalController(User_Id.Parse("lc001"));
 
             var admin           = await SignedIn();
             var viewerHTTP      = await SignedInAs("vera", veraPassword);
@@ -612,9 +613,9 @@ namespace cloud.charging.open.CSMS.Tests
                 Assert.That(viewerPut.StatusCode,           Is.EqualTo(HttpStatusCode.Forbidden));
                 Assert.That(notABoolean.StatusCode,         Is.EqualTo(HttpStatusCode.BadRequest));
                 Assert.That(adminPut.StatusCode,            Is.EqualTo(HttpStatusCode.OK));
-                Assert.That(CSMS.WebSocketLogins.IsLocalController("lc001"), Is.True);
+                Assert.That(CSMS.WebSocketLogins.IsLocalController(User_Id.Parse("lc001")), Is.True);
                 Assert.That((listing["logins"] as JArray)?.OfType<JObject>().
-                                Single(station => station.Value<String>("id") == "lc001").
+                                Single(station => station.Value<String>("login") == "lc001").
                                 Value<Boolean>("localController"),
                                                             Is.True, listing.ToString());
 

@@ -110,7 +110,7 @@ namespace cloud.charging.open.CSMS
     /// An endpoint of a charging station over TLS, as its report of TLSClientController says it.
     /// </summary>
     /// <param name="Connection">The instance: the station's connection id.</param>
-    /// <param name="URL">Where it dials.</param>
+    /// <param name="URL">Where it connects to.</param>
     /// <param name="ServerKeyPins">The key pins it holds.</param>
     /// <param name="Version">The version of the pin set they came from.</param>
     /// <param name="State">Configured, Learned or Confirmed.</param>
@@ -134,7 +134,7 @@ namespace cloud.charging.open.CSMS
     /// <remarks>
     /// <para>
     /// <b>Which stations are behind which controller</b> is learned from their BootNotifications, whose network
-    /// path names the controller as its last hop where the controller dials this CSMS in the overlay network -
+    /// path names the controller as its last hop where the controller connects to this CSMS in the overlay network -
     /// and kept in <see cref="KeyPinStore"/>, beside the configuration file, from which the routes to them are
     /// put back at the next start. The first controller a station comes through keeps it: a frame that names
     /// another node as its way moves nothing, as any node in the overlay network can name itself the way to
@@ -174,9 +174,9 @@ namespace cloud.charging.open.CSMS
         /// otherwise.
         /// </summary>
         /// <remarks>
-        /// Short: a station connected before the switch stays connected, and one that dials after it is shown
+        /// Short: a station connected before the switch stays connected, and one that connects after it is shown
         /// the next key, which it has. The old pin is left for what is under way at the moment of the switch -
-        /// a station dialling just then.
+        /// a station connecting just then.
         /// </remarks>
         public static readonly TimeSpan  DefaultRolloverGrace  = TimeSpan.FromSeconds(30);
 
@@ -339,7 +339,7 @@ namespace cloud.charging.open.CSMS
         /// behind another one already, where it is left.
         /// </summary>
         /// <remarks>
-        /// Not moved by what a frame says: any node that dials this CSMS in the overlay network - a charging
+        /// Not moved by what a frame says: any node that connects to this CSMS in the overlay network - a charging
         /// station as well as a controller - can name itself the last hop of any station, and a station moved
         /// by that would have its requests, and the pin sets signed of that node's key pins, go wherever that
         /// node wants. A station that did move is forgotten by hand (<see cref="ForgetWhereAStationIs"/>), and
@@ -581,7 +581,7 @@ namespace cloud.charging.open.CSMS
         #region InOverlayNetwork(Node)
 
         /// <summary>
-        /// Whether the given node dialled this CSMS in the overlay network - X-OCPP-NetworkingMode said so - which
+        /// Whether the given node connected to this CSMS in the overlay network - X-OCPP-NetworkingMode said so - which
         /// is what lets this CSMS address the stations behind it.
         /// </summary>
         public Boolean InOverlayNetwork(String Node)
@@ -589,9 +589,9 @@ namespace cloud.charging.open.CSMS
             => (ocppWebSocketServer?.WebSocketConnections.Any(connection => StationOn(connection) == Node &&
                                                                             connection.TryGetCustomDataAs<NetworkingMode>(WebSocketKeys.NetworkingMode, out var mode) &&
                                                                             mode == NetworkingMode.OverlayNetwork) ?? false) ||
-               // One this CSMS dialled itself, as a local controller or a
-               // gateway: both are dialled in the overlay network.
-               DialledAs(Node) is { ConnectionType: protocols.WWCP.Node.Connections.ConnectionType.LocalController or
+               // One this CSMS connected to itself, as a local controller or a
+               // gateway: both are connected to in the overlay network.
+               ConnectedAs(Node) is { ConnectionType: protocols.WWCP.Node.Connections.ConnectionType.LocalController or
                                                     protocols.WWCP.Node.Connections.ConnectionType.Gateway };
 
         #endregion
@@ -696,7 +696,7 @@ namespace cloud.charging.open.CSMS
 
             if (controller is null)
                 return Refused($"'{target}' is neither a local controller nor a charging station known behind one. A station is known behind its local " +
-                                "controller once its BootNotification came through it, with the controller dialling this CSMS in the overlay network.");
+                                "controller once its BootNotification came through it, with the controller connecting to this CSMS in the overlay network.");
 
             if (WhyNotNow(controller) is String why)
                 return Refused(why);
@@ -1114,8 +1114,8 @@ namespace cloud.charging.open.CSMS
                 return $"The local controller '{LocalController}' is not connected.";
 
             if (!InOverlayNetwork(LocalController))
-                return $"The local controller '{LocalController}' dials this CSMS in standard mode, in which the stations behind it cannot be " +
-                        "addressed. Set \"networkingMode\": \"overlay\" in the csms section of its configuration and let it dial again.";
+                return $"The local controller '{LocalController}' connects to this CSMS in standard mode, in which the stations behind it cannot be " +
+                        "addressed. Set \"networkingMode\": \"overlay\" in the csms section of its configuration and let it connect again.";
 
             return null;
 
