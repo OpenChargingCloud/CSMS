@@ -299,8 +299,8 @@ namespace cloud.charging.open.CSMS.Tests
 
             Assert.Multiple(() => {
                 Assert.That(json["connectionTypes"]!.Select(type => type.Value<String>()),
-                            Is.EqualTo(new[] { "CSMS", "CSMSBackup", "LocalController", "Gateway", "ChargingStation", "EnergyMeter", "EMSP" }),
-                            "every kind of node of OCPP, an energy meter, which is read over Modbus, and an EMSP, which a CSMS speaks OCPI to");
+                            Is.EqualTo(new[] { "CSMS", "CSMSBackup", "LocalController", "Gateway", "ChargingStation", "EnergyMeter", "GridOperator", "PKI", "EMSP" }),
+                            "every kind of node of OCPP, an energy meter, which is read over Modbus, a grid operator, which is spoken to in OpenADR, a PKI, which is asked in the messages of a PKI, and an EMSP, which a CSMS speaks OCPI to");
                 Assert.That(json["ocppVersions"]!.Select(version => version.Value<String>()),
                             Is.EqualTo(new[] { "OCPP2.1" }));
                 Assert.That(json["rules"]!.Value<Boolean>("inbound"),                Is.True);

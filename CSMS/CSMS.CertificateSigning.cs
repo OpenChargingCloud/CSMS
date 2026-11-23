@@ -27,6 +27,7 @@ using System.Text;
 
 using Newtonsoft.Json.Linq;
 
+using org.GraphDefined.Vanaheimr.Illias;
 using org.GraphDefined.Vanaheimr.Hermod;
 using org.GraphDefined.Vanaheimr.Hermod.DNS;
 using org.GraphDefined.Vanaheimr.Hermod.Messaging;
@@ -37,9 +38,16 @@ using cloud.charging.open.protocols.OCPPv2_1;
 using cloud.charging.open.protocols.OCPPv2_1.CS;
 using cloud.charging.open.protocols.OCPPv2_1.CSMS;
 
+using cloud.charging.open.protocols.WWCP.Node.PKI;
+using cloud.charging.open.protocols.WWCP.Node.Connections;
+
 using cloud.charging.open.CSMS.Configuration;
 
-using OCPPCommon = cloud.charging.open.protocols.OCPP;
+using OCPPCommon                 = cloud.charging.open.protocols.OCPP;
+using ConnectionType             = cloud.charging.open.protocols.WWCP.Node.Connections.ConnectionType;
+using SignCertificateRequest     = cloud.charging.open.protocols.OCPPv2_1.CS.SignCertificateRequest;
+using SignCertificateResponse    = cloud.charging.open.protocols.OCPPv2_1.CSMS.SignCertificateResponse;
+using PKISignCertificateRequest  = cloud.charging.open.protocols.WWCP.Node.PKI.SignCertificateRequest;
 
 #endregion
 
@@ -403,7 +411,23 @@ namespace cloud.charging.open.CSMS
             X509Certificate2              certificate;
             List<X509Certificate2>        above;
 
-            try
+            // Over a connection to the PKI: in the messages of a PKI.
+            if (CertificateSigningConfiguration.IsConnection(EST))
+            {
+
+                var (signed, why) = await SignOverTheConnection(Request.CSR, EST);
+
+                if (signed is null)
+                {
+                    Failed("failed", why!);
+                    return;
+                }
+
+                (certificate, above) = signed.Value;
+
+            }
+
+            else try
             {
 
                 using var http   = PKIClient(EST);
@@ -492,6 +516,70 @@ namespace cloud.charging.open.CSMS
             }
 
             #endregion
+
+        }
+
+        #endregion
+
+        #region (private) SignOverTheConnection(CSR, Address)
+
+        /// <summary>
+        /// The CSR signed by the PKI of the connection of the type "PKI" with the
+        /// URL of the given address, at the label after its '#': the certificate
+        /// and the CAs above it but for the root - or why there is none.
+        /// </summary>
+        /// <param name="CSR">The CSR of the station, as PEM.</param>
+        /// <param name="Address">The URL of the connection, with the label of EST after its '#'.</param>
+        private async Task<((X509Certificate2 Certificate, List<X509Certificate2> Above)? Signed, String? Why)> SignOverTheConnection(String  CSR,
+                                                                                                                                       Uri     Address)
+        {
+
+            var url    = CertificateSigningConfiguration.ConnectionURLOf(Address);
+            var label  = CertificateSigningConfiguration.LabelOf(Address);
+
+            if (Connections.Connections.FirstOrDefault(entry => entry.ConnectionType == ConnectionType.PKI &&
+                                                               !entry.Inbound &&
+                                                               String.Equals(entry.URL.ToString().TrimEnd('/'), url, StringComparison.OrdinalIgnoreCase)) is not ConnectionEntry connection)
+            {
+                return (null, $"There is no connection of this {NodeNoun} to a PKI at {url}: write one down, of the type 'PKI', with that URL.");
+            }
+
+            try
+            {
+
+                var answer = await SignCertificateAtThePKI(connection.Id,
+                                                           new PKISignCertificateRequest(CSR, label),
+                                                           ESTTimeout);
+
+                if (answer.Status != PKIStatus.Accepted || answer.CertificateChain is null)
+                    return (null, $"The PKI of the connection '{connection.Description.FirstText()}' did not sign it" +
+                                  (answer.StatusInfo is null ? "." : $": {answer.StatusInfo.ReasonCode}{(answer.StatusInfo.AdditionalInfo is null ? "" : $", {answer.StatusInfo.AdditionalInfo}")}"));
+
+                var chain = new X509Certificate2Collection();
+                chain.ImportFromPem(answer.CertificateChain);
+
+                if (chain.Count == 0)
+                    return (null, $"The PKI of the connection '{connection.Description.FirstText()}' answered with no certificate.");
+
+                // The certificate first, then the sub-CAs above it - a root, where
+                // one is sent along, is the station's already.
+                var above = chain.Skip(1).
+                                  Where(ca => !ca.SubjectName.RawData.AsSpan().SequenceEqual(ca.IssuerName.RawData)).
+                                  ToList();
+
+                foreach (var root in chain.Skip(1).Except(above))
+                    root.Dispose();
+
+                Log.Info($"The PKI of the connection '{connection.Description.FirstText()}' signed the certificate {answer.CertificateId}{(label is null ? "" : $" at the label '{label}'")}.",
+                         "ocpp", "certificate", "pki");
+
+                return ((chain[0], above), null);
+
+            }
+            catch (Exception e) when (e is PKIException or TimeoutException or IOException or InvalidOperationException or CryptographicException)
+            {
+                return (null, $"The PKI of the connection '{connection.Description.FirstText()}' could not be asked: {e.Message}");
+            }
 
         }
 

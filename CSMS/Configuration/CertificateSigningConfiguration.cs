@@ -46,7 +46,13 @@ namespace cloud.charging.open.CSMS.Configuration
     /// <para>
     /// An address is where EST is, with its label where it has one: the CSR
     /// goes to its "simpleenroll", and the CAs above the certificate come
-    /// from its "cacerts". A kind of certificate without one is not signed:
+    /// from its "cacerts". An address of ws://, wss:// or ssh:// is a
+    /// connection of this CSMS to its PKI instead - one of the type "PKI" with
+    /// that URL -, and its fragment the label of EST the PKI signs at:
+    /// "wss://pki.example.org:2364/csms-01#stations". The CSR goes over that
+    /// connection with SignCertificate, in the messages of a PKI, signed in as
+    /// the connection signs in; no API key is needed there.
+    /// A kind of certificate without one is not signed:
     /// the station is told so. The API key is that of an account of the PKI
     /// that may sign certificates of servers and clients - the "registrar"
     /// role of the PKI - and goes over HTTPS only, or to the loopback address.
@@ -152,7 +158,7 @@ namespace cloud.charging.open.CSMS.Configuration
                 return false;
             }
 
-            foreach (var est in new[] { ChargingStationCertificate, V2GCertificate }.OfType<Uri>())
+            foreach (var est in new[] { ChargingStationCertificate, V2GCertificate }.OfType<Uri>().Where(address => !IsConnection(address)))
                 if (String.Equals(est.Host, Responder.Host, StringComparison.OrdinalIgnoreCase) &&
                     (Responder.Port == est.Port || Responder.Port is 80 or 443))
                 {
@@ -290,12 +296,29 @@ namespace cloud.charging.open.CSMS.Configuration
 
             if (String.IsNullOrEmpty(text) ||
                 !Uri.TryCreate(text, UriKind.Absolute, out var address) ||
-                address.Scheme is not ("https" or "http") ||
+                address.Scheme is not ("https" or "http" or "ws" or "wss" or "ssh") ||
                 !String.IsNullOrEmpty(address.Query) ||
-                !String.IsNullOrEmpty(address.Fragment))
+                (!IsConnection(address) && !String.IsNullOrEmpty(address.Fragment)))
             {
-                Error = $"'{SectionName}.{Name}' is the address of an EST server, as https://pki.example.org/.well-known/est/<label>.";
+                Error = $"'{SectionName}.{Name}' is the address of an EST server, as https://pki.example.org/.well-known/est/<label> - " +
+                        "or the URL of a connection of this CSMS to its PKI, with the label after '#', as wss://pki.example.org:2364/csms-01#<label>.";
                 return false;
+            }
+
+            // A connection: kept as it is written, with its label. Whether it is
+            // encrypted is what the connection says, and it is checked there.
+            if (IsConnection(address))
+            {
+
+                if (LabelOf(address) is String label && (label.Length > 64 || label.Any(character => !Char.IsAsciiLetterOrDigit(character) && character is not ('-' or '_'))))
+                {
+                    Error = $"'{SectionName}.{Name}': '{label}' is no label of EST: letters, digits, '-' and '_', at most 64.";
+                    return false;
+                }
+
+                Address = address;
+                return true;
+
             }
 
             if (address.Scheme == "http" && !IsLoopback(address))
@@ -309,6 +332,32 @@ namespace cloud.charging.open.CSMS.Configuration
             return true;
 
         }
+
+        /// <summary>
+        /// Whether an address is a connection of this CSMS to its PKI - ws://,
+        /// wss:// or ssh:// - rather than an EST server.
+        /// </summary>
+        public static Boolean IsConnection(Uri Address)
+
+            => Address.Scheme is "ws" or "wss" or "ssh";
+
+        /// <summary>
+        /// The URL of the connection an address is, without its label: what the
+        /// connection of the type "PKI" is written down with.
+        /// </summary>
+        public static String ConnectionURLOf(Uri Address)
+
+            => Address.GetLeftPart(UriPartial.Path).TrimEnd('/');
+
+        /// <summary>
+        /// The label of EST the address of a connection names after its '#', or
+        /// null where it names none.
+        /// </summary>
+        public static String? LabelOf(Uri Address)
+
+            => Address.Fragment.TrimStart('#') is { Length: > 0 } label
+                   ? Uri.UnescapeDataString(label)
+                   : null;
 
         /// <summary>
         /// Whether an address is on this machine.
@@ -368,8 +417,10 @@ namespace cloud.charging.open.CSMS.Configuration
 
             var json = new JObject();
 
-            if (ChargingStationCertificate is not null)  json.Add("chargingStationCertificate", ChargingStationCertificate.ToString());
-            if (V2GCertificate             is not null)  json.Add("v2gCertificate",             V2GCertificate.ToString());
+            // As it was written: a connection's URL keeps its own form, which
+            // its connection of the type "PKI" has as well.
+            if (ChargingStationCertificate is not null)  json.Add("chargingStationCertificate", ChargingStationCertificate.OriginalString);
+            if (V2GCertificate             is not null)  json.Add("v2gCertificate",             V2GCertificate.OriginalString);
 
             if (RenewDaysBefore            is not null)  json.Add("renewDaysBefore",            RenewDaysBefore.Value);
             if (OCSPResponders             is not null)  json.Add("ocspResponders",             new JArray(OCSPResponders.Select(responder => responder.ToString())));
