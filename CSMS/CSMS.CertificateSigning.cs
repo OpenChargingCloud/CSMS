@@ -521,6 +521,21 @@ namespace cloud.charging.open.CSMS
 
         #endregion
 
+        #region (private) PKIConnectionAt(URL)
+
+        /// <summary>
+        /// The connection of this CSMS of the type "PKI" to the given URL - as
+        /// <see cref="CertificateSigningConfiguration.ConnectionURLOf"/> gives
+        /// it -, or null.
+        /// </summary>
+        private ConnectionEntry? PKIConnectionAt(String URL)
+
+            => Connections.Connections.FirstOrDefault(entry => entry.ConnectionType == ConnectionType.PKI &&
+                                                               !entry.Inbound &&
+                                                               String.Equals(entry.URL.ToString().TrimEnd('/'), URL, StringComparison.OrdinalIgnoreCase));
+
+        #endregion
+
         #region (private) SignOverTheConnection(CSR, Address)
 
         /// <summary>
@@ -537,9 +552,7 @@ namespace cloud.charging.open.CSMS
             var url    = CertificateSigningConfiguration.ConnectionURLOf(Address);
             var label  = CertificateSigningConfiguration.LabelOf(Address);
 
-            if (Connections.Connections.FirstOrDefault(entry => entry.ConnectionType == ConnectionType.PKI &&
-                                                               !entry.Inbound &&
-                                                               String.Equals(entry.URL.ToString().TrimEnd('/'), url, StringComparison.OrdinalIgnoreCase)) is not ConnectionEntry connection)
+            if (PKIConnectionAt(url) is not ConnectionEntry connection)
             {
                 return (null, $"There is no connection of this {NodeNoun} to a PKI at {url}: write one down, of the type 'PKI', with that URL.");
             }

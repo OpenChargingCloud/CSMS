@@ -21,16 +21,23 @@ using System.Net.Http.Headers;
 
 using Newtonsoft.Json.Linq;
 
+using org.GraphDefined.Vanaheimr.Illias;
 using org.GraphDefined.Vanaheimr.Hermod;
 using org.GraphDefined.Vanaheimr.Hermod.Messaging;
 
 using cloud.charging.open.protocols.WWCP.NetworkingNode;
 using cloud.charging.open.protocols.WWCP.Node.Logging;
+using cloud.charging.open.protocols.WWCP.Node.Connections;
 using cloud.charging.open.protocols.OCPPv2_1;
 using cloud.charging.open.protocols.OCPPv2_1.CS;
 using cloud.charging.open.protocols.OCPPv2_1.CSMS;
 
 using cloud.charging.open.CSMS.OCPP;
+using cloud.charging.open.CSMS.Configuration;
+
+using PKIStatus                  = cloud.charging.open.protocols.WWCP.Node.PKI.PKIStatus;
+using PKIException               = cloud.charging.open.protocols.WWCP.Node.PKI.PKIException;
+using GetOCSPResponseRequest     = cloud.charging.open.protocols.WWCP.Node.PKI.GetOCSPResponseRequest;
 
 #endregion
 
@@ -47,13 +54,15 @@ namespace cloud.charging.open.CSMS
     /// <param name="Outcome">"good", "revoked" or "unknown", as the responder said; "answered", where the responder answered and not of that certificate; "refused", where the request was not sent on; "failed", where the responder did not answer, or not successfully.</param>
     /// <param name="Detail">Why, in a sentence, where it was not answered; null otherwise.</param>
     /// <param name="NextUpdate">Until when the answer holds, where the responder says so.</param>
+    /// <param name="Via">The URL of the connection to the PKI it was asked over; null where it was asked over HTTP, or not at all.</param>
     public sealed record CertificateStatusEntry(DateTimeOffset   At,
                                                 String           Station,
                                                 String           SerialNumber,
                                                 String           Responder,
                                                 String           Outcome,
                                                 String?          Detail       = null,
-                                                DateTimeOffset?  NextUpdate   = null)
+                                                DateTimeOffset?  NextUpdate   = null,
+                                                String?          Via          = null)
     {
 
         public JObject ToJSON()
@@ -65,7 +74,8 @@ namespace cloud.charging.open.CSMS
                    new JProperty("responder",     Responder),
                    new JProperty("outcome",       Outcome),
                    new JProperty("detail",        Detail),
-                   new JProperty("nextUpdate",    NextUpdate?.ToUniversalTime().ToString("o"))
+                   new JProperty("nextUpdate",    NextUpdate?.ToUniversalTime().ToString("o")),
+                   new JProperty("via",           Via)
                );
 
     }
@@ -83,6 +93,14 @@ namespace cloud.charging.open.CSMS
     /// issuer and the serial number - and sent to the responder it names; the
     /// answer goes back to it as it came, DER in Base64, for the station and
     /// the EV to judge by its signature.
+    /// </para>
+    /// <para>
+    /// <b>Over the connection to the PKI first.</b> Where "certificateSigning"
+    /// names a connection of the type "PKI", the request goes over it, with
+    /// GetOCSPResponse, whatever responder the station names: the PKI answers
+    /// for its own CAs, signed by their responders, as over HTTP. A PKI that
+    /// has not the CA the station asks about says so, and the next connection
+    /// is asked - then the responder the station names, over HTTP.
     /// </para>
     /// <para>
     /// <b>Not to anywhere.</b> The responder is a station's word, and this CSMS
@@ -167,11 +185,12 @@ namespace cloud.charging.open.CSMS
             var serial     = data.SerialNumber;
             var responder  = data.ResponderURL.ToString();
             var now        = TimeProvider.GetUtcNow();
+            var via        = (String?) null;
 
             GetCertificateStatusResponse Failed(String Outcome, String Why, String ReasonCode)
             {
 
-                Remember(new CertificateStatusEntry(now, station, serial, responder, Outcome, Why));
+                Remember(new CertificateStatusEntry(now, station, serial, responder, Outcome, Why, Via: via));
 
                 Log.Warning($"The GetCertificateStatus request of '{station}' for the certificate {serial} at '{responder}' was not answered: {Why}", "ocpp", "certificate", "station");
 
@@ -182,23 +201,37 @@ namespace cloud.charging.open.CSMS
 
             }
 
-            #region Whether it may be asked, and what
-
-            if (!Uri.TryCreate(responder, UriKind.Absolute, out var address) || !certificateSigning.MayAsk(address))
-                return Failed("refused",
-                              $"'{responder}' is no OCSP responder this CSMS asks: one on the host of the EST server of its PKI, or one it was told of.",
-                              "UnknownResponder");
+            #region What is asked
 
             if (!OCSPMessages.TryMakeRequest(data.HashAlgorithm.ToString(), data.IssuerNameHash, data.IssuerKeyHash, serial, out var ocspRequest, out var badRequest))
                 return Failed("refused", badRequest, "InvalidOCSPRequest");
 
             #endregion
 
-            #region Asked
+            #region Asked over a connection to the PKI
+
+            var (fromThePKI, askedOver, notAnswered) = await AskOverThePKIConnections(ocspRequest, CancellationToken);
+
+            if (fromThePKI is not null)
+                via = askedOver;
+
+            #endregion
+
+            #region Or asked over HTTP, where it may be
 
             Byte[] answer;
 
-            try
+            if (fromThePKI is not null)
+                answer = fromThePKI;
+
+            else if (!Uri.TryCreate(responder, UriKind.Absolute, out var address) || !certificateSigning.MayAsk(address))
+                return notAnswered is not null
+                           ? Failed("failed",  notAnswered, "OCSPResponderUnreachable")
+                           : Failed("refused",
+                                    $"'{responder}' is no OCSP responder this CSMS asks: one on the host of the EST server of its PKI, or one it was told of.",
+                                    "UnknownResponder");
+
+            else try
             {
 
                 using var client  = PKIClient(address, OCSPTimeout);
@@ -239,22 +272,28 @@ namespace cloud.charging.open.CSMS
 
             #region Handed back
 
+            var who = via is null ? $"'{responder}'" : $"the PKI of '{via}'";
+
+            if (answer.Length > MaxOCSPResultLength / 4 * 3)
+                return Failed("failed", $"The answer of {who} is longer than the {MaxOCSPResultLength} characters of Base64 a station takes.", "OCSPResponseTooLong");
+
             if (!OCSPMessages.TryRead(answer, serial, out var read))
-                return Failed("failed", $"What '{responder}' answered is no OCSP response.", "OCSPResponderFailed");
+                return Failed("failed", $"What {who} answered is no OCSP response.", "OCSPResponderFailed");
 
             if (read.ResponseStatus != "successful")
-                return Failed("failed", $"'{responder}' answered {read.ResponseStatus}.", "OCSPResponderFailed");
+                return Failed("failed", $"{who} answered {read.ResponseStatus}.", "OCSPResponderFailed");
 
             var outcome = read.CertificateStatus is "good" or "revoked" or "unknown" ? read.CertificateStatus : "answered";
 
             Remember(new CertificateStatusEntry(now, station, serial, responder, outcome,
                                                 outcome == "answered" ? "The answer is not of the certificate asked about." : null,
-                                                read.NextUpdate));
+                                                read.NextUpdate,
+                                                via));
 
             if (outcome == "revoked")
             {
 
-                Log.Warning($"'{station}' asked about the certificate {serial}: '{responder}' says it was revoked{(read.RevokedAt is DateTimeOffset at ? $" on {at:u}" : "")}.", "ocpp", "certificate", "station");
+                Log.Warning($"'{station}' asked about the certificate {serial}: {who} says it was revoked{(read.RevokedAt is DateTimeOffset at ? $" on {at:u}" : "")}.", "ocpp", "certificate", "station");
 
                 // A certificate of its own, revoked: the station is asked for
                 // a new one now, and not when the old one would run out.
@@ -266,13 +305,70 @@ namespace cloud.charging.open.CSMS
 
             }
             else
-                Log.Info   ($"'{station}' asked about the certificate {serial}: '{responder}' says {outcome}.", "ocpp", "certificate", "station");
+                Log.Info   ($"'{station}' asked about the certificate {serial}: {who} says {outcome}.", "ocpp", "certificate", "station");
 
             return new GetCertificateStatusResponse(Request,
                                                     protocols.OCPPv2_1.GetCertificateStatus.Accepted,
                                                     OCSPResult.Parse(Convert.ToBase64String(answer)));
 
             #endregion
+
+        }
+
+        #endregion
+
+        #region (private) AskOverThePKIConnections(OCSPRequest, CancellationToken)
+
+        /// <summary>
+        /// The answer of the first PKI of the connections "certificateSigning"
+        /// names that has the CA the request asks about, and the URL of that
+        /// connection; or none, and why, where a connection could not be asked -
+        /// or no why, where there is no connection, or none has that CA.
+        /// </summary>
+        private async Task<(Byte[]? Answer, String? Via, String? Why)> AskOverThePKIConnections(Byte[]             OCSPRequest,
+                                                                                             CancellationToken  CancellationToken)
+        {
+
+            String? why = null;
+
+            var urls = new[] { certificateSigning.ChargingStationCertificate, certificateSigning.V2GCertificate }.
+                           OfType<Uri>().
+                           Where (CertificateSigningConfiguration.IsConnection).
+                           Select(CertificateSigningConfiguration.ConnectionURLOf).
+                           Distinct(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var url in urls)
+            {
+
+                if (PKIConnectionAt(url) is not ConnectionEntry connection)
+                {
+                    why ??= $"There is no connection of this {NodeNoun} to a PKI at {url}.";
+                    continue;
+                }
+
+                try
+                {
+
+                    var answer = await GetOCSPResponseOfThePKI(connection.Id,
+                                                               GetOCSPResponseRequest.Of(OCSPRequest),
+                                                               OCSPTimeout,
+                                                               CancellationToken);
+
+                    // A PKI that has not that CA: the next one is asked.
+                    if (answer.Status != PKIStatus.Accepted || answer.DER is not Byte[] der)
+                        continue;
+
+                    return (der, url, null);
+
+                }
+                catch (Exception e) when (e is PKIException or TimeoutException or IOException or InvalidOperationException or FormatException)
+                {
+                    why ??= $"The PKI of the connection '{connection.Description.FirstText()}' could not be asked: {e.Message}";
+                }
+
+            }
+
+            return (null, null, why);
 
         }
 
