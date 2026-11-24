@@ -137,6 +137,12 @@ namespace cloud.charging.open.CSMS
         /// </summary>
         public static TimeSpan  ESTTimeout            { get; } = TimeSpan.FromSeconds(30);
 
+        /// <summary>
+        /// How long the signing waits for the answer to a SignCertificate
+        /// request to have gone out, before it goes on anyway.
+        /// </summary>
+        public static TimeSpan  AnswerSentWait        { get; } = TimeSpan.FromSeconds(5);
+
         private CertificateSigningConfiguration                                certificateSigning  = new ();
 
         private readonly List<CertificateSigningEntry>                        certificateSignings = [];
@@ -144,6 +150,12 @@ namespace cloud.charging.open.CSMS
         private readonly ConcurrentDictionary<(String Station, String Type), Byte>  signingNow = new ();
 
         private readonly SemaphoreSlim                                         signingLock         = new (1, 1);
+
+        /// <summary>
+        /// The SignCertificate requests whose answer has not gone out yet, by
+        /// the very request: the signing waits for it.
+        /// </summary>
+        private readonly ConcurrentDictionary<SignCertificateRequest, TaskCompletionSource>  answerSent = new (ReferenceEqualityComparer.Instance);
 
         #endregion
 
@@ -184,6 +196,17 @@ namespace cloud.charging.open.CSMS
 
             certificateSigning             = Configuration ?? new CertificateSigningConfiguration();
             csms01.SignCertificateProcessor = SignCertificate;
+
+            // The certificate goes to the station after the answer to its
+            // request, as OCPP has it: the signing waits for this.
+            csms01.OCPP.OUT.OnSignCertificateResponseSent += (timestamp, sender, connection, request, response, runtime, sentMessageResult, cancellationToken) => {
+
+                if (answerSent.TryRemove(request, out var sent))
+                    sent.TrySetResult();
+
+                return Task.CompletedTask;
+
+            };
 
             BuildCertificateRenewal();
             BuildCertificateStatus();
@@ -366,10 +389,17 @@ namespace cloud.charging.open.CSMS
             Log.Info($"'{station}' asked for a {type}: its CSR goes to {est}.", "ocpp", "certificate", "station");
 
             // Not awaited: the station is answered now, and the certificate
-            // follows with a request of this CSMS's own.
+            // follows with a request of this CSMS's own - once the answer has
+            // gone out: a PKI that signs at once would otherwise have the
+            // CertificateSigned request overtake it.
+            var sent = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            answerSent[Request] = sent;
+
             _ = Task.Run(async () => {
                     try
                     {
+                        await Task.WhenAny(sent.Task, Task.Delay(AnswerSentWait));
+                        answerSent.TryRemove(Request, out _);
                         await SignAndSend(Request, der, type, est, settings.APIKey, now);
                     }
                     finally
