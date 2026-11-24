@@ -21,6 +21,7 @@ import { locationsPage }          from './pages/locations';
 import { roamingDataPages }       from './pages/roamingData';
 
 import { connectionsPage }        from '@ocpp/pages/connections';
+import { ocppLogMenuEntry, ocppLogPage } from '@ocpp/pages/ocppLog';
 import { commissioningPage }      from '@ocpp/pages/commissioning';
 import { setConnectionsResource, setNodeNoun, setNodeTraits } from '@ocpp/settings';
 
@@ -79,6 +80,8 @@ startNode({
                 { path: '/roaming/cdrs',      label: 'Charge detail records',  icon: 'fa-file-invoice',  permission: [ 'roaming:read' ] }
             ]
         },
+        // Every OCPP message this node sent and received.
+        ocppLogMenuEntry,
         nodeMenu.logs
     ],
 
@@ -120,6 +123,8 @@ startNode({
     // own page had answered 403 (found by the charging station and the
     // gateway).
     pages: {
+
+        '/ocpp-log':                                ocppLogPage,
 
         '/configuration':                           configurationPage,
 
