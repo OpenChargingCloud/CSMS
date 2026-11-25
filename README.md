@@ -1,5 +1,7 @@
 # CSMS
 
+![The EV charging test environment, the CSMS (CSMS) highlighted](docs/EVChargingTestEnvironment.svg)
+
 One EV Charging Station Management System, with a web interface in front of it:
 a C# HTTP backend built on [Hermod](https://github.com/Vanaheimr/Hermod), and a
 frontend of HTML, SCSS and TypeScript bundled by webpack and embedded into the
