@@ -519,7 +519,7 @@ namespace cloud.charging.open.CSMS
                 if (response.Status.ToString() != "Accepted")
                 {
                     Failed("notTaken",
-                           $"'{station}' did not take the certificate {fingerprint}: {response.Status}{(response.StatusInfo is null ? "" : $", {response.StatusInfo.ReasonCode} {response.StatusInfo.AdditionalInfo}")}.",
+                           $"'{station}' did not take the certificate {fingerprint}: {response.Status}{StatusInfoOf(response.StatusInfo)}.",
                            fingerprint, certificate.NotAfter);
                     return;
                 }

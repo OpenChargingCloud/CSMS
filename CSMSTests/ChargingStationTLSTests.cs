@@ -511,6 +511,127 @@ namespace cloud.charging.open.CSMS.Tests
 
         #endregion
 
+        #region (private) ConnectUnencrypted()
+
+        /// <summary>
+        /// One charging station on security profile 1: ws://, with its password.
+        /// </summary>
+        private async Task<(Boolean Connected, String? Why)> ConnectUnencrypted()
+        {
+
+            using var client  = new ClientWebSocket();
+            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+
+            client.Options.AddSubProtocol("ocpp2.1");
+            client.Options.SetRequestHeader(
+                "Authorization",
+                "Basic " + Convert.ToBase64String(Encoding.UTF8.GetBytes($"cs001:{ThePassword}"))
+            );
+
+            try
+            {
+                await client.ConnectAsync(new Uri($"ws://127.0.0.1:{port}"), timeout.Token);
+            }
+            catch (Exception e)
+            {
+                return (false, e.GetBaseException().Message);
+            }
+
+            try
+            {
+                await client.CloseAsync(WebSocketCloseStatus.NormalClosure, "done", timeout.Token);
+            }
+            catch (Exception)
+            { }
+
+            return (true, null);
+
+        }
+
+        #endregion
+
+        #region TheWaysInChangedWhileRunning_OpenThePortAnew_EncryptedOrNot()
+
+        /// <summary>
+        /// Security profile 1 alone, while the port speaks TLS: the port is
+        /// opened anew, unencrypted, and takes a station on ws://. TLS allowed
+        /// again: opened anew, encrypted, and takes one on wss://. A port left
+        /// as it was took nobody after such a change - it read a TLS handshake
+        /// as HTTP, or waited for one from a station dialling ws:// - and said
+        /// nothing of a restart owed.
+        /// </summary>
+        [Test]
+        public async Task TheWaysInChangedWhileRunning_OpenThePortAnew_EncryptedOrNot()
+        {
+
+            Assert.That(CSMS.OCPPServerTLS, Is.True);
+
+            Assert.That(CSMS.TryUpdateOCPPServerConfiguration(JObject.Parse("""{ "clientAuthentication": [ "httpAuthWithoutTLS" ] }"""), out var error),
+                        Is.True, error);
+
+            Assert.That(CSMS.OCPPServerTLS, Is.False, "security profile 1 alone, and the port still speaks TLS");
+
+            var unencrypted = await ConnectUnencrypted();
+            Assert.That(unencrypted.Connected, Is.True, unencrypted.Why);
+
+            Assert.That(CSMS.TryUpdateOCPPServerConfiguration(JObject.Parse("""{ "clientAuthentication": [ "httpAuthOverTLS" ] }"""), out error),
+                        Is.True, error);
+
+            Assert.That(CSMS.OCPPServerTLS, Is.True, "TLS allowed again, and the port is still unencrypted");
+
+            var encrypted = await Connect();
+            Assert.That(encrypted.Connected, Is.True, encrypted.Why);
+
+        }
+
+        #endregion
+
+        #region TheWaysInChangedOverAConnection_OpenThePortAnewOnceAnswered()
+
+        /// <summary>
+        /// The same change, asked for over a connection that is to be answered
+        /// first - as the web interface asks: the port is opened anew once the
+        /// answer is out, and not before.
+        /// </summary>
+        [Test]
+        public async Task TheWaysInChangedOverAConnection_OpenThePortAnewOnceAnswered()
+        {
+
+            var answered = new TaskCompletionSource();
+
+            Assert.That(CSMS.TryUpdateOCPPServerConfiguration(JObject.Parse("""{ "clientAuthentication": [ "httpAuthWithoutTLS" ] }"""),
+                                                              out var error,
+                                                              out _,
+                                                              answered.Task),
+                        Is.True, error);
+
+            Assert.That(CSMS.OCPPServerTLS, Is.True, "opened anew before the change was answered");
+
+            answered.SetResult();
+
+            var giveUp = DateTimeOffset.UtcNow.AddSeconds(15);
+
+            while (CSMS.OCPPServerTLS && DateTimeOffset.UtcNow < giveUp)
+                await Task.Delay(50);
+
+            Assert.That(CSMS.OCPPServerTLS, Is.False, "not opened anew, unencrypted, once the change was answered");
+
+            // Decided before the port listens again: a station may come a
+            // moment too early, and comes again.
+            var unencrypted = await ConnectUnencrypted();
+
+            while (!unencrypted.Connected && DateTimeOffset.UtcNow < giveUp)
+            {
+                await Task.Delay(100);
+                unencrypted = await ConnectUnencrypted();
+            }
+
+            Assert.That(unencrypted.Connected, Is.True, unencrypted.Why);
+
+        }
+
+        #endregion
+
     }
 
 }

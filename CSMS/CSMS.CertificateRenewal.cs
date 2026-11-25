@@ -331,7 +331,7 @@ namespace cloud.charging.open.CSMS
                                                       answer,
                                                       answer == "Accepted"
                                                           ? null
-                                                          : $"'{Station}' answered {answer}{(response.StatusInfo is null ? "" : $": {response.StatusInfo.ReasonCode} {response.StatusInfo.AdditionalInfo}".TrimEnd())}.");
+                                                          : $"'{Station}' answered {answer}{StatusInfoOf(response.StatusInfo)}.");
 
             }
             catch (Exception e)

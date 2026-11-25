@@ -637,11 +637,25 @@ namespace cloud.charging.open.CSMS
 
         #region (private static) StatusInfoOf(StatusInfo)
 
+        /// <summary>
+        /// What a station said beside its answer, to follow the answer in a
+        /// sentence that ends with a period of its own: " (NoTLS: This station
+        /// makes no wss:// connection ...)", the period of the station's text
+        /// left out; nothing where it said nothing.
+        /// </summary>
         private static String StatusInfoOf(StatusInfo? StatusInfo)
+        {
 
-            => StatusInfo is null
-                   ? ""
-                   : $": {StatusInfo.ReasonCode} {StatusInfo.AdditionalInfo}".TrimEnd();
+            if (StatusInfo is null)
+                return "";
+
+            var additional = StatusInfo.AdditionalInfo?.Trim().TrimEnd('.').TrimEnd();
+
+            return String.IsNullOrEmpty(additional)
+                       ? $" ({StatusInfo.ReasonCode})"
+                       : $" ({StatusInfo.ReasonCode}: {additional})";
+
+        }
 
         #endregion
 
