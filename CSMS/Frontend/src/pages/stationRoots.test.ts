@@ -119,7 +119,8 @@ describe('the station roots page', () => {
 
         held      = aCSMS();
         installed = [ { certificateType: 'CSMSRootCertificate', hashAlgorithm: 'SHA256', issuerNameHash: 'aa', issuerKeyHash: 'bb', serialNumber: '1ab',
-                        children: 0, root: aRoot.id, subject: 'CN=CSMS Root' },
+                        children: 0, root: aRoot.id, subject: 'CN=CSMS Root',
+                        context: 'A root for the servers of the back ends this station connects to over wss://; OCPP 1.6: CentralSystemRootCertificate.' },
                       { certificateType: 'ManufacturerRootCertificate', hashAlgorithm: 'SHA256', issuerNameHash: 'cc', issuerKeyHash: 'dd', serialNumber: '77',
                         children: 0, root: null, subject: null } ];
 
@@ -133,6 +134,8 @@ describe('the station roots page', () => {
 
         assert.match(root.querySelector('#installed tr[data-serial="1ab"]')!.textContent!, /CN=CSMS Root/);
         assert.match(root.querySelector('#installed tr[data-serial="77"]')!.textContent!,  /none of the roots here/);
+        assert.match(root.querySelector('#installed tr[data-serial="1ab"] .context')!.textContent!, /OCPP 1\.6: CentralSystemRootCertificate/);
+        assert.equal(root.querySelector('#installed tr[data-serial="77"] .context'), null, 'a context is shown where the station said none');
 
         const yes = window.confirm;
 

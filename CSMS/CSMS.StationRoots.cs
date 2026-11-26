@@ -57,8 +57,10 @@ namespace cloud.charging.open.CSMS
 
     /// <summary>
     /// A certificate a charging station says it has, as GetInstalledCertificateIds
-    /// names it - and the root of this CSMS it is, where it is one.
+    /// names it - and the root of this CSMS it is, where it is one; and what
+    /// it is for there, where the station says so.
     /// </summary>
+    /// <param name="Context">What the station says it is for, as the "context" of the customData of the certificate: "A root for the servers of the back ends ...; OCPP 1.6: CentralSystemRootCertificate."</param>
     public sealed record InstalledCertificate(String   CertificateType,
                                               String   HashAlgorithm,
                                               String   IssuerNameHash,
@@ -66,7 +68,8 @@ namespace cloud.charging.open.CSMS
                                               String   SerialNumber,
                                               Int32    Children,
                                               String?  Root,
-                                              String?  Subject)
+                                              String?  Subject,
+                                              String?  Context   = null)
     {
 
         public JObject ToJSON()
@@ -79,7 +82,8 @@ namespace cloud.charging.open.CSMS
                    new JProperty("serialNumber",     SerialNumber),
                    new JProperty("children",         Children),
                    new JProperty("root",             Root),
-                   new JProperty("subject",          Subject)
+                   new JProperty("subject",          Subject),
+                   new JProperty("context",          Context)
                );
 
     }
@@ -344,7 +348,8 @@ namespace cloud.charging.open.CSMS
                                                                    hash.SerialNumber,
                                                                    chain.ChildCertificateHashData.Count(),
                                                                    root?.Id,
-                                                                   root?.Subject);
+                                                                   root?.Subject,
+                                                                   ContextOf(chain));
 
                                })]
                        );
@@ -656,6 +661,22 @@ namespace cloud.charging.open.CSMS
                        : $" ({StatusInfo.ReasonCode}: {additional})";
 
         }
+
+        #endregion
+
+        #region (private static) ContextOf(Chain)
+
+        /// <summary>
+        /// What a station says a certificate it has is for: the "context" of
+        /// its customData, where it is a text - or null.
+        /// </summary>
+        private static String? ContextOf(CertificateHashDataChain Chain)
+
+            => Chain.CustomData?["context"] is JValue { Type: JTokenType.String } context &&
+               context.Value<String>() is String text &&
+               text.Trim().Length > 0
+                   ? text.Trim()
+                   : null;
 
         #endregion
 

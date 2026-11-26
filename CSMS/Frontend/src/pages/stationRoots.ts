@@ -69,7 +69,7 @@ export const stationRootsPage: Page = {
                     ${mayChange ? html`
                         <td><button type="button" class="btn small danger installed-delete"
                                     @click=${() => void deleteFrom(station, certificate)}>Delete</button></td>` : nothing}
-                    <td>${certificate.certificateType}</td>
+                    <td>${certificate.certificateType}${certificate.context ? html`<br><span class="hint context">${certificate.context}</span>` : nothing}</td>
                     <td>${certificate.subject ?? html`<span class="muted">none of the roots here</span>`}</td>
                     <td><code>${certificate.serialNumber}</code></td>
                     <td>${certificate.children > 0 ? `${certificate.children} below it` : ''}</td>

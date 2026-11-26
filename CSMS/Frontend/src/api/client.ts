@@ -748,6 +748,8 @@ export interface InstalledCertificate {
     children:         number;
     root:             string | null;
     subject:          string | null;
+    /** What the station says it is for, where it says so. */
+    context?:         string | null;
 }
 
 /** What became of one GetCertificateStatus request of a charging station. */

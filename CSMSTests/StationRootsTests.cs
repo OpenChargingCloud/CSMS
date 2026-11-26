@@ -166,6 +166,7 @@ namespace cloud.charging.open.CSMS.Tests
             Assert.That(CSMS.StationRoots.TryAdd(pem, "V2GRootCertificate", false, DateTimeOffset.UtcNow, out var root, out var error), Is.True, error);
 
             station.Installed.Add(("ManufacturerRootCertificate", "SHA256", "aa", "bb", "1234"));
+            station.Contexts["1234"] = "A root of the manufacturer, for its firmware.";
 
             using var installed = await browser.PostAsync($"api/v1/configuration/station-roots/V2GRootCertificate/{root!.Id}/install",
                                                           JSONBody(new JProperty("station", "cs001")));
@@ -180,6 +181,9 @@ namespace cloud.charging.open.CSMS.Tests
                 Assert.That(station.Installed.Count,                                Is.EqualTo(2));
                 Assert.That(ours["root"]!.Value<String>(),                          Is.EqualTo(root.Id), "known as the root it is");
                 Assert.That(looked["installed"]!.Count(one => one["root"]!.Type == JTokenType.Null), Is.EqualTo(1), "the other is nobody's here");
+                Assert.That(looked["installed"]!.Single(one => one["serialNumber"]!.Value<String>() == "1234")["context"]!.Value<String>(),
+                            Is.EqualTo("A root of the manufacturer, for its firmware."), "what the station says it is for");
+                Assert.That(ours["context"]!.Type,                                  Is.EqualTo(JTokenType.Null), "where the station says nothing");
             });
 
             using var deleted   = await browser.PostAsync("api/v1/configuration/station-roots/stations/cs001/delete",
@@ -293,6 +297,20 @@ namespace cloud.charging.open.CSMS.Tests
             /// </summary>
             public List<(String Type, String Algorithm, String NameHash, String KeyHash, String Serial)> Installed { get; } = [];
 
+            /// <summary>
+            /// What it says a certificate is for, by its serial number: the
+            /// "context" of the customData it sends along with it.
+            /// </summary>
+            public Dictionary<String, String> Contexts { get; } = [];
+
+            private JObject? CustomDataOf(String Serial)
+            {
+                lock (Installed)
+                    return Contexts.TryGetValue(Serial, out var context)
+                               ? new JObject(new JProperty("vendorId", "GraphDefined"), new JProperty("context", context))
+                               : null;
+            }
+
             private (String Type, String Algorithm, String NameHash, String KeyHash, String Serial)[] Copy()
             {
                 lock (Installed) return [.. Installed];
@@ -368,7 +386,10 @@ namespace cloud.charging.open.CSMS.Tests
                                                                                                    new JProperty("hashAlgorithm",       one.Algorithm),
                                                                                                    new JProperty("issuerNameHash",      one.NameHash),
                                                                                                    new JProperty("issuerKeyHash",       one.KeyHash),
-                                                                                                   new JProperty("serialNumber",        one.Serial)))))))),
+                                                                                                   new JProperty("serialNumber",        one.Serial))),
+                                                                                               CustomDataOf(one.Serial) is JObject customData
+                                                                                                   ? [ new JProperty("customData", customData) ]
+                                                                                                   : Array.Empty<JProperty>()))))),
                             "InstallCertificate"          => Install(payload),
                             "DeleteCertificate"           => Delete(payload),
                             _                             => new JObject()
